@@ -6,7 +6,7 @@
 int main() {
     try {
         Server server;
-        server.init("127.0.0.1", 8080);
+        server.init("192.168.1.49", 8080);
         server.run();
     }
     catch (std::exception& e) {

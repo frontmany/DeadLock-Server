@@ -48,6 +48,7 @@ void Server::startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket) {
 void Server::onAccept(std::shared_ptr<asio::ip::tcp::socket> socket) {
     {
         std::lock_guard<std::mutex> lock(m_mtx);
+        std::cout << "client connected on socket:" <<  socket << '\n';
         m_vec_sockets.push_back(socket);
     }
     startAsyncRead(socket);
@@ -80,19 +81,19 @@ void Server::handleRead(const asio::error_code& ec, std::size_t bytes_transferre
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (classificationStr == "GET") {
-        handleGet(socket, buffer, remainingStr);
+        handleGet(socket, remainingStr);
     }
     else if (classificationStr == "RPL") {
-        handleRpl(socket, buffer, remainingStr);
+        handleRpl(socket, remainingStr);
     }
     else if (classificationStr == "BROADCAST") {
-        handleBroadcast(socket, buffer, remainingStr);
+        handleBroadcast(socket, remainingStr);
     }
 
     startAsyncRead(socket);
 }
 
-void Server::handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string typeStr;
@@ -100,11 +101,11 @@ void Server::handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std:
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (typeStr == "STATUS") {
-        broadcastUserInfo(socket, buffer, remainingStr);
+        broadcastUserInfo(socket, remainingStr);
     }
 }
 
-void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string status;
@@ -127,13 +128,13 @@ void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSock
                 continue;
             }
             else {
-                sendResponse(it->second->getSocketOnServer(), buffer, m_sender.get_statusStr(login, status));
+                sendResponse(it->second->getSocketOnServer(), m_sender.get_statusStr(login, status));
             }
         }
     }
 }
 
-void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string typeStr;
@@ -142,20 +143,20 @@ void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::share
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (typeStr == "AUTHORIZATION") {
-        authorizeUser(socket, buffer, remainingStr);
+        authorizeUser(socket, remainingStr);
     }
     else if (typeStr == "REGISTRATION") {
-        registerUser(socket, buffer, remainingStr);
+        registerUser(socket, remainingStr);
     }
     else if (typeStr == "CREATE_CHAT") {
-        createChat(socket, buffer, remainingStr);
+        createChat(socket, remainingStr);
     }
     else if (typeStr == "UPDATE_MY_INFO") {
-        updateUserInfo(socket, buffer, remainingStr);
+        updateUserInfo(socket, remainingStr);
     }
 }
 
-void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string friendLogin;
@@ -168,20 +169,20 @@ void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::share
     if (it == m_map_online_users.end()) {
         m_db.collect(friendLogin, packet);
         if (type == "MESSAGE") {
-            sendResponse(socket, buffer, m_sender.get_messageSuccessStr());
+            sendResponse(socket, m_sender.get_messageSuccessStr());
         }
         else if (type == "MESSAGE_READ_CONFIRMATION") {
-            sendResponse(socket, buffer, m_sender.get_messageReadConfirmationSuccessStr());
+            sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
     }
     else {
         User* user = m_map_online_users[friendLogin];
-        sendResponse(user->getSocketOnServer(), buffer, packet);
+        sendResponse(user->getSocketOnServer(), packet);
         if (type == "MESSAGE") {
-            sendResponse(socket, buffer, m_sender.get_messageSuccessStr());
+            sendResponse(socket, m_sender.get_messageSuccessStr());
         }
         else if (type == "MESSAGE_READ_CONFIRMATION") {
-            sendResponse(socket, buffer, m_sender.get_messageReadConfirmationSuccessStr());
+            sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
     }
 }
@@ -196,7 +197,7 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     return remainingStr;
 }
 
-void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string login;
@@ -217,20 +218,20 @@ void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, 
 
             std::vector<std::string> statusesVec = m_db.getUsersStatusesVec(user->getUserFriendsVec(), m_map_online_users);
             std::string response = m_sender.get_authorizationSuccessStr(user->getUserFriendsVec(), statusesVec);
-            sendResponse(acceptSocket, buffer, response);
+            sendResponse(acceptSocket, response);
 
             for (auto pack : m_db.getCollected(login)) {
-                sendResponse(acceptSocket, buffer, pack);
+                sendResponse(acceptSocket, pack);
             }
         }
     }
     else {
         std::string response = m_sender.get_authorizationFailStr();
-        sendResponse(acceptSocket, buffer, response);
+        sendResponse(acceptSocket, response);
     }
 }
 
-void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string login;
@@ -247,16 +248,16 @@ void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, s
         m_map_online_users[login] = user;
 
         std::string response = m_sender.get_registrationSuccessStr();
-        sendResponse(acceptSocket, buffer, response);
+        sendResponse(acceptSocket, response);
         m_db.addUser(login, name, password);
     }
     else {
         std::string response = m_sender.get_registrationFailStr();
-        sendResponse(acceptSocket, buffer, response);
+        sendResponse(acceptSocket, response);
     }
 }
 
-void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string myLogin;
@@ -267,23 +268,23 @@ void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std
 
     if (myLogin == friendLogin) {
         std::string response = m_sender.get_chatCreateFailStr();
-        sendResponse(acceptSocket, buffer, response);
+        sendResponse(acceptSocket, response);
     }
 
     else {
         User* user = m_db.getUser(friendLogin);
         if (user == nullptr) {
             std::string response = m_sender.get_chatCreateFailStr();
-            sendResponse(acceptSocket, buffer, response);
+            sendResponse(acceptSocket, response);
         }
         else {
             std::string response = m_sender.get_chatCreateSuccessStr(user);
-            sendResponse(acceptSocket, buffer, response);
+            sendResponse(acceptSocket, response);
         }
     }
 }
 
-void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet) {
+void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string myLogin;
@@ -313,21 +314,18 @@ void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket,
         m_db.updateUser(myLogin, name, password, isHasPhoto);
     }
 
-    sendResponse(acceptSocket, buffer, m_sender.get_userInfoUpdatedSuccessStr());
+    sendResponse(acceptSocket, m_sender.get_userInfoUpdatedSuccessStr());
 }
 
-void Server::sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string response) {
-    auto response_buffer = std::make_shared<std::string>(response);
-
-    asio::async_write(*socket, asio::buffer(*response_buffer),
-        [socket, this, buffer, response_buffer]  
-        (const asio::error_code& write_ec, std::size_t)
-        {
-            if (!write_ec) {
-                startAsyncRead(socket); 
+void Server::sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::string response) {
+    asio::async_write(*socket, asio::buffer(response.data(), response.size()),
+        [socket](const asio::error_code& error, std::size_t bytes_transferred) {
+            if (error) {
+                std::cerr << "Send error: " << error.message() << std::endl;
+                // Handle the error (e.g., close the socket)
             }
             else {
-                std::cerr << "Write error: " << write_ec.message() << std::endl;
+                std::cout << "Sent " << bytes_transferred << " bytes to " << socket->remote_endpoint() << std::endl;
             }
         });
 }

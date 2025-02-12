@@ -22,21 +22,21 @@ public:
 private:
     void acceptConnections();
     void onAccept(std::shared_ptr<asio::ip::tcp::socket> socket);
-    void sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string response);
+    void sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::string response);
     void startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket);
     void handleRead(const asio::error_code& ec, std::size_t bytes_transferred,
         std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer);
 
 
-    void authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
+    void authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
+    void registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket,std::string packet);
+    void createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
+    void updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
+    void broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
 
-    void handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
-    void handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer, std::string packet);
+    void handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
+    void handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
+    void handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
 
 
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
