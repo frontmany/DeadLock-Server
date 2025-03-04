@@ -26,7 +26,7 @@ private:
     void startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket);
     void handleRead(const asio::error_code& ec, std::size_t bytes_transferred,
         std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer);
-
+    void returnUserInfo(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
 
     void authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
     void registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket,std::string packet);
@@ -58,7 +58,6 @@ private:
     std::mutex                          m_mtx;
     asio::thread_pool                   m_thread_pool;
 
-    std::vector<std::shared_ptr<asio::ip::tcp::socket>>      m_vec_sockets;
     std::unordered_map<std::string, User*>  m_map_online_users;
     std::vector<std::thread>                m_vec_threads;
 

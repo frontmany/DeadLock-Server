@@ -11,3 +11,6 @@ void User::setLastSeenToNow() {
     m_last_seen = "last seen " + oss.str(); // например "last seen 14:30:00"
 }
 
+void User::setLastSeenToOnline() {
+    m_last_seen = "online";
+}

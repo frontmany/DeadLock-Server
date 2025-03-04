@@ -21,9 +21,12 @@ public:
     std::string get_messageReadConfirmationFailStr();
     std::string get_userInfoUpdatedSuccessStr();
     std::string get_userInfoUpdatedFailStr();
+    std::string get_userInfoSuccessStr(User* user);
+    std::string get_userInfoFailStr();
+    std::string get_loginToSendStatusStr(const std::string& login);
 
     std::string get_chatCreateSuccessStr(User* user);
-    std::string get_statusStr(const std::string login, const std::string status);
+    std::string get_statusStr(const std::string& login, const std::string& status);
 
 private:
     const std::string vecBegin = "VEC_BEGIN";

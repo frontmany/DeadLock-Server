@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "hasher.h"
 #include <iostream>
 #include <algorithm>
 
@@ -49,7 +50,6 @@ void Server::onAccept(std::shared_ptr<asio::ip::tcp::socket> socket) {
     {
         std::lock_guard<std::mutex> lock(m_mtx);
         std::cout << "client connected on socket:" <<  socket << '\n';
-        m_vec_sockets.push_back(socket);
     }
     startAsyncRead(socket);
 }
@@ -60,10 +60,13 @@ void Server::handleRead(const asio::error_code& ec, std::size_t bytes_transferre
         if (ec == asio::error::eof || ec == asio::error::connection_reset) {
             std::lock_guard<std::mutex> lock(m_mtx);
             std::cout << "Client disconnected: " << socket->remote_endpoint() << std::endl;
-
-            auto it = std::find(m_vec_sockets.begin(), m_vec_sockets.end(), socket);
-            if (it != m_vec_sockets.end()) {
-                m_vec_sockets.erase(it);
+            
+            auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [socket](const std::pair<std::string, User*> pair) {
+                return pair.second->getSocketOnServer() == socket;
+                });
+            if (it != m_map_online_users.end()) {
+                User* user = it->second;
+                m_map_online_users.erase(user->getLogin());
             }
             return; 
         }
@@ -125,7 +128,7 @@ void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSock
         else {
             auto it = m_map_online_users.find(line);
             if (it == m_map_online_users.end()) {
-                continue;
+                continue; 
             }
             else {
                 sendResponse(it->second->getSocketOnServer(), m_sender.get_statusStr(login, status));
@@ -154,6 +157,9 @@ void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::strin
     else if (typeStr == "UPDATE_MY_INFO") {
         updateUserInfo(socket, remainingStr);
     }
+    else if (typeStr == "LOAD_FRIEND_INFO") {
+        returnUserInfo(socket, remainingStr);
+    }
 }
 
 void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
@@ -166,22 +172,30 @@ void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::strin
     std::getline(iss, type);
 
     auto it = m_map_online_users.find(friendLogin);
+
     if (it == m_map_online_users.end()) {
-        m_db.collect(friendLogin, packet);
         if (type == "MESSAGE") {
+            m_db.collect(friendLogin, "MESSAGE\n" + iss.str());
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
         else if (type == "MESSAGE_READ_CONFIRMATION") {
+            m_db.collect(friendLogin, "MESSAGE_READ_CONFIRMATION\n" + iss.str());
             sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
     }
     else {
-        User* user = m_map_online_users[friendLogin];
-        sendResponse(user->getSocketOnServer(), packet);
+        User* user = it->second;
+
         if (type == "MESSAGE") {
+            sendResponse(user->getSocketOnServer(), "MESSAGE\n" + iss.str());
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
-        else if (type == "MESSAGE_READ_CONFIRMATION") {
+        else if (type == "FIRST_MESSAGE") {
+            sendResponse(user->getSocketOnServer(), "FIRST_MESSAGE\n" + iss.str());
+            sendResponse(socket, m_sender.get_messageSuccessStr());
+        }
+        else if (type == "MESSAGES_READ_CONFIRMATION") {
+            sendResponse(user->getSocketOnServer(), "MESSAGES_READ_CONFIRMATION\n" + iss.str());
             sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
     }
@@ -195,6 +209,29 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
+}
+
+void Server::returnUserInfo(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
+    std::istringstream iss(packet);
+    std::string login;
+    std::getline(iss, login);
+
+    User* user = m_db.getUser(login, socket);
+    if (user == nullptr) {
+        std::string response = m_sender.get_userInfoFailStr();
+        sendResponse(socket, response);
+    }
+    else {
+        std::string response;
+        auto it = m_map_online_users.find(user->getLogin());
+        if (it == m_map_online_users.end()) {
+            response = m_sender.get_userInfoSuccessStr(user);
+        }
+        else {
+            response = m_sender.get_userInfoSuccessStr(it->second);
+        }
+        sendResponse(socket, response);
+    }
 }
 
 void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
@@ -218,10 +255,10 @@ void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, 
 
             std::vector<std::string> statusesVec = m_db.getUsersStatusesVec(user->getUserFriendsVec(), m_map_online_users);
             std::string response = m_sender.get_authorizationSuccessStr(user->getUserFriendsVec(), statusesVec);
-            sendResponse(acceptSocket, response);
+            sendResponse(user->getSocketOnServer(), response);
 
             for (auto pack : m_db.getCollected(login)) {
-                sendResponse(acceptSocket, pack);
+                sendResponse(user->getSocketOnServer(), pack);
             }
         }
     }
@@ -244,12 +281,14 @@ void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, s
     std::getline(iss, password);
 
     if (m_db.getUser(login) == nullptr) {
-        User* user = new User(login, m_db.hashPassword(password), name, false, Photo(), acceptSocket);
+        std::string passwordHash = hash::hashPassword(password);
+        User* user = new User(login, passwordHash, name, false, Photo(), acceptSocket);
+        user->setLastSeenToOnline();
         m_map_online_users[login] = user;
 
         std::string response = m_sender.get_registrationSuccessStr();
         sendResponse(acceptSocket, response);
-        m_db.addUser(login, name, password);
+        m_db.addUser(login, name, user->getLastSeen(), passwordHash);
     }
     else {
         std::string response = m_sender.get_registrationFailStr();
@@ -266,22 +305,32 @@ void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std
     std::string friendLogin;
     std::getline(iss, friendLogin);
 
-    if (myLogin == friendLogin) {
-        std::string response = m_sender.get_chatCreateFailStr();
-        sendResponse(acceptSocket, response);
-    }
+    std::string response;
 
+    if (myLogin == friendLogin) {
+        response = m_sender.get_chatCreateFailStr();
+    }
     else {
         User* user = m_db.getUser(friendLogin);
         if (user == nullptr) {
-            std::string response = m_sender.get_chatCreateFailStr();
-            sendResponse(acceptSocket, response);
+            response = m_sender.get_chatCreateFailStr();
         }
         else {
-            std::string response = m_sender.get_chatCreateSuccessStr(user);
-            sendResponse(acceptSocket, response);
+            response = m_sender.get_chatCreateSuccessStr(user);
+
+            auto it = m_map_online_users.find(friendLogin);
+            if (it == m_map_online_users.end()) {
+                std::cerr << "User " << friendLogin << " not found in online users." << std::endl;
+            }
+            else
+            {
+                sendResponse(it->second->getSocketOnServer(), m_sender.get_loginToSendStatusStr(myLogin));
+                
+            }
         }
     }
+
+    sendResponse(acceptSocket, response);
 }
 
 void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {

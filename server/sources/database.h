@@ -42,28 +42,18 @@ public:
 	Database() = default;
 	void init();
 	User* getUser(const std::string& login, std::shared_ptr<asio::ip::tcp::socket> acceptSocket = nullptr);
-	void addUser(const std::string& login, const std::string& name, const std::string& passwordHash);
+	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
 	void collect(const std::string& login, const std::string& packet);
 	void updateUser(const std::string& login, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo = Photo());
 	std::vector<std::string> getCollected(const std::string& login);
 	bool checkPassword(const std::string& login, const std::string& password);
 	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::unordered_map<std::string, User*>& mapOnlineUsers);
 
-	std::string hashPassword(const std::string& password);
-
 private:
-	bool verifyPassword(const std::string& password, const std::string& storedHash);
-
 	std::string friendsToString(const std::vector<std::string>& friends);
 	std::vector<std::string> stringToFriends(const std::string& friendsString);
 
-	std::string extractHash(const std::string& storedHash);
-	std::string extractSalt(const std::string& storedHash);
-	std::string bcryptHash(const std::string& password, const std::string& salt);
-	std::string generateSalt();
-
 	std::string getCurrentDateTime();
-	std::string byteArrayToHexString(const BYTE* data, size_t dataLength);
 
 	sqlite3_open_t sqlite3_open;
 	sqlite3_exec_t sqlite3_exec;

@@ -1,4 +1,5 @@
 #include"database.h" 
+#include"hasher.h"
 #include"user.h"  
 
 
@@ -80,7 +81,7 @@ void Database::init() {
     }
 }
 
-void Database::addUser(const std::string& login, const std::string& name, const std::string& passwordHash) {
+void Database::addUser(const std::string& login, const std::string& name, const std::string& lastSeen, const std::string& passwordHash) {
     const char* sql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE, FRIENDS_LOGINS) "
         "VALUES (?, ?, ?, ?, 0, '', 0, '');";
 
@@ -97,7 +98,7 @@ void Database::addUser(const std::string& login, const std::string& name, const 
     sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, passwordHash.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, time.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, lastSeen.c_str(), -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
@@ -145,9 +146,11 @@ User* Database::getUser(const std::string& login, std::shared_ptr<asio::ip::tcp:
         User* user = nullptr;
         if (isHasPhoto) {
             user = new User(login, passwordHash, name, isHasPhoto, photo, acceptSocket);
+            user->setLastSeen(lastSeen);
         }
         else {
             user = new User(login, passwordHash, name, isHasPhoto, Photo(), acceptSocket);
+            user->setLastSeen(lastSeen);
         }
 
         sqlite3_finalize(stmt);
@@ -189,22 +192,9 @@ bool Database::checkPassword(const std::string& login, const std::string& passwo
         return false;
     }
 
-    char* zErrMsg = 0;
+    char* zErrMsg = nullptr;
     int rc;
-    std::string sql;
-
-    std::string escapedLogin;
-    for (char c : login) {
-        if (c == '\'') {
-            escapedLogin += "''";
-        }
-        else {
-            escapedLogin += c;
-        }
-    }
-
-    sql = "SELECT PASSWORD FROM USER WHERE LOGIN = '" + escapedLogin + "';";
-
+    std::string sql = "SELECT PASSWORD_HASH FROM USER WHERE LOGIN = ?;";
     std::string storedHashedPassword;
 
     auto passwordCallback = [](void* data, int argc, char** argv, char** azColName) -> int {
@@ -214,19 +204,35 @@ bool Database::checkPassword(const std::string& login, const std::string& passwo
         return 0;
         };
 
-    rc = sqlite3_exec(m_db, sql.c_str(), passwordCallback, &storedHashedPassword, &zErrMsg);
-    if (rc != 0) {
-        std::cerr << "SQL error: " << zErrMsg << std::endl;
-        FreeLibrary(m_sqlite3_dll);
-        sqlite3_free((void*)zErrMsg);
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql.c_str(), -1, (void**)&stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
         return false;
     }
+
+    sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        const char* passwordText = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (passwordText) {
+            storedHashedPassword = passwordText;
+        }
+    }
+    else if (rc != SQLITE_DONE) {
+        std::cerr << "SQL error: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    sqlite3_finalize(stmt);
 
     if (storedHashedPassword.empty()) {
         return false;
     }
 
-    return verifyPassword(password, storedHashedPassword);
+    return hash::verifyPassword(password, storedHashedPassword);
 }
 
 void Database::collect(const std::string& login, const std::string& packet) {
@@ -301,7 +307,7 @@ void Database::updateUser(const std::string& login, const std::string& name, con
 
     // Привязка параметров
     sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, hashPassword(password).c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, hash::hashPassword(password).c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 3, isHasPhoto ? 1 : 0); // Преобразуем bool в int
     sqlite3_bind_text(stmt, 4, isHasPhoto ? photo.getPhotoPath().c_str() : "", -1, SQLITE_STATIC); // Путь к фото
     sqlite3_bind_int(stmt, 5, isHasPhoto ? photo.getSize() : 0); // Размер фото
@@ -320,119 +326,6 @@ void Database::updateUser(const std::string& login, const std::string& name, con
 }
 
 
-// Convert a byte array to a hex string
-std::string Database::byteArrayToHexString(const BYTE* data, size_t dataLength) {
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
-    for (size_t i = 0; i < dataLength; ++i) {
-        ss << std::setw(2) << static_cast<int>(data[i]);
-    }
-    return ss.str();
-}
-
-// New generateSalt function (generates 16 bytes = 32 hex characters)
-std::string Database::generateSalt() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distribution(0, 255);
-
-    BYTE saltBytes[16]; // 16 bytes = 128 bits
-    for (int i = 0; i < 16; ++i) {
-        saltBytes[i] = static_cast<BYTE>(distribution(gen));
-    }
-
-    return byteArrayToHexString(saltBytes, 16); // Convert byte array to hex string
-}
-
-// Function to extract the salt from the stored hash (assuming salt is stored as the first 32 characters = 16 bytes hex)
-std::string Database::extractSalt(const std::string& storedHash) {
-    if (storedHash.length() < 33) {
-        throw std::runtime_error("Invalid stored hash format (salt missing)");
-    }
-    return storedHash.substr(0, 32); // Salt is the first 32 characters
-}
-
-// Function to extract the hash from the stored hash (assuming salt is stored as the first 32 characters, and then ':' and then hash)
-std::string Database::extractHash(const std::string& storedHash) {
-
-    size_t delimiterPos = storedHash.find(':');
-    if (delimiterPos == std::string::npos) {
-        throw std::runtime_error("Invalid stored hash format (delimiter missing)");
-    }
-    if (delimiterPos + 1 >= storedHash.length()) {
-        throw std::runtime_error("Invalid stored hash format (hash missing)");
-    }
-    return storedHash.substr(delimiterPos + 1); // Hash is after the salt and ':'
-}
-
-
-// Rewritten bcryptHash function (still doesn't truly use bcrypt but uses SHA256 with a salt)
-std::string Database::bcryptHash(const std::string& password, const std::string& salt) {
-    // **WARNING: This is NOT true bcrypt!  It's SHA256 with a salt.**
-    // Proper bcrypt implementation requires using a dedicated bcrypt library.
-
-    BCRYPT_ALG_HANDLE hAlg = nullptr;
-    BCRYPT_HASH_HANDLE hHash = nullptr;
-    DWORD hashLength = 0;
-    BYTE* hash = nullptr;
-
-    std::string saltedPassword = salt + password; // Salt before the password
-
-    // Open the algorithm provider for SHA256
-    NTSTATUS status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0);
-
-
-    // Create the hash object
-    status = BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0); // No salt to BCryptCreateHash
-
-
-    // Hash the data (salted password)
-    status = BCryptHashData(hHash, (PBYTE)saltedPassword.c_str(), saltedPassword.length(), 0);
-
-
-    // Get the hash length
-    status = BCryptGetProperty(hAlg, BCRYPT_HASH_LENGTH, (PBYTE)&hashLength, sizeof(DWORD), nullptr, 0);
-
-
-    // Allocate memory for the hash
-    hash = new BYTE[hashLength];
-
-    // Finish the hash
-    status = BCryptFinishHash(hHash, hash, hashLength, 0);
-
-
-    // Convert hash to hex string
-    std::string hashedPassword = byteArrayToHexString(hash, hashLength);
-
-    // Clean up
-    delete[] hash;
-    BCryptDestroyHash(hHash);
-    BCryptCloseAlgorithmProvider(hAlg, 0);
-
-    return hashedPassword;
-}
-
-// New functions:
-std::string Database::hashPassword(const std::string& password) {
-    std::string salt = generateSalt();
-    std::string hashedPassword = bcryptHash(password, salt); // Still SHA256!
-    return salt + ":" + hashedPassword; // Store salt:hash
-}
-
-bool Database::verifyPassword(const std::string& password, const std::string& storedHash) {
-
-    try {
-        std::string salt = extractSalt(storedHash);
-        std::string storedHashedPassword = extractHash(storedHash);
-        std::string hashedPassword = bcryptHash(password, salt);
-
-        return hashedPassword == storedHashedPassword;
-    }
-    catch (const std::runtime_error& e) {
-        std::cerr << "Error verifying password: " << e.what() << std::endl;
-        return false; // Or handle the error differently
-    }
-}
 
 
 std::string Database::friendsToString(const std::vector<std::string>& friends) {

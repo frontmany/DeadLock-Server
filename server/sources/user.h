@@ -17,7 +17,7 @@
 
 class User {
 public:
-    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo = Photo(), std::shared_ptr<asio::ip::tcp::socket> sock = nullptr)
+    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, std::shared_ptr<asio::ip::tcp::socket> sock)
         : m_login(login), m_password_hash(passwordHash),
         m_name(name), m_is_has_photo(m_is_has_photo), m_photo(photo), m_on_server_sock(sock) {}
 
@@ -45,6 +45,7 @@ public:
     std::vector<std::string>& getUserFriendsStatusesVec() { return m_vec_user_friends_logins; }
 
     void setLastSeenToNow();
+    void setLastSeenToOnline();
 
 private:
     bool                                    m_is_has_photo;
