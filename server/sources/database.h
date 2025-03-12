@@ -6,7 +6,7 @@
 #include <sstream>
 #include <sstream>
 #include <thread>
-#include <unordered_map>
+#include <map>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -41,19 +41,19 @@ class Database {
 public:
 	Database() = default;
 	void init();
-	User* getUser(const std::string& login, std::shared_ptr<asio::ip::tcp::socket> acceptSocket = nullptr);
+	User* getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket = nullptr);
 	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
 	void collect(const std::string& login, const std::string& packet);
 	void updateUser(const std::string& login, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo = Photo());
+	void updateUserStatus(const std::string& login, std::string lastSeen);
 	std::vector<std::string> getCollected(const std::string& login);
 	bool checkPassword(const std::string& login, const std::string& password);
-	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::unordered_map<std::string, User*>& mapOnlineUsers);
+	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
+	std::string getCurrentDateTime();
 
 private:
 	std::string friendsToString(const std::vector<std::string>& friends);
 	std::vector<std::string> stringToFriends(const std::string& friendsString);
-
-	std::string getCurrentDateTime();
 
 	sqlite3_open_t sqlite3_open;
 	sqlite3_exec_t sqlite3_exec;

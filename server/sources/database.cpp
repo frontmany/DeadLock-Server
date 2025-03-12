@@ -111,7 +111,7 @@ void Database::addUser(const std::string& login, const std::string& name, const 
     sqlite3_finalize(stmt);
 }
 
-User* Database::getUser(const std::string& login, std::shared_ptr<asio::ip::tcp::socket> acceptSocket) {
+User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket) {
     sqlite3_stmt* stmt = nullptr;
 
     std::string sql = "SELECT LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE, FRIENDS_LOGINS FROM USER WHERE LOGIN = ?";
@@ -164,7 +164,7 @@ User* Database::getUser(const std::string& login, std::shared_ptr<asio::ip::tcp:
     }
 }
 
-std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::unordered_map<std::string, User*>& mapOnlineUsers) {
+std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
     std::vector<std::string> statuses;
     for (const auto& login : loginsVec) {
 
@@ -325,7 +325,32 @@ void Database::updateUser(const std::string& login, const std::string& name, con
     sqlite3_finalize(stmt);
 }
 
+void Database::updateUserStatus(const std::string& login, std::string lastSeen) {
+    const char* sql = "UPDATE USER SET LAST_SEEN = ? WHERE LOGIN = ?;";
 
+    sqlite3_stmt* stmt = nullptr;
+    int rc;
+
+    // Подготовка SQL-запроса
+    rc = sqlite3_prepare_v2(m_db, sql, -1, (void**)&stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, lastSeen.c_str(), -1, SQLITE_STATIC);
+
+    // Выполнение запроса
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+    else {
+        std::cout << "User  updated successfully" << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+}
 
 
 std::string Database::friendsToString(const std::vector<std::string>& friends) {

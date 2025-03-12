@@ -4,6 +4,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <map>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -21,32 +22,26 @@ public:
 
 private:
     void acceptConnections();
-    void onAccept(std::shared_ptr<asio::ip::tcp::socket> socket);
-    void sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::string response);
-    void startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket);
+    void onAccept(asio::ip::tcp::socket* socket);
+    void onDisconnect(asio::ip::tcp::socket* socket);
+
+    void sendResponse(asio::ip::tcp::socket* socket, std::string response);
+    void startAsyncRead(asio::ip::tcp::socket* socket);
     void handleRead(const asio::error_code& ec, std::size_t bytes_transferred,
-        std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer);
-    void returnUserInfo(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
+        asio::ip::tcp::socket* socket, std::shared_ptr<asio::streambuf> buffer);
+    void returnUserInfo(asio::ip::tcp::socket* socket, std::string packet);
 
-    void authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
-    void registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket,std::string packet);
-    void createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
-    void updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
-    void broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet);
+    void authorizeUser(asio::ip::tcp::socket* socket, std::string packet);
+    void registerUser(asio::ip::tcp::socket* socket,std::string packet);
+    void createChat(asio::ip::tcp::socket* socket, std::string packet);
+    void updateUserInfo(asio::ip::tcp::socket* socket, std::string packet);
+    void broadcastUserInfo(asio::ip::tcp::socket* socket, std::string packet);
 
-    void handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
-    void handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
-    void handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet);
-
+    void handleBroadcast(asio::ip::tcp::socket* socket, std::string packet);
+    void handleGet(asio::ip::tcp::socket* socket, std::string packet);
+    void handleRpl(asio::ip::tcp::socket* socket, std::string packet);
 
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
-
-    /*
-    void redirectMessage(rpl::Message* message);
-    void sendStatusToFriends(asio::ip::tcp::socket& socket, bool status);
-    void updateUserInfo(asio::ip::tcp::socket& socket, rcv::UpdateUserInfoPacket& packet);
-    void onDisconnect(asio::ip::tcp::socket& socket);
-    */
 
 private:
     SendStringsGenerator                m_sender;
@@ -58,7 +53,6 @@ private:
     std::mutex                          m_mtx;
     asio::thread_pool                   m_thread_pool;
 
-    std::unordered_map<std::string, User*>  m_map_online_users;
-    std::vector<std::thread>                m_vec_threads;
-
+    std::map<std::string, User*>  m_map_online_users;
+    std::vector<std::thread>      m_vec_threads;
 };

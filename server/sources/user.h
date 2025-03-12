@@ -17,12 +17,19 @@
 
 class User {
 public:
-    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, std::shared_ptr<asio::ip::tcp::socket> sock)
+    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, asio::ip::tcp::socket* sock)
         : m_login(login), m_password_hash(passwordHash),
         m_name(name), m_is_has_photo(m_is_has_photo), m_photo(photo), m_on_server_sock(sock) {}
 
-    std::shared_ptr<asio::ip::tcp::socket> getSocketOnServer() const { return m_on_server_sock; }
-    void setSocketOnServer(std::shared_ptr<asio::ip::tcp::socket> sock) { m_on_server_sock = sock; }
+    ~User() { 
+        resetSocket();
+        m_on_server_sock->close();
+        delete m_on_server_sock; 
+    
+    }
+
+    asio::ip::tcp::socket* getSocketOnServer() const { return m_on_server_sock; }
+    void setSocketOnServer(asio::ip::tcp::socket* sock) { m_on_server_sock = sock; }
 
     const std::string& getLogin() const { return m_login; }
     void setLogin(const std::string& login) { m_login = login; }
@@ -44,6 +51,16 @@ public:
     std::vector<std::string>& getUserFriendsVec() { return m_vec_user_friends_logins; }
     std::vector<std::string>& getUserFriendsStatusesVec() { return m_vec_user_friends_logins; }
 
+    void resetSocket() {
+        if ((*m_on_server_sock).is_open()) {
+            asio::error_code ec;
+            (*m_on_server_sock).close(ec);
+            if (ec) {
+                std::cerr << "Ошибка закрытия сокета: " << ec.message() << std::endl;
+            }
+        }
+    }
+
     void setLastSeenToNow();
     void setLastSeenToOnline();
 
@@ -56,6 +73,6 @@ private:
     Photo			                        m_photo;
     std::vector<std::string>                m_vec_user_friends_logins;
 
-    std::shared_ptr<asio::ip::tcp::socket> m_on_server_sock;
+    asio::ip::tcp::socket*                  m_on_server_sock;
 };
 

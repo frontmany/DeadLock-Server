@@ -29,7 +29,7 @@ void Server::run() {
 }
 
 void Server::acceptConnections() {
-    auto socket = std::make_shared<asio::ip::tcp::socket>(m_io_context);
+    auto socket = new asio::ip::tcp::socket(m_io_context);
     m_acceptor.async_accept(*socket, [this, socket](std::error_code ec) {
         if (!ec) {
             onAccept(socket);
@@ -38,7 +38,7 @@ void Server::acceptConnections() {
         });
 }
 
-void Server::startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket) {
+void Server::startAsyncRead(asio::ip::tcp::socket* socket) {
     auto buffer = std::make_shared<asio::streambuf>();
     asio::async_read_until(*socket, *buffer, "_+14?bb5HmR;%@`7[S^?!#sL8",
         [this, socket, buffer](const asio::error_code& ec, std::size_t bytes_transferred) {
@@ -46,34 +46,49 @@ void Server::startAsyncRead(std::shared_ptr<asio::ip::tcp::socket> socket) {
         });
 }
 
-void Server::onAccept(std::shared_ptr<asio::ip::tcp::socket> socket) {
+void Server::onAccept(asio::ip::tcp::socket* socket) {
     {
         std::lock_guard<std::mutex> lock(m_mtx);
-        std::cout << "client connected on socket:" <<  socket << '\n';
+        std::cout << "client connected on socket:" <<  socket->remote_endpoint() << '\n';
     }
     startAsyncRead(socket);
 }
 
+void Server::onDisconnect(asio::ip::tcp::socket* socket) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
+    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [socket](const auto& pair) {
+        return pair.second->getSocketOnServer() == socket;
+        });
+
+    if (it != m_map_online_users.end()) {
+        std::cout << "client disconnected on socket:" << socket->remote_endpoint() << '\n';
+
+        User* user = it->second;
+        m_db.updateUserStatus(user->getLogin(), m_db.getCurrentDateTime());
+        m_map_online_users.erase(it);
+        delete user;
+    }
+    else {
+        std::cout << "client disconnected on socket:" << socket->remote_endpoint() << '\n';
+        socket->close();
+        delete socket;
+    }
+}
+
+
 void Server::handleRead(const asio::error_code& ec, std::size_t bytes_transferred,
-    std::shared_ptr<asio::ip::tcp::socket> socket, std::shared_ptr<asio::streambuf> buffer) {
+    asio::ip::tcp::socket* socket, std::shared_ptr<asio::streambuf> buffer) {
+
+    if (ec == asio::error::eof || ec == asio::error::connection_reset) {
+        onDisconnect(socket);
+        return;
+    }
+
     if (ec) {
-        if (ec == asio::error::eof || ec == asio::error::connection_reset) {
-            std::lock_guard<std::mutex> lock(m_mtx);
-            std::cout << "Client disconnected: " << socket->remote_endpoint() << std::endl;
-            
-            auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [socket](const std::pair<std::string, User*> pair) {
-                return pair.second->getSocketOnServer() == socket;
-                });
-            if (it != m_map_online_users.end()) {
-                User* user = it->second;
-                m_map_online_users.erase(user->getLogin());
-            }
-            return; 
-        }
-        else {
-            std::cerr << "Read error: " << ec.message() << std::endl;
-            return; 
-        }
+        std::cerr << "Read error: " << ec.message() << std::endl;
+        return; 
+        
     }
 
     std::istream is(buffer.get());
@@ -96,7 +111,7 @@ void Server::handleRead(const asio::error_code& ec, std::size_t bytes_transferre
     startAsyncRead(socket);
 }
 
-void Server::handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
+void Server::handleBroadcast(asio::ip::tcp::socket* socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string typeStr;
@@ -108,7 +123,7 @@ void Server::handleBroadcast(std::shared_ptr<asio::ip::tcp::socket> socket, std:
     }
 }
 
-void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
+void Server::broadcastUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string status;
@@ -137,12 +152,11 @@ void Server::broadcastUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSock
     }
 }
 
-void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
+void Server::handleGet(asio::ip::tcp::socket* socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string typeStr;
     std::getline(iss, typeStr);
-
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (typeStr == "AUTHORIZATION") {
@@ -162,7 +176,7 @@ void Server::handleGet(std::shared_ptr<asio::ip::tcp::socket> socket, std::strin
     }
 }
 
-void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
+void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
     std::istringstream iss(packet);
 
     std::string friendLogin;
@@ -171,7 +185,7 @@ void Server::handleRpl(std::shared_ptr<asio::ip::tcp::socket> socket, std::strin
     std::string type;
     std::getline(iss, type);
 
-    auto it = m_map_online_users.find(friendLogin);
+    auto it = m_map_online_users.find(friendLogin); 
 
     if (it == m_map_online_users.end()) {
         if (type == "MESSAGE") {
@@ -211,7 +225,9 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     return remainingStr;
 }
 
-void Server::returnUserInfo(std::shared_ptr<asio::ip::tcp::socket> socket, std::string packet) {
+void Server::returnUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
     std::istringstream iss(packet);
     std::string login;
     std::getline(iss, login);
@@ -234,7 +250,9 @@ void Server::returnUserInfo(std::shared_ptr<asio::ip::tcp::socket> socket, std::
     }
 }
 
-void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
+void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
     std::istringstream iss(packet);
 
     std::string login;
@@ -243,14 +261,22 @@ void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, 
     std::string password;
     std::getline(iss, password);
 
+    if (m_map_online_users.find(login) != m_map_online_users.end()) {
+        std::string response = m_sender.get_authorizationFailStr();
+        sendResponse(socket, response);
+        return;
+    }
+
     bool isAuthorized = m_db.checkPassword(login, password);
     if (isAuthorized) {
-        User* user = m_db.getUser(login, acceptSocket);
+        User* user = m_db.getUser(login, socket);
+
         if (user == nullptr) {
             std::cout << "can't get user info";
         }
+
         else {
-            user->setLastSeen("online");
+            user->setLastSeenToOnline();
             m_map_online_users[login] = user;
 
             std::vector<std::string> statusesVec = m_db.getUsersStatusesVec(user->getUserFriendsVec(), m_map_online_users);
@@ -264,11 +290,13 @@ void Server::authorizeUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, 
     }
     else {
         std::string response = m_sender.get_authorizationFailStr();
-        sendResponse(acceptSocket, response);
+        sendResponse(socket, response);
     }
 }
 
-void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
+void Server::registerUser(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
     std::istringstream iss(packet);
 
     std::string login;
@@ -282,21 +310,23 @@ void Server::registerUser(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, s
 
     if (m_db.getUser(login) == nullptr) {
         std::string passwordHash = hash::hashPassword(password);
-        User* user = new User(login, passwordHash, name, false, Photo(), acceptSocket);
+        User* user = new User(login, passwordHash, name, false, Photo(), socket);
         user->setLastSeenToOnline();
         m_map_online_users[login] = user;
 
         std::string response = m_sender.get_registrationSuccessStr();
-        sendResponse(acceptSocket, response);
+        sendResponse(socket, response);
         m_db.addUser(login, name, user->getLastSeen(), passwordHash);
     }
     else {
         std::string response = m_sender.get_registrationFailStr();
-        sendResponse(acceptSocket, response);
+        sendResponse(socket, response);
     }
 }
 
-void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
+void Server::createChat(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
     std::istringstream iss(packet);
 
     std::string myLogin;
@@ -330,10 +360,12 @@ void Server::createChat(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std
         }
     }
 
-    sendResponse(acceptSocket, response);
+    sendResponse(socket, response);
 }
 
-void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket, std::string packet) {
+void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
     std::istringstream iss(packet);
 
     std::string myLogin;
@@ -363,18 +395,22 @@ void Server::updateUserInfo(std::shared_ptr<asio::ip::tcp::socket> acceptSocket,
         m_db.updateUser(myLogin, name, password, isHasPhoto);
     }
 
-    sendResponse(acceptSocket, m_sender.get_userInfoUpdatedSuccessStr());
+    sendResponse(socket, m_sender.get_userInfoUpdatedSuccessStr());
 }
 
-void Server::sendResponse(std::shared_ptr<asio::ip::tcp::socket> socket, std::string response) {
+void Server::sendResponse(asio::ip::tcp::socket* socket, std::string response) {
     asio::async_write(*socket, asio::buffer(response.data(), response.size()),
-        [socket](const asio::error_code& error, std::size_t bytes_transferred) {
+        [socket, this](const asio::error_code& error, std::size_t bytes_transferred) {
             if (error) {
                 std::cerr << "Send error: " << error.message() << std::endl;
                 // Handle the error (e.g., close the socket)
             }
             else {
-                std::cout << "Sent " << bytes_transferred << " bytes to " << socket->remote_endpoint() << std::endl;
+                {
+                    std::lock_guard<std::mutex> lock(m_mtx);
+                    std::cout << "Sent " << bytes_transferred << " bytes to " << socket->remote_endpoint() << std::endl;
+
+                }
             }
         });
 }
