@@ -55,4 +55,7 @@ private:
 
     std::map<std::string, User*>  m_map_online_users;
     std::vector<std::thread>      m_vec_threads;
+
+    // from who to who send status (tmp)
+    std::vector<std::pair<std::string, std::string>>      m_vec_login_to_login;
 };

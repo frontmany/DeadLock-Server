@@ -65,6 +65,17 @@ void Server::onDisconnect(asio::ip::tcp::socket* socket) {
         std::cout << "client disconnected on socket:" << socket->remote_endpoint() << '\n';
 
         User* user = it->second;
+
+        for (auto pair : m_vec_login_to_login) {
+            if (pair.first == user->getLogin()) {
+                auto it2 = m_map_online_users.find(pair.second);
+                if (it2 != m_map_online_users.end()) {
+                    User* userTo = it2->second;
+                    sendResponse(userTo->getSocketOnServer(), m_sender.get_statusStr(user->getLogin(), m_db.getCurrentDateTime()));
+                }
+            }
+        }
+
         m_db.updateUserStatus(user->getLogin(), m_db.getCurrentDateTime());
         m_map_online_users.erase(it);
         delete user;
@@ -196,6 +207,10 @@ void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
             m_db.collect(friendLogin, "MESSAGE_READ_CONFIRMATION\n" + iss.str());
             sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
+        else if (type == "FIRST_MESSAGE") {
+            m_db.collect(friendLogin, "FIRST_MESSAGE\n" + iss.str());
+            sendResponse(socket, m_sender.get_messageSuccessStr());
+        }
     }
     else {
         User* user = it->second;
@@ -205,6 +220,18 @@ void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
         else if (type == "FIRST_MESSAGE") {
+
+            std::string myLogin;
+            std::getline(iss, myLogin);
+
+            auto itPair = std::find_if(m_vec_login_to_login.begin(), m_vec_login_to_login.end(), [&myLogin, &friendLogin](std::pair<std::string, std::string> pair) {
+                return pair.first == myLogin && pair.second == friendLogin;
+                });
+
+            if (itPair != m_vec_login_to_login.end()) {
+                m_vec_login_to_login.erase(itPair);
+            }
+
             sendResponse(user->getSocketOnServer(), "FIRST_MESSAGE\n" + iss.str());
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
@@ -286,6 +313,16 @@ void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
             for (auto pack : m_db.getCollected(login)) {
                 sendResponse(user->getSocketOnServer(), pack);
             }
+
+            for (auto pair : m_vec_login_to_login) {
+                if (pair.first == login) {
+                    auto it = m_map_online_users.find(pair.second);
+                    if (it != m_map_online_users.end()) {
+                        User* userTo = it->second;
+                        sendResponse(userTo->getSocketOnServer(), m_sender.get_statusStr(user->getLogin(), "online"));
+                    }
+                }
+            }
         }
     }
     else {
@@ -350,6 +387,7 @@ void Server::createChat(asio::ip::tcp::socket* socket, std::string packet) {
 
             auto it = m_map_online_users.find(friendLogin);
             if (it == m_map_online_users.end()) {
+                m_vec_login_to_login.push_back(std::make_pair(friendLogin, myLogin));
                 std::cerr << "User " << friendLogin << " not found in online users." << std::endl;
             }
             else

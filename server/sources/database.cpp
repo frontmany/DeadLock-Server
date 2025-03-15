@@ -339,6 +339,7 @@ void Database::updateUserStatus(const std::string& login, std::string lastSeen) 
     }
 
     sqlite3_bind_text(stmt, 1, lastSeen.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, login.c_str(), -1, SQLITE_STATIC);
 
     // Выполнение запроса
     rc = sqlite3_step(stmt);
