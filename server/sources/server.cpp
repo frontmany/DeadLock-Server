@@ -185,6 +185,9 @@ void Server::handleGet(asio::ip::tcp::socket* socket, std::string packet) {
     else if (typeStr == "LOAD_FRIEND_INFO") {
         returnUserInfo(socket, remainingStr);
     }
+    else if (typeStr == "LOAD_ALL_FRIENDS_STATUSES") {
+        findFriendsStatuses(socket, remainingStr);
+    }
 }
 
 void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
@@ -195,6 +198,9 @@ void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
 
     std::string type;
     std::getline(iss, type);
+
+    std::string myLogin;
+    std::getline(iss, myLogin);
 
     auto it = m_map_online_users.find(friendLogin); 
 
@@ -220,10 +226,6 @@ void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
         else if (type == "FIRST_MESSAGE") {
-
-            std::string myLogin;
-            std::getline(iss, myLogin);
-
             auto itPair = std::find_if(m_vec_login_to_login.begin(), m_vec_login_to_login.end(), [&myLogin, &friendLogin](std::pair<std::string, std::string> pair) {
                 return pair.first == myLogin && pair.second == friendLogin;
                 });
@@ -277,6 +279,36 @@ void Server::returnUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
     }
 }
 
+void Server::findFriendsStatuses(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+    std::istringstream iss(packet);
+    std::string vecBegin;
+    std::getline(iss, vecBegin);
+
+    std::vector<std::string> logins;
+    std::vector<std::string> statuses;
+
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "VEC_END") {
+            break;
+        }
+        else {
+            User* user = m_db.getUser(line, socket);
+            auto it = m_map_online_users.find(user->getLogin());
+
+            logins.push_back(user->getLogin());
+            if (it == m_map_online_users.end()) {
+                statuses.push_back(user->getLastSeen());
+            }
+            else {
+                statuses.push_back("online");
+            }
+        }
+    }
+    sendResponse(socket, m_sender.get_friendsStatusesSuccessStr(logins, statuses));
+}
+
 void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
     std::lock_guard<std::mutex> lock(m_mtx);
 
@@ -306,8 +338,7 @@ void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
             user->setLastSeenToOnline();
             m_map_online_users[login] = user;
 
-            std::vector<std::string> statusesVec = m_db.getUsersStatusesVec(user->getUserFriendsVec(), m_map_online_users);
-            std::string response = m_sender.get_authorizationSuccessStr(user->getUserFriendsVec(), statusesVec);
+            std::string response = m_sender.get_authorizationSuccessStr();
             sendResponse(user->getSocketOnServer(), response);
 
             for (auto pack : m_db.getCollected(login)) {

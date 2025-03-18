@@ -32,6 +32,7 @@ private:
     void returnUserInfo(asio::ip::tcp::socket* socket, std::string packet);
 
     void authorizeUser(asio::ip::tcp::socket* socket, std::string packet);
+    void findFriendsStatuses(asio::ip::tcp::socket* socket, std::string packet);
     void registerUser(asio::ip::tcp::socket* socket,std::string packet);
     void createChat(asio::ip::tcp::socket* socket, std::string packet);
     void updateUserInfo(asio::ip::tcp::socket* socket, std::string packet);

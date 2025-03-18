@@ -50,8 +50,7 @@ void Database::init() {
       "LAST_SEEN      TEXT              NOT NULL,"
       "IS_HAS_PHOTO   INTEGER           NOT NULL,"
       "PHOTO_PATH     TEXT              NOT NULL,"
-      "PHOTO_SIZE     INTEGER           NOT NULL,"
-      "FRIENDS_LOGINS TEXT);";
+      "PHOTO_SIZE     INTEGER           NOT NULL);";
 
 
     rc = sqlite3_exec(m_db, sql1, 0, 0, &zErrMsg);
@@ -82,30 +81,30 @@ void Database::init() {
 }
 
 void Database::addUser(const std::string& login, const std::string& name, const std::string& lastSeen, const std::string& passwordHash) {
-    const char* sql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE, FRIENDS_LOGINS) "
-        "VALUES (?, ?, ?, ?, 0, '', 0, '');";
+    //TODO PHOTO LOGIC
+    const char* sql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE) "
+        "VALUES (?, ?, ?, ?, 0, '', 0);";
 
-    sqlite3_stmt* stmt = nullptr;;
+    sqlite3_stmt* stmt = nullptr;
     int rc;
 
-    rc = sqlite3_prepare_v2(m_db, sql, -1, (void**)&stmt, nullptr);
+    rc = sqlite3_prepare_v2(m_db, sql, -1, (void**) & stmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
         return;
     }
 
-    std::string time = getCurrentDateTime().c_str();
-    sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, passwordHash.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, lastSeen.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, passwordHash.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, lastSeen.c_str(), -1, SQLITE_TRANSIENT);
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
     }
     else {
-        std::cout << "User  added successfully" << std::endl;
+        std::cout << "User added successfully" << std::endl;
     }
 
     sqlite3_finalize(stmt);
@@ -114,7 +113,7 @@ void Database::addUser(const std::string& login, const std::string& name, const 
 User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket) {
     sqlite3_stmt* stmt = nullptr;
 
-    std::string sql = "SELECT LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE, FRIENDS_LOGINS FROM USER WHERE LOGIN = ?";
+    std::string sql = "SELECT LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE FROM USER WHERE LOGIN = ?";
 
     int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, (void**)&stmt, nullptr);
     if (rc != SQLITE_OK) {
@@ -139,9 +138,6 @@ User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptS
         std::string photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
         int photoSize = sqlite3_column_int(stmt, 6);
         Photo photo(photoPath, photoSize);
-
-        std::string friendsLoginsStr = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
-        std::vector<std::string> vecUserFriendsLogins = stringToFriends(friendsLoginsStr);
 
         User* user = nullptr;
         if (isHasPhoto) {
@@ -352,7 +348,6 @@ void Database::updateUserStatus(const std::string& login, std::string lastSeen) 
 
     sqlite3_finalize(stmt);
 }
-
 
 std::string Database::friendsToString(const std::vector<std::string>& friends) {
     std::stringstream ss;

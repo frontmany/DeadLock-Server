@@ -10,7 +10,8 @@ enum class Status { NOT_STATED, SEND, NOT_SEND };
 
 class SendStringsGenerator {
 public:
-    std::string get_authorizationSuccessStr(const std::vector <std::string>& friendsLoginsVec, const std::vector <std::string>& friendsStatusesVec);
+    std::string get_authorizationSuccessStr();
+    std::string get_friendsStatusesSuccessStr(const std::vector <std::string>& friendsLoginsVec, const std::vector <std::string>& friendsStatusesVec);
 	std::string get_authorizationFailStr();
     std::string get_registrationSuccessStr();
     std::string get_registrationFailStr();

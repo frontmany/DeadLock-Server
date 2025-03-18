@@ -1,14 +1,21 @@
 #include"sender.h"
 #include"user.h"
 
-std::string SendStringsGenerator::get_authorizationSuccessStr(const std::vector<std::string>& friendsLoginsVec, const std::vector <std::string>& friendsStatusesVec) {
+std::string SendStringsGenerator::get_authorizationSuccessStr() {
+	std::string s;
+	s += "AUTHORIZATION_SUCCESS\n";
+	s += endPacket;
+	return s;
+}
+
+std::string SendStringsGenerator::get_friendsStatusesSuccessStr(const std::vector <std::string>& friendsLoginsVec, const std::vector <std::string>& friendsStatusesVec) {
 	if (friendsLoginsVec.size() != friendsStatusesVec.size()) {
 		std::cout << "error size friendsLoginsVec != friendsStatusesVec";
 		return "";
 	}
 
 	std::string s;
-	s += "AUTHORIZATION_SUCCESS\n";
+	s += "FRIENDS_STATUSES\n";
 	s += vecBegin + '\n';
 	for (int i = 0; i < friendsLoginsVec.size(); i++) {
 		s += friendsLoginsVec[i] + ',' + friendsStatusesVec[i] + '\n';

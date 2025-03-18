@@ -48,9 +48,6 @@ public:
     const std::string& getLastSeen() const { return m_last_seen; }
     void setLastSeen(const std::string& lastSeen) { m_last_seen = lastSeen; }
 
-    std::vector<std::string>& getUserFriendsVec() { return m_vec_user_friends_logins; }
-    std::vector<std::string>& getUserFriendsStatusesVec() { return m_vec_user_friends_logins; }
-
     void resetSocket() {
         if ((*m_on_server_sock).is_open()) {
             asio::error_code ec;
@@ -71,7 +68,6 @@ private:
     std::string			                    m_login;
     std::string			                    m_password_hash;
     Photo			                        m_photo;
-    std::vector<std::string>                m_vec_user_friends_logins;
 
     asio::ip::tcp::socket*                  m_on_server_sock;
 };
