@@ -5,9 +5,11 @@
 #include <thread>
 #include <unordered_map>
 #include <map>
+#include <queue>
 #include <string>
 #include <vector>
 #include <mutex>
+#include <stack>
 #include <asio.hpp>
 
 #include"database.h"
@@ -54,6 +56,7 @@ private:
     std::mutex                          m_mtx;
     asio::thread_pool                   m_thread_pool;
 
+    std::queue<std::string>       m_loginsQueue;
     std::map<std::string, User*>  m_map_online_users;
     std::vector<std::thread>      m_vec_threads;
 

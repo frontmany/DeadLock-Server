@@ -1,5 +1,6 @@
 #include "Server.h"
 #include "hasher.h"
+#include "base64.h"
 #include <iostream>
 #include <algorithm>
 
@@ -40,6 +41,7 @@ void Server::acceptConnections() {
 
 void Server::startAsyncRead(asio::ip::tcp::socket* socket) {
     auto buffer = std::make_shared<asio::streambuf>();
+    buffer->prepare(1024 * 1024 * 20);
     asio::async_read_until(*socket, *buffer, "_+14?bb5HmR;%@`7[S^?!#sL8",
         [this, socket, buffer](const asio::error_code& ec, std::size_t bytes_transferred) {
             handleRead(ec, bytes_transferred, socket, buffer);
@@ -209,8 +211,8 @@ void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
             m_db.collect(friendLogin, "MESSAGE\n" + iss.str());
             sendResponse(socket, m_sender.get_messageSuccessStr());
         }
-        else if (type == "MESSAGE_READ_CONFIRMATION") {
-            m_db.collect(friendLogin, "MESSAGE_READ_CONFIRMATION\n" + iss.str());
+        else if (type == "MESSAGES_READ_CONFIRMATION") {
+            m_db.collect(friendLogin, "MESSAGES_READ_CONFIRMATION\n" + iss.str());
             sendResponse(socket, m_sender.get_messageReadConfirmationSuccessStr());
         }
         else if (type == "FIRST_MESSAGE") {
@@ -307,6 +309,21 @@ void Server::findFriendsStatuses(asio::ip::tcp::socket* socket, std::string pack
         }
     }
     sendResponse(socket, m_sender.get_friendsStatusesSuccessStr(logins, statuses));
+
+    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [socket](const auto& pair) {
+        return pair.second->getSocketOnServer() == socket;
+        });
+
+    if (it != m_map_online_users.end()) {
+        User* user = it->second;
+
+        auto packets = m_db.getCollected(user->getLogin());
+        for (int i = 0; i < packets.size(); i++){
+            sendResponse(user->getSocketOnServer(), packets[i]);
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+        
+    }
 }
 
 void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
@@ -340,10 +357,6 @@ void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
 
             std::string response = m_sender.get_authorizationSuccessStr();
             sendResponse(user->getSocketOnServer(), response);
-
-            for (auto pack : m_db.getCollected(login)) {
-                sendResponse(user->getSocketOnServer(), pack);
-            }
 
             for (auto pair : m_vec_login_to_login) {
                 if (pair.first == login) {
@@ -409,6 +422,8 @@ void Server::createChat(asio::ip::tcp::socket* socket, std::string packet) {
         response = m_sender.get_chatCreateFailStr();
     }
     else {
+        setlocale(LC_ALL, "ru");
+
         User* user = m_db.getUser(friendLogin);
         if (user == nullptr) {
             response = m_sender.get_chatCreateFailStr();
@@ -429,6 +444,7 @@ void Server::createChat(asio::ip::tcp::socket* socket, std::string packet) {
         }
     }
 
+
     sendResponse(socket, response);
 }
 
@@ -446,16 +462,50 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
     std::string password;
     std::getline(iss, password);
 
+    std::string vecBegin;
+    std::getline(iss, vecBegin);
+
+    std::vector<std::string> logins;
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "VEC_END") {
+            break;
+        }
+        else {
+            logins.push_back(line);
+        }
+    }
+
     std::string isHasPhotoStr;
     std::getline(iss, isHasPhotoStr);
     bool isHasPhoto = isHasPhotoStr == "true";
 
+    std::string photoSizeStr;
+    std::getline(iss, photoSizeStr);
+    size_t size = std::stoi(photoSizeStr);
+
+    std::string photoStr;
+    std::getline(iss, photoStr);
+
     Photo photo;
     if (isHasPhoto) {
-        std::string photoStr;
-        std::getline(iss, photoStr);
-        photo = Photo::deserialize(photoStr);
+        photo = Photo::deserialize(base64_decode(photoStr), size, myLogin);
     }
+
+    for (auto login : logins) {
+        auto it = m_map_online_users.find(login);
+        if (it != m_map_online_users.end()) {
+            User* user = it->second;
+            std::string packetU = m_sender.get_userInfoPacket(user->getLogin(), user->getName(), isHasPhotoStr, photoStr);
+            sendResponse(user->getSocketOnServer(), packetU);
+        }
+        else {
+            User* user = m_db.getUser(login);
+            std::string packetU = m_sender.get_userInfoPacket(login, user->getName(), isHasPhotoStr, photoStr);
+            m_db.collect(line, packetU);
+        }
+    }
+
 
     if (isHasPhoto) {
         m_db.updateUser(myLogin, name, password, isHasPhoto, photo);
@@ -468,6 +518,10 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
 }
 
 void Server::sendResponse(asio::ip::tcp::socket* socket, std::string response) {
+
+    bool is_lock = m_mtx.try_lock();
+    
+
     asio::async_write(*socket, asio::buffer(response.data(), response.size()),
         [socket, this](const asio::error_code& error, std::size_t bytes_transferred) {
             if (error) {
@@ -482,4 +536,8 @@ void Server::sendResponse(asio::ip::tcp::socket* socket, std::string response) {
                 }
             }
         });
+
+    if (is_lock) {
+        m_mtx.unlock();
+    }
 }

@@ -33,6 +33,8 @@ typedef int (*sqlite3_step_t)(void* stmt);
 typedef const unsigned char* (*sqlite3_column_text_t)(void* stmt, int iCol);
 typedef int (*sqlite3_column_int_t)(void* stmt, int iCol);
 typedef int (*sqlite3_finalize_t)(void* stmt);
+typedef int (*sqlite3_bind_int_t)(sqlite3_stmt*, int, int);
+
 
 class User;
 class Photo;
@@ -64,6 +66,7 @@ private:
 	sqlite3_prepare_v2_t sqlite3_prepare_v2;
 	sqlite3_bind_text_t sqlite3_bind_text;
 	sqlite3_step_t sqlite3_step;
+	sqlite3_bind_int_t sqlite3_bind_int;
 	sqlite3_column_text_t sqlite3_column_text;
 	sqlite3_column_int_t sqlite3_column_int;
 	sqlite3_finalize_t sqlite3_finalize;

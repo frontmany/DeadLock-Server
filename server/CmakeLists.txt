@@ -4,10 +4,10 @@ project(server)
 set(CMAKE_CXX_STANDARD 20)            
 set(CMAKE_CXX_STANDARD_REQUIRED ON) 
 
-file(GLOB_RECURSE SOURCES "sources/*.cpp" "sources/*.h")
+file(GLOB_RECURSE SOURCES "sources/*.cpp" "sources/*.h" "vendor/base_64/base64.h" "vendor/base_64/base64.cpp")
 source_group("Source Files" FILES ${SOURCES})
 
-include_directories("sources" "vendor") 
+include_directories("sources" "vendor" "vendor/base_64") 
 link_directories("vendor/sqlite")
  
 add_executable(${PROJECT_NAME} ${SOURCES})
