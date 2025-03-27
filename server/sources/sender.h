@@ -25,7 +25,8 @@ public:
     std::string get_userInfoSuccessStr(User* user);
     std::string get_userInfoFailStr();
     std::string get_loginToSendStatusStr(const std::string& login);
-
+    std::string get_newLoginSuccessStr();
+    std::string get_newLoginFailStr();
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);
 

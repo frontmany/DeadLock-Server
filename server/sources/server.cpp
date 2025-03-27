@@ -190,6 +190,9 @@ void Server::handleGet(asio::ip::tcp::socket* socket, std::string packet) {
     else if (typeStr == "LOAD_ALL_FRIENDS_STATUSES") {
         findFriendsStatuses(socket, remainingStr);
     }
+    else if (typeStr == "CHECK_NEW_LOGIN") {
+        checkIsNewLoginAvailable(socket, remainingStr);
+    }
 }
 
 void Server::handleRpl(asio::ip::tcp::socket* socket, std::string packet) {
@@ -254,6 +257,25 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
+}
+
+void Server::checkIsNewLoginAvailable(asio::ip::tcp::socket* socket, std::string packet) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+
+    std::istringstream iss(packet);
+    std::string newLogin;
+    std::getline(iss, newLogin);
+    bool isAvailable = m_db.checkIsNewLoginAvailable(newLogin);
+
+    std::string packetResponse;
+    if (isAvailable) {
+        packetResponse = m_sender.get_newLoginSuccessStr();
+    }
+    else {
+        packetResponse = m_sender.get_newLoginFailStr();
+    }
+
+    sendResponse(socket, packetResponse);
 }
 
 void Server::returnUserInfo(asio::ip::tcp::socket* socket, std::string packet) {

@@ -159,6 +159,34 @@ User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptS
     }
 }
 
+bool Database::checkIsNewLoginAvailable(const std::string& newLogin) {
+    sqlite3_stmt* stmt = nullptr;
+
+    std::string sql = "SELECT COUNT(*) FROM USER WHERE LOGIN = ?";
+
+    int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, (void**)&stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    rc = sqlite3_bind_text(stmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to bind parameter: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    bool isAvailable = false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        int count = sqlite3_column_int(stmt, 0);
+        isAvailable = (count == 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return isAvailable;
+}
+
 std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
     std::vector<std::string> statuses;
     for (const auto& login : loginsVec) {

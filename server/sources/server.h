@@ -39,6 +39,7 @@ private:
     void createChat(asio::ip::tcp::socket* socket, std::string packet);
     void updateUserInfo(asio::ip::tcp::socket* socket, std::string packet);
     void broadcastUserInfo(asio::ip::tcp::socket* socket, std::string packet);
+    void checkIsNewLoginAvailable(asio::ip::tcp::socket* socket, std::string packet);
 
     void handleBroadcast(asio::ip::tcp::socket* socket, std::string packet);
     void handleGet(asio::ip::tcp::socket* socket, std::string packet);

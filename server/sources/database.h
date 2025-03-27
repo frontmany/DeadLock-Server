@@ -52,6 +52,7 @@ public:
 	bool checkPassword(const std::string& login, const std::string& password);
 	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
 	std::string getCurrentDateTime();
+	bool checkIsNewLoginAvailable(const std::string& newLogin);
 
 private:
 	std::string friendsToString(const std::vector<std::string>& friends);

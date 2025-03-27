@@ -45,6 +45,18 @@ std::string SendStringsGenerator::get_registrationFailStr() {
     return oss.str();
 }
 
+std::string SendStringsGenerator::get_newLoginSuccessStr() {
+    std::ostringstream oss;
+    oss << "NEW_LOGIN_SUCCESS\n" << endPacket;
+    return oss.str();
+}
+
+std::string SendStringsGenerator::get_newLoginFailStr() {
+    std::ostringstream oss;
+    oss << "NEW_LOGIN_FAIL\n" << endPacket;
+    return oss.str();
+}
+
 std::string SendStringsGenerator::get_chatCreateSuccessStr(User* user) {
     std::ostringstream oss;
     oss << "CHAT_CREATE_SUCCESS\n"
