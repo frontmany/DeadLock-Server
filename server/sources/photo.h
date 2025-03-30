@@ -25,7 +25,7 @@ public:
     std::size_t getSize() const { return m_size; }
 
     std::string serialize() const;
-    static Photo deserialize(const std::string& data, size_t size, std::string login);
+    static Photo deserialize(const std::string& data, size_t size, std::string oldLogin, std::string newLogin);
 
 private:
     static std::string wideStringToString(const WCHAR* wideStr);

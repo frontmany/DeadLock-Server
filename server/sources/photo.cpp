@@ -55,20 +55,12 @@ std::string Photo::serialize() const {
     return base64_encode(std::string(buffer.data(), m_size), false);
 }
 
-Photo Photo::deserialize(const std::string& data, size_t size, std::string login) {
+Photo Photo::deserialize(const std::string& data, size_t size, std::string oldLogin, std::string newLogin) {
+    // ≈сли данных о фото нет - возвращаем пустое фото
     if (data.empty()) {
         return Photo();
     }
-
-    std::istringstream iss(data);
-
-    // „тение данных фото
-    std::vector<char> buffer(size);
-    iss.read(buffer.data(), size);
-    if (!iss) {
-        std::cerr << "Failed to read photo data" << std::endl;
-        return Photo();
-    }
+    
 
     WCHAR username[256];
     DWORD username_len = sizeof(username) / sizeof(WCHAR);
@@ -77,36 +69,52 @@ Photo Photo::deserialize(const std::string& data, size_t size, std::string login
         return Photo();
     }
 
-
     std::string usernameStr = wideStringToString(username);
     std::string saveDirectory = "C:/Users/" + usernameStr + "/Documents/ReceivedFiles";
-    std::string tempPath = saveDirectory + "/" + login + "Photo.png";
+    std::filesystem::create_directories(saveDirectory);
 
-    if (size > 0) {
-        if (!std::filesystem::create_directories(saveDirectory)) {
-            std::cerr << "Failed to create directories: " << saveDirectory << std::endl;
+    std::string newPath = saveDirectory + "/" + newLogin + "Photo.png";
+    std::string oldPath = saveDirectory + "/" + oldLogin + "Photo.png";
+
+    if (newLogin != oldLogin) {
+        // ”дал€ем старое фото, если оно существует
+        if (std::filesystem::exists(oldPath)) {
+            try {
+                std::filesystem::remove(oldPath);
+                std::cout << "Old login photo deleted: " << oldPath << std::endl;
+            }
+            catch (const std::filesystem::filesystem_error& e) {
+                std::cerr << "Failed to delete old login photo: " << e.what() << std::endl;
+            }
         }
+    }
+    
 
-        std::ofstream outFile(tempPath, std::ios::binary);
-        if (!outFile) {
-            std::cerr << "Failed to open file for writing: " << tempPath << std::endl;
-            return Photo();
+    // ”дал€ем существующее фото с новым логином (если есть)
+    if (std::filesystem::exists(newPath)) {
+        try {
+            std::filesystem::remove(newPath);
+            std::cout << "Existing photo deleted for update: " << newPath << std::endl;
         }
+        catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Failed to delete existing photo: " << e.what() << std::endl;
+        }
+    }
 
+    // —охран€ем новые данные фото
+    std::vector<char> buffer(size);
+    std::istringstream iss(data);
+    iss.read(buffer.data(), size);
+
+    std::ofstream outFile(newPath, std::ios::binary);
+    if (outFile) {
         outFile.write(buffer.data(), size);
-        if (!outFile) {
-            std::cerr << "Failed to write data to file: " << tempPath << std::endl;
-            return Photo();
-        }
-
         outFile.close();
-        std::cout << "Photo saved to: " << tempPath << std::endl;
+        std::cout << "Photo saved: " << newPath << std::endl;
+        return Photo(newPath);
     }
     else {
-        std::cout << "No photo data to restore" << std::endl;
-        return Photo("");
+        std::cerr << "Failed to open file for writing" << std::endl;
+        return Photo();
     }
-    Photo ph = Photo(tempPath);
-    ph.updateSize();
-    return ph;
 }

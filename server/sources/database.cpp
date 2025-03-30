@@ -355,8 +355,8 @@ std::vector<std::string> Database::getCollected(const std::string& login) {
     return packets;
 }
 
-void Database::updateUser(const std::string& login, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo) {
-    const char* sql = "UPDATE USER SET NAME = ?, PASSWORD_HASH = ?, IS_HAS_PHOTO = ?, PHOTO_PATH = ?, PHOTO_SIZE = ? WHERE LOGIN = ?;";
+void Database::updateUser(const std::string& oldLogin, const std::string& newLogin, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo) {
+    const char* sql = "UPDATE USER SET LOGIN = ?, NAME = ?, PASSWORD_HASH = ?, IS_HAS_PHOTO = ?, PHOTO_PATH = ?, PHOTO_SIZE = ? WHERE LOGIN = ?;";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(m_db, sql, -1, (void**)&stmt, nullptr);
@@ -372,19 +372,20 @@ void Database::updateUser(const std::string& login, const std::string& name, con
     const int photoSize = isHasPhoto ? photo.getSize() : 0;
     const std::string hashedPassword = hash::hashPassword(password);
 
-    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, hashedPassword.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 3,  hasPhotoInt);
-    sqlite3_bind_text(stmt, 4, photoPath.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 5, photoSize);
-    sqlite3_bind_text(stmt, 6, login.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);  
+    sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, hashedPassword.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 4, hasPhotoInt);
+    sqlite3_bind_text(stmt, 5, photoPath.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 6, photoSize);
+    sqlite3_bind_text(stmt, 7, oldLogin.c_str(), -1, SQLITE_STATIC); 
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
     }
     else if (sqlite3_changes(m_db) == 0) {
-        std::cerr << "User with login '" << login << "' not found" << std::endl;
+        std::cerr << "User with login '" << oldLogin << "' not found" << std::endl;
     }
     else {
         std::cout << "User updated successfully" << std::endl;

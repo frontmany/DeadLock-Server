@@ -148,15 +148,18 @@ std::string SendStringsGenerator::get_loginToSendStatusStr(const std::string& lo
     return oss.str();
 }
 
-std::string SendStringsGenerator::get_userInfoPacket(const std::string& login,
+std::string SendStringsGenerator::get_userInfoPacket(const std::string& oldLogin, const std::string& newLogin,
     const std::string& name,
     const std::string& isHasPhotoStr,
+    const std::string& size,
     const std::string& photoStr) {
     std::ostringstream oss;
     oss << "FRIEND_INFO\n"
-        << login << '\n'
+        << oldLogin << '\n'
+        << newLogin << '\n'
         << name << '\n'
         << isHasPhotoStr << '\n'
+        << size << '\n'
         << photoStr << '\n'
         << endPacket;
     return oss.str();

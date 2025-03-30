@@ -30,7 +30,7 @@ public:
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);
 
-    std::string get_userInfoPacket(const std::string& login, const std::string& name, const std::string& isHasPhotoStr, const std::string& photoStr);
+    std::string get_userInfoPacket(const std::string& oldLogin, const std::string& newLogin, const std::string& name, const std::string& isHasPhotoStr, const std::string& size, const std::string& photoStr);
 
 private:
     const std::string vecBegin = "VEC_BEGIN";

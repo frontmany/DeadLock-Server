@@ -475,8 +475,11 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
 
     std::istringstream iss(packet);
 
-    std::string myLogin;
-    std::getline(iss, myLogin);
+    std::string oldLogin;
+    std::getline(iss, oldLogin);
+
+    std::string newLogin;
+    std::getline(iss, newLogin);
 
     std::string name;
     std::getline(iss, name);
@@ -504,36 +507,59 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
 
     std::string photoSizeStr;
     std::getline(iss, photoSizeStr);
-    size_t size = std::stoi(photoSizeStr);
+
+    size_t size = 0;
+    if (photoSizeStr != "") {
+        size = std::stoi(photoSizeStr);
+    }
 
     std::string photoStr;
     std::getline(iss, photoStr);
-
-    Photo photo;
-    if (isHasPhoto) {
-        photo = Photo::deserialize(base64_decode(photoStr), size, myLogin);
-    }
 
     for (auto login : logins) {
         auto it = m_map_online_users.find(login);
         if (it != m_map_online_users.end()) {
             User* user = it->second;
-            std::string packetU = m_sender.get_userInfoPacket(user->getLogin(), user->getName(), isHasPhotoStr, photoStr);
+            std::string packetU = m_sender.get_userInfoPacket(oldLogin, newLogin, name, isHasPhotoStr, photoSizeStr, photoStr);
             sendResponse(user->getSocketOnServer(), packetU);
         }
         else {
             User* user = m_db.getUser(login);
-            std::string packetU = m_sender.get_userInfoPacket(login, user->getName(), isHasPhotoStr, photoStr);
+            std::string packetU = m_sender.get_userInfoPacket(oldLogin, newLogin, name, isHasPhotoStr, photoSizeStr, photoStr);
             m_db.collect(line, packetU);
         }
     }
 
+    if (oldLogin != newLogin) {
+        auto it = m_map_online_users.find(oldLogin);
+        if (it != m_map_online_users.end()) { 
+            User* user = it->second;
+            m_map_online_users.erase(it);
+            m_map_online_users[newLogin] = user;
+
+            user->setLogin(newLogin); 
+        }
+
+        for (auto [login1, login2] : m_vec_login_to_login) {
+            if (login1 == oldLogin) {
+                login1 = newLogin;
+            }
+            else if (login2 == oldLogin) {
+                login2 = newLogin;
+            }
+        }
+    }
+
+    Photo photo;
+    if (isHasPhoto) {
+        photo = Photo::deserialize(base64_decode(photoStr), size, oldLogin, newLogin);
+    }
 
     if (isHasPhoto) {
-        m_db.updateUser(myLogin, name, password, isHasPhoto, photo);
+        m_db.updateUser(oldLogin, newLogin, name, password, isHasPhoto, photo);
     }
     else {
-        m_db.updateUser(myLogin, name, password, isHasPhoto);
+        m_db.updateUser(oldLogin, newLogin, name, password, isHasPhoto);
     }
 
     sendResponse(socket, m_sender.get_userInfoUpdatedSuccessStr());

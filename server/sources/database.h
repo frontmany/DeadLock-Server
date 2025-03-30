@@ -46,7 +46,7 @@ public:
 	User* getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket = nullptr);
 	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
 	void collect(const std::string& login, const std::string& packet);
-	void updateUser(const std::string& login, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo = Photo());
+	void updateUser(const std::string& oldLogin, const std::string& newLogin, const std::string& name, const std::string& password, bool isHasPhoto, Photo photo = Photo());
 	void updateUserStatus(const std::string& login, std::string lastSeen);
 	std::vector<std::string> getCollected(const std::string& login);
 	bool checkPassword(const std::string& login, const std::string& password);
