@@ -1,6 +1,7 @@
 #include "photo.h"
 #include "base64.h"
-
+#include <locale>
+#include <codecvt>
 
 
 std::string Photo::wideStringToString(const WCHAR* wideStr) {
@@ -42,7 +43,15 @@ std::string Photo::serialize() const {
         return "";
     }
 
+
+#ifdef _WIN32
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wide_path = converter.from_bytes(m_photoPath);
+    std::ifstream file(wide_path, std::ios::binary);
+#else
     std::ifstream file(m_photoPath, std::ios::binary);
+#endif
+
     if (!file) {
         throw std::runtime_error("Failed to open file: " + m_photoPath);
     }
@@ -51,7 +60,6 @@ std::string Photo::serialize() const {
     file.read(buffer.data(), m_size);
     file.close();
 
-    // Кодируем бинарные данные в Base64
     return base64_encode(std::string(buffer.data(), m_size), false);
 }
 

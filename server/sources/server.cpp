@@ -3,7 +3,8 @@
 #include "base64.h"
 #include <iostream>
 #include <algorithm>
-
+#include <codecvt>
+#include <locale>
 
 Server::Server()
     : m_acceptor(m_io_context),
@@ -319,14 +320,18 @@ void Server::findFriendsStatuses(asio::ip::tcp::socket* socket, std::string pack
         }
         else {
             User* user = m_db.getUser(line, socket);
-            auto it = m_map_online_users.find(user->getLogin());
-
-            logins.push_back(user->getLogin());
-            if (it == m_map_online_users.end()) {
-                statuses.push_back(user->getLastSeen());
+            if (user != nullptr) {
+                auto it = m_map_online_users.find(user->getLogin());
+                logins.push_back(user->getLogin());
+                if (it == m_map_online_users.end()) {
+                    statuses.push_back(user->getLastSeen());
+                }
+                else {
+                    statuses.push_back("online");
+                }
             }
             else {
-                statuses.push_back("online");
+                statuses.push_back("recently");
             }
         }
     }
@@ -397,6 +402,40 @@ void Server::authorizeUser(asio::ip::tcp::socket* socket, std::string packet) {
     }
 }
 
+
+bool is_valid_utf8(const std::string& str) {
+    try {
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        std::wstring wide = converter.from_bytes(str);
+        (void)wide; // Убеждаемся, что конвертация прошла без ошибок
+        return true;
+    }
+    catch (const std::range_error&) {
+        return false;
+    }
+}
+
+#ifdef _WIN32
+std::string convert_to_utf8(const std::string& str) {
+    try {
+        if (is_valid_utf8(str)) {
+            return str; // Уже UTF-8
+        }
+        // Предполагаем, что строка в Windows-1251 (если не UTF-8)
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
+        std::wstring wide_str = utf8_conv.from_bytes(str);
+        return utf8_conv.to_bytes(wide_str);
+    }
+    catch (...) {
+        return str; // Если не удалось конвертировать, возвращаем как есть
+    }
+}
+#else
+std::string convert_to_utf8(const std::string& str) {
+    return str; // На Linux/macOS обычно уже UTF-8
+}
+#endif
+
 void Server::registerUser(asio::ip::tcp::socket* socket, std::string packet) {
     std::lock_guard<std::mutex> lock(m_mtx);
 
@@ -404,12 +443,15 @@ void Server::registerUser(asio::ip::tcp::socket* socket, std::string packet) {
 
     std::string login;
     std::getline(iss, login);
+    login = convert_to_utf8(login);
 
     std::string name;
     std::getline(iss, name);
+    name = convert_to_utf8(name);
 
     std::string password;
     std::getline(iss, password);
+    password = convert_to_utf8(password);
 
     if (m_db.getUser(login) == nullptr) {
         std::string passwordHash = hash::hashPassword(password);
@@ -477,15 +519,19 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
 
     std::string oldLogin;
     std::getline(iss, oldLogin);
+    oldLogin = convert_to_utf8(oldLogin); // Конвертируем в UTF-8
 
     std::string newLogin;
     std::getline(iss, newLogin);
+    newLogin = convert_to_utf8(newLogin); // Конвертируем в UTF-8
 
     std::string name;
     std::getline(iss, name);
+    name = convert_to_utf8(name); // Конвертируем в UTF-8
 
     std::string password;
     std::getline(iss, password);
+    password = convert_to_utf8(password);
 
     std::string vecBegin;
     std::getline(iss, vecBegin);
@@ -526,7 +572,7 @@ void Server::updateUserInfo(asio::ip::tcp::socket* socket, std::string packet) {
         else {
             User* user = m_db.getUser(login);
             std::string packetU = m_sender.get_userInfoPacket(oldLogin, newLogin, name, isHasPhotoStr, photoSizeStr, photoStr);
-            m_db.collect(line, packetU);
+            m_db.collect(login, packetU);
         }
     }
 
