@@ -1,12 +1,11 @@
 #pragma once
-#include<iostream>
-#include<sstream>
-#include<string>
-#include<vector>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 #include <fstream>
 #include <cstring>
 #include <filesystem>
-#include <windows.h>
 
 class Photo {
 public:
@@ -28,7 +27,6 @@ public:
     static Photo deserialize(const std::string& data, size_t size, std::string oldLogin, std::string newLogin);
 
 private:
-    static std::string wideStringToString(const WCHAR* wideStr);
     void updateSize();
 
 private:

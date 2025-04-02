@@ -1,6 +1,7 @@
-#include "Server.h"
+#include "server.h"
 #include "hasher.h"
 #include "base64.h"
+
 #include <iostream>
 #include <algorithm>
 #include <codecvt>

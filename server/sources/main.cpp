@@ -1,7 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <asio.hpp>
-#include "Server.h"
+#include "server.h"
 
 int main() {
     try {

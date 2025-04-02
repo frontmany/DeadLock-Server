@@ -1,4 +1,4 @@
-#include"user.h"
+#include "user.h"
 
 void User::setLastSeenToNow() {
     auto now = std::chrono::system_clock::now();

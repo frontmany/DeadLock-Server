@@ -1,10 +1,8 @@
 #pragma once
 
-#include<iostream>
-#include<sstream>
-#include<string>
-#include<winsock2.h>
-#include<ws2tcpip.h>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <fstream>
 #include <cstring>
 #include <chrono>
@@ -12,7 +10,7 @@
 #include <ctime>
 
 #include "photo.h"
-#include <asio.hpp>
+#include "asio.hpp"
 
 
 class User {

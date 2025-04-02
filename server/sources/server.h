@@ -12,9 +12,9 @@
 #include <stack>
 #include <asio.hpp>
 
-#include"database.h"
-#include "user.h"
+#include "database.h"
 #include "sender.h"
+#include "user.h"
 
 class Server {
 public:

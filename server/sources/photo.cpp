@@ -3,28 +3,6 @@
 #include <locale>
 #include <codecvt>
 
-
-std::string Photo::wideStringToString(const WCHAR* wideStr) {
-    if (!wideStr) {
-        return ""; // Возвращаем пустую строку, если входной указатель нулевой
-    }
-
-    // Получаем размер буфера, необходимого для преобразования
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, nullptr, 0, nullptr, nullptr);
-    if (size_needed <= 0) {
-        return ""; // Возвращаем пустую строку в случае ошибки
-    }
-
-    // Создаем строку с нужным размером
-    std::string str(size_needed - 1, 0); // Исключаем завершающий нулевой символ
-
-    // Выполняем преобразование
-    WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, &str[0], size_needed, nullptr, nullptr);
-
-    return str;
-}
-
-
 void Photo::updateSize() {
     std::ifstream file(m_photoPath, std::ios::binary);
     if (file) {
@@ -69,16 +47,7 @@ Photo Photo::deserialize(const std::string& data, size_t size, std::string oldLo
         return Photo();
     }
     
-
-    WCHAR username[256];
-    DWORD username_len = sizeof(username) / sizeof(WCHAR);
-    if (!GetUserNameW(username, &username_len)) {
-        std::cerr << "Failed to get user name" << std::endl;
-        return Photo();
-    }
-
-    std::string usernameStr = wideStringToString(username);
-    std::string saveDirectory = "C:/Users/" + usernameStr + "/Documents/ReceivedFiles";
+    std::string saveDirectory = ":/ReceivedFiles";
     std::filesystem::create_directories(saveDirectory);
 
     std::string newPath = saveDirectory + "/" + newLogin + "Photo.png";
