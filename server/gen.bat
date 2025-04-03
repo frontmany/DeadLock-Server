@@ -1,2 +1,2 @@
-cd C:\prj\C++\serverAcio\serverLinux\build
+cd C:\prj\C++\serverAcio\server\build
 cmake ..
