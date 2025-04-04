@@ -59,35 +59,22 @@ void Server::onAccept(asio::ip::tcp::socket* socket) {
 }
 
 void Server::onDisconnect(asio::ip::tcp::socket* socket) {
-    std::lock_guard<std::mutex> lock(m_mtx);
+    try {
+        std::lock_guard<std::mutex> lock(m_mtx);
 
-    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [socket](const auto& pair) {
-        return pair.second->getSocketOnServer() == socket;
-        });
+        if (!socket->is_open()) return;
 
-    if (it != m_map_online_users.end()) {
-        std::cout << "client disconnected on socket:" << socket->remote_endpoint() << '\n';
+        auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
+            [socket](const auto& pair) { return pair.second->getSocketOnServer() == socket; });
 
-        User* user = it->second;
-
-        for (auto pair : m_vec_login_to_login) {
-            if (pair.first == user->getLogin()) {
-                auto it2 = m_map_online_users.find(pair.second);
-                if (it2 != m_map_online_users.end()) {
-                    User* userTo = it2->second;
-                    sendResponse(userTo->getSocketOnServer(), m_sender.get_statusStr(user->getLogin(), m_db.getCurrentDateTime()));
-                }
-            }
+        if (it != m_map_online_users.end()) {
+            User* user = it->second;
+            m_map_online_users.erase(it);
+            delete user;
         }
-
-        m_db.updateUserStatus(user->getLogin(), m_db.getCurrentDateTime());
-        m_map_online_users.erase(it);
-        delete user;
     }
-    else {
-        std::cout << "client disconnected on socket:" << socket->remote_endpoint() << '\n';
-        socket->close();
-        delete socket;
+    catch (const std::exception& e) {
+        std::cerr << "onDisconnect error: " << e.what() << '\n';
     }
 }
 
