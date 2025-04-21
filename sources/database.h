@@ -18,27 +18,30 @@
 
 class User;
 class Photo;
+enum class QueryType : uint32_t;
 
 class Database {
 public:
 	Database() = default;
 	void init();
-	User* getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket = nullptr);
+
+	User* getUser(const std::string& login);
 	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
-	void collect(const std::string& login, const std::string& packet);
+
+	void collect(const std::string& login, const std::string& packet, QueryType type);
+	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& login);
+	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
 
 	void updateUserName(const std::string& login, const std::string& newName);
 	void updateUserPassword(const std::string& login, const std::string& passwordHash);
 	void updateUserPhoto(const std::string& login, const Photo& photo, size_t photoSize);
-
 	void updateUserStatus(const std::string& login, std::string lastSeen);
-	std::vector<std::string> getCollected(const std::string& login);
+
 	bool checkPassword(const std::string& login, const std::string& passwordHash);
-	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
 	std::string getCurrentDateTime();
-	bool checkIsNewLoginAvailable(const std::string& newLogin);
-	void executeAndCheck(sqlite3_stmt* stmt, const std::string& operation);
+
 private:
+	void executeAndCheck(sqlite3_stmt* stmt, const std::string& operation);
 	std::string friendsToString(const std::vector<std::string>& friends);
 	std::vector<std::string> stringToFriends(const std::string& friendsString);
 

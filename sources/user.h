@@ -10,24 +10,33 @@
 #include <ctime>
 
 #include "photo.h"
-#include "asio.hpp"
 
+
+namespace net {
+    template <typename T>
+    class connection;
+}
+
+enum class QueryType : uint32_t;
+
+typedef std::shared_ptr<net::connection<QueryType>> connectionT;
 
 class User {
 public:
-    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, asio::ip::tcp::socket* sock)
+    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, connectionT connection)
         : m_login(login), m_password_hash(passwordHash),
-        m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo), m_on_server_sock(sock) {}
+        m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo), m_connection(connection) {}
 
-    ~User() { 
-        resetSocket();
-        m_on_server_sock->close();
-        delete m_on_server_sock; 
-    
-    }
+    User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo)
+        : m_login(login), m_password_hash(passwordHash),
+        m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo) {}
 
-    asio::ip::tcp::socket* getSocketOnServer() const { return m_on_server_sock; }
-    void setSocketOnServer(asio::ip::tcp::socket* sock) { m_on_server_sock = sock; }
+
+    ~User() = default;
+
+
+    connectionT getConnection() const { return m_connection; }
+    void setConnection(connectionT connection) { m_connection = connection; }
 
     const std::string& getLogin() const { return m_login; }
     void setLogin(const std::string& login) { m_login = login; }
@@ -46,16 +55,6 @@ public:
     const std::string& getLastSeen() const { return m_last_seen; }
     void setLastSeen(const std::string& lastSeen) { m_last_seen = lastSeen; }
 
-    void resetSocket() {
-        if ((*m_on_server_sock).is_open()) {
-            asio::error_code ec;
-            (*m_on_server_sock).close(ec);
-            if (ec) {
-                std::cerr << "Ошибка закрытия сокета: " << ec.message() << std::endl;
-            }
-        }
-    }
-
     void setLastSeenToNow();
     void setLastSeenToOnline();
 
@@ -66,7 +65,6 @@ private:
     std::string			                    m_login;
     std::string			                    m_password_hash;
     Photo			                        m_photo;
-
-    asio::ip::tcp::socket*                  m_on_server_sock;
+    connectionT                             m_connection;
 };
 

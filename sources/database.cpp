@@ -31,7 +31,8 @@ void Database::init() {
 
     const char* sql2 = "CREATE TABLE IF NOT EXISTS COLLECTED_PACKETS("
         "LOGIN          TEXT              NOT NULL,"
-        "PACKET         TEXT              NOT NULL);";
+        "PACKET         TEXT              NOT NULL,"
+        "PACKET_TYPE    INTEGER           NOT NULL);";
 
     rc = sqlite3_exec(m_db, sql2, 0, 0, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -69,7 +70,7 @@ void Database::addUser(const std::string& login, const std::string& name, const 
     sqlite3_finalize(stmt);
 }
 
-User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptSocket) {
+User* Database::getUser(const std::string& login) {
     sqlite3_stmt* stmt = nullptr;
     std::string sql = "SELECT LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH , PHOTO_SIZE FROM USER WHERE LOGIN = ?";
 
@@ -101,11 +102,11 @@ User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptS
 
         User* user = nullptr;
         if (isHasPhoto) {
-            user = new User(login, passwordHash, name, isHasPhoto, photo, acceptSocket);
+            user = new User(login, passwordHash, name, isHasPhoto, photo);
             user->setLastSeen(lastSeen);
         }
         else {
-            user = new User(login, passwordHash, name, isHasPhoto, Photo(), acceptSocket);
+            user = new User(login, passwordHash, name, isHasPhoto, Photo());
             user->setLastSeen(lastSeen);
         }
 
@@ -117,34 +118,6 @@ User* Database::getUser(const std::string& login, asio::ip::tcp::socket* acceptS
         sqlite3_finalize(stmt);
         return nullptr;
     }
-}
-
-bool Database::checkIsNewLoginAvailable(const std::string& newLogin) {
-    sqlite3_stmt* stmt = nullptr;
-
-    std::string sql = "SELECT COUNT(*) FROM USER WHERE LOGIN = ?";
-
-    int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
-        return false;
-    }
-
-    rc = sqlite3_bind_text(stmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);
-    if (rc != SQLITE_OK) {
-        std::cerr << "Failed to bind parameter: " << sqlite3_errmsg(m_db) << std::endl;
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
-    bool isAvailable = false;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        int count = sqlite3_column_int(stmt, 0);
-        isAvailable = (count == 0);
-    }
-
-    sqlite3_finalize(stmt);
-    return isAvailable;
 }
 
 std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
@@ -218,9 +191,9 @@ bool Database::checkPassword(const std::string& login, const std::string& passwo
     return hash::verifyPassword(passwordHash, storedHashedPassword);
 }
 
-void Database::collect(const std::string& login, const std::string& packet) {
-    const char* sql = "INSERT INTO COLLECTED_PACKETS (LOGIN, PACKET) "
-        "VALUES (?, ?);";
+void Database::collect(const std::string& login, const std::string& packet, QueryType type) {
+    const char* sql = "INSERT INTO COLLECTED_PACKETS (LOGIN, PACKET, PACKET_TYPE) "
+        "VALUES (?, ?, ?);";
 
     sqlite3_stmt* stmt = nullptr;
     int rc;
@@ -233,31 +206,32 @@ void Database::collect(const std::string& login, const std::string& packet) {
 
     sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, packet.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, static_cast<int>(type)); 
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
     }
     else {
-        std::cout << "User  added successfully" << std::endl;
+        std::cout << "Packet collected successfully" << std::endl;
     }
 
     sqlite3_finalize(stmt);
 }
 
-std::vector<std::string> Database::getCollected(const std::string& login) {
-    const char* selectSql = "SELECT PACKET FROM COLLECTED_PACKETS WHERE LOGIN = ?;";
+std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std::string& login) {
+    const char* selectSql = "SELECT PACKET, PACKET_TYPE FROM COLLECTED_PACKETS WHERE LOGIN = ?;";
     const char* deleteSql = "DELETE FROM COLLECTED_PACKETS WHERE LOGIN = ? AND PACKET = ?;";
     sqlite3_stmt* selectStmt = nullptr;
     sqlite3_stmt* deleteStmt = nullptr;
     int rc;
-    std::vector<std::string> packets;
+    std::vector<std::pair<std::string, QueryType>> packets;
 
     // Подготовка SELECT-запроса
     rc = sqlite3_prepare_v2(m_db, selectSql, -1, &selectStmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare SELECT statement: " << sqlite3_errmsg(m_db) << std::endl;
-        return packets; // Возвращаем пустой вектор в случае ошибки
+        return packets;
     }
 
     // Привязка параметра для SELECT-запроса
@@ -270,40 +244,45 @@ std::vector<std::string> Database::getCollected(const std::string& login) {
 
     // Чтение данных
     while ((rc = sqlite3_step(selectStmt)) == SQLITE_ROW) {
+        // Получаем PACKET
         const char* packet = reinterpret_cast<const char*>(sqlite3_column_text(selectStmt, 0));
-        if (packet) {
-            packets.emplace_back(packet);
+        if (!packet) continue;  // Пропускаем NULL
 
-            // Подготовка DELETE-запроса
-            rc = sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr);
-            if (rc != SQLITE_OK) {
-                std::cerr << "Failed to prepare DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
-                continue; // Пропускаем удаление, если запрос не удалось подготовить
-            }
+        // Получаем PACKET_TYPE (предполагается, что QueryType — enum, хранящийся как INTEGER)
+        QueryType type = static_cast<QueryType>(sqlite3_column_int(selectStmt, 1));
 
-            // Привязка параметров для DELETE-запроса
-            rc = sqlite3_bind_text(deleteStmt, 1, login.c_str(), -1, SQLITE_STATIC);
-            if (rc != SQLITE_OK) {
-                std::cerr << "Failed to bind login in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
-                sqlite3_finalize(deleteStmt);
-                continue;
-            }
+        // Добавляем в результат
+        packets.emplace_back(packet, type);
 
-            rc = sqlite3_bind_text(deleteStmt, 2, packet, -1, SQLITE_STATIC);
-            if (rc != SQLITE_OK) {
-                std::cerr << "Failed to bind packet in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
-                sqlite3_finalize(deleteStmt);
-                continue;
-            }
-
-            // Выполнение DELETE-запроса
-            rc = sqlite3_step(deleteStmt);
-            if (rc != SQLITE_DONE) {
-                std::cerr << "Failed to delete packet: " << sqlite3_errmsg(m_db) << std::endl;
-            }
-
-            sqlite3_finalize(deleteStmt);
+        // Подготовка DELETE-запроса (удаляем после выборки)
+        rc = sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr);
+        if (rc != SQLITE_OK) {
+            std::cerr << "Failed to prepare DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
+            continue;
         }
+
+        // Привязка параметров для DELETE
+        rc = sqlite3_bind_text(deleteStmt, 1, login.c_str(), -1, SQLITE_STATIC);
+        if (rc != SQLITE_OK) {
+            std::cerr << "Failed to bind login in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteStmt);
+            continue;
+        }
+
+        rc = sqlite3_bind_text(deleteStmt, 2, packet, -1, SQLITE_STATIC);
+        if (rc != SQLITE_OK) {
+            std::cerr << "Failed to bind packet in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteStmt);
+            continue;
+        }
+
+        // Выполнение DELETE
+        rc = sqlite3_step(deleteStmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "Failed to delete packet: " << sqlite3_errmsg(m_db) << std::endl;
+        }
+
+        sqlite3_finalize(deleteStmt);
     }
 
     if (rc != SQLITE_DONE) {

@@ -13,6 +13,6 @@ file(GLOB_RECURSE SOURCES
     "vendor/base_64/base64.cpp"
 )
 
-include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite") 
+include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite" "vendor/network_library") 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME})

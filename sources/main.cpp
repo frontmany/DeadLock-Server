@@ -1,6 +1,7 @@
 #include <iostream>
 #include "server.h"
 
+/*
 std::string getLocalIP() {
     asio::io_context io_context;
     asio::ip::tcp::resolver resolver(io_context);
@@ -43,14 +44,12 @@ std::string getServerIP() {
 
     return "127.0.0.1";
 }
+*/
 
 int main() {
     try {
-        Server server;
-        std::string ip = getServerIP();
-        std::cout << "Server IP: " << ip << std::endl;
-        server.init(ip, 8080);
-        server.run();
+        Server server(8080);
+        server.startServer();
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

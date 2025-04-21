@@ -8,12 +8,7 @@ class User;
 
 class SendStringsGenerator {
 public:
-    std::string get_authorizationSuccessStr();
     std::string get_friendsStatusesSuccessStr(const std::vector <std::string>& friendsLoginsVec, const std::vector <std::string>& friendsStatusesVec);
-	std::string get_authorizationFailStr();
-    std::string get_registrationSuccessStr();
-    std::string get_registrationFailStr();
-    std::string get_chatCreateFailStr();
     std::string get_userInfoPacket(User* user);
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);

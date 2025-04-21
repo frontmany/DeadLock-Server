@@ -10,62 +10,61 @@
 #include <vector>
 #include <mutex>
 #include <stack>
-#include <asio.hpp>
+
 
 #include "database.h"
+#include "queryType.h"
 #include "sender.h"
 #include "user.h"
+#include "net.h"
 
-class Server {
+typedef std::shared_ptr<net::connection<QueryType>> connectionT;
+typedef net::owned_message<QueryType> ownedMessageT;
+
+class Server : public net::server_interface<QueryType> { //TODO
 public:
-    Server();
-    void init(const std::string& ipAddress, int port);
-    void run();
+    Server(int port);
+    void startServer();
+    void stopServer();
 
 private:
-    void acceptConnections();
-    void onAccept(asio::ip::tcp::socket* socket);
-    void onDisconnect(asio::ip::tcp::socket* socket);
+    void processIncomingMessagesQueue();
 
-    void sendResponse(asio::ip::tcp::socket* socket, std::string response);
-    void startAsyncRead(asio::ip::tcp::socket* socket);
-    void handleRead(const asio::error_code& ec, std::size_t bytes_transferred,
-        asio::ip::tcp::socket* socket, std::shared_ptr<asio::streambuf> buffer);
+    void onClientDisconnect(connectionT connection) override;
+    bool onClientConnect(connectionT connection) override;
+    void onMessage(connectionT connection, ownedMessageT& msg) override;
 
+    void sendResponse(connectionT connection, net::message<QueryType>& msg);
+    void sendPendingMessages(connectionT connection);
 
+    void authorizeUser(connectionT connection, const std::string& stringPacket);
+    void registerUser(connectionT connection, const std::string& stringPacket);
 
-    void authorizeUser(asio::ip::tcp::socket* socket, std::string packet);
-    void registerUser(asio::ip::tcp::socket* socket,std::string packet);
+    void createChat(connectionT connection, const std::string& stringPacket);
 
-    void createChat(asio::ip::tcp::socket* socket, std::string packet);
+    void updateUserName(connectionT connection, const std::string& stringPacket);
+    void updateUserPassword(connectionT connection, const std::string& stringPacket);
+    void updateUserPhoto(connectionT connection, const std::string& stringPacket);
 
-    void updateUserName(asio::ip::tcp::socket* socket, std::string packet);
-    void updateUserPassword(asio::ip::tcp::socket* socket, std::string packet);
-    void updateUserPhoto(asio::ip::tcp::socket* socket, std::string packet);
+    void returnUserInfo(connectionT connection, const std::string& stringPacket);
+    void findFriendsStatuses(connectionT connection, const std::string& stringPacket);
 
-    void returnUserInfo(asio::ip::tcp::socket* socket, std::string packet);
-    void findFriendsStatuses(asio::ip::tcp::socket* socket, std::string packet);
+    void broadcastUserStatus(connectionT connection, const std::string& stringPacket);
 
-
-
-    void broadcastUserInfo(asio::ip::tcp::socket* socket, std::string packet);
-
-    void handleBroadcast(asio::ip::tcp::socket* socket, std::string packet);
-    void handleGet(asio::ip::tcp::socket* socket, std::string packet);
-    void handleRpl(asio::ip::tcp::socket* socket, std::string packet);
+    void handleBroadcast(connectionT connection, const std::string& stringPacket, QueryType type);
+    void handleGet(connectionT connection, const std::string& stringPacket, QueryType type);
+    void handleRpl(connectionT connection, const std::string& stringPacket, QueryType type);
 
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
 
 private:
+    std::thread                         m_worker_thread;
+
     SendStringsGenerator                m_sender;
     Database                            m_db;
-    asio::io_context                    m_io_context;
-    asio::ip::tcp::acceptor             m_acceptor;
+
     std::string                         m_ipAddress;
     int                                 m_port;
-    std::mutex                          m_mtx;
-    asio::thread_pool                   m_thread_pool;
 
     std::map<std::string, User*>  m_map_online_users;
-    std::vector<std::thread>      m_vec_threads;
 };
