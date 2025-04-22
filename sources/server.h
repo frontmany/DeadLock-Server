@@ -21,7 +21,7 @@
 typedef std::shared_ptr<net::connection<QueryType>> connectionT;
 typedef net::owned_message<QueryType> ownedMessageT;
 
-class Server : public net::server_interface<QueryType> { //TODO
+class Server : public net::server_interface<QueryType> {
 public:
     Server(int port);
     void startServer();

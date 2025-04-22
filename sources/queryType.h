@@ -19,5 +19,5 @@ enum class QueryType : uint32_t {
 	FRIENDS_STATUSES,
 	CHAT_CREATE_SUCCESS,
 	CHAT_CREATE_FAIL,
-	USER_INFO,
+	USER_INFO
 };

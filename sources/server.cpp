@@ -57,13 +57,13 @@ void Server::onMessage(connectionT connection, ownedMessageT& msg) {
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (classificationStr == "GET") {
-        handleGet(connection, messageStr, msg.msg.header.type);
+        handleGet(connection, remainingStr, msg.msg.header.type);
     }
     else if (classificationStr == "RPL") {
-        handleRpl(connection, messageStr, msg.msg.header.type);
+        handleRpl(connection, remainingStr, msg.msg.header.type);
     }
     else if (classificationStr == "BROADCAST") {
-        handleBroadcast(connection, messageStr, msg.msg.header.type);
+        handleBroadcast(connection, remainingStr, msg.msg.header.type);
     }
 }
 
@@ -343,7 +343,7 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
     std::getline(iss, friendLogin);
 
     QueryType responseType;
-
+    std::string response;
     if (myLogin == friendLogin) {
         responseType = QueryType::CHAT_CREATE_FAIL;
     }
@@ -356,11 +356,15 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
         }
         else {
             responseType = QueryType::CHAT_CREATE_SUCCESS;
+            response = "ghgfhfghfijghfgjhiofjoihfjig";
         }
     }
 
     net::message<QueryType> msgResponse;
     msgResponse.header.type = responseType;
+    if (responseType == QueryType::CHAT_CREATE_SUCCESS) {
+        msgResponse << response;
+    }
     sendResponse(connection, msgResponse);
 }
 

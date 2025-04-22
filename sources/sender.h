@@ -16,5 +16,4 @@ public:
 private:
     const std::string vecBegin = "VEC_BEGIN";
     const std::string vecEnd = "VEC_END";
-    const std::string endPacket = "_+14?bb5HmR;%@`7[S^?!#sL8";
 };
