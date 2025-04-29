@@ -347,6 +347,83 @@ void Database::updateUserPhoto(const std::string& login, const Photo& photo, siz
     sqlite3_finalize(stmt);
 }
 
+void Database::updateUserLogin(const std::string& oldLogin, const std::string& newLogin) {
+    if (oldLogin == newLogin) return;
+
+    // 1. Сначала проверим, не существует ли уже пользователя с новым логином
+    const char* checkSql = "SELECT 1 FROM USER WHERE LOGIN = ?;";
+    sqlite3_stmt* checkStmt;
+
+    if (sqlite3_prepare_v2(m_db, checkSql, -1, &checkStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare check statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return;
+    }
+
+    sqlite3_bind_text(checkStmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(checkStmt) == SQLITE_ROW) {
+        std::cerr << "User with login '" << newLogin << "' already exists!" << std::endl;
+        sqlite3_finalize(checkStmt);
+        return;
+    }
+    sqlite3_finalize(checkStmt);
+
+    // 2. Начинаем транзакцию для атомарности
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return;
+    }
+
+    // 3. Создаем временную копию пользователя с новым логином
+    const char* copySql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE) "
+        "SELECT ?, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE "
+        "FROM USER WHERE LOGIN = ?;";
+
+    sqlite3_stmt* copyStmt;
+    if (sqlite3_prepare_v2(m_db, copySql, -1, &copyStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare copy statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+
+    sqlite3_bind_text(copyStmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(copyStmt, 2, oldLogin.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(copyStmt) != SQLITE_DONE) {
+        std::cerr << "Failed to copy user data: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(copyStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    sqlite3_finalize(copyStmt);
+
+    // 4. Удаляем старую запись
+    const char* deleteSql = "DELETE FROM USER WHERE LOGIN = ?;";
+    sqlite3_stmt* deleteStmt;
+
+    if (sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare delete statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+
+    sqlite3_bind_text(deleteStmt, 1, oldLogin.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(deleteStmt) != SQLITE_DONE) {
+        std::cerr << "Failed to delete old user: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(deleteStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return;
+    }
+    sqlite3_finalize(deleteStmt);
+
+    // 6. Завершаем транзакцию
+    if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+}
+
 // Вспомогательная функция для выполнения SQL и проверки результата
 void Database::executeAndCheck(sqlite3_stmt* stmt, const std::string& operation) {
     int rc = sqlite3_step(stmt);
@@ -424,4 +501,32 @@ std::string Database::getCurrentDateTime() {
         << std::setw(2) << std::setfill('0') << ltm->tm_sec;
 
     return "last seen: " + ss.str();
+}
+
+bool Database::checkNewLogin(const std::string& newLogin) {
+    // Проверка на пустой логин
+    if (newLogin.empty()) {
+        std::cerr << "Login cannot be empty" << std::endl;
+        return false;
+    }
+
+    const char* sql = "SELECT 1 FROM USER WHERE LOGIN = ? LIMIT 1;";
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, newLogin.c_str(), -1, SQLITE_STATIC);
+
+    bool loginExists = false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        loginExists = true;
+    }
+
+    sqlite3_finalize(stmt);
+
+
+    return !loginExists;
 }

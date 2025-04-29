@@ -41,11 +41,10 @@ namespace net {
 
         friend message<T>& operator << (message<T>& msg, const std::string& str) {
             msg.body.insert(msg.body.end(), str.begin(), str.end());
+            msg.header.size = msg.size();
 
             uint32_t size = static_cast<uint32_t>(str.size());
             msg << size;
-
-            msg.header.size = msg.size();
 
             return msg;
         }

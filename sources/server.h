@@ -41,10 +41,13 @@ private:
     void registerUser(connectionT connection, const std::string& stringPacket);
 
     void createChat(connectionT connection, const std::string& stringPacket);
+    void verifyPassword(connectionT connection, const std::string& stringPacket);
+    void checkNewLogin(connectionT connection, const std::string& stringPacket);
 
     void updateUserName(connectionT connection, const std::string& stringPacket);
     void updateUserPassword(connectionT connection, const std::string& stringPacket);
     void updateUserPhoto(connectionT connection, const std::string& stringPacket);
+    void updateUserLogin(connectionT connection, const std::string& stringPacket);
 
     void returnUserInfo(connectionT connection, const std::string& stringPacket);
     void findFriendsStatuses(connectionT connection, const std::string& stringPacket);
@@ -66,5 +69,5 @@ private:
     std::string                         m_ipAddress;
     int                                 m_port;
 
-    std::map<std::string, User*>  m_map_online_users;
+    std::unordered_map<std::string, User*>  m_map_online_users;
 };

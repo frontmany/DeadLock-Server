@@ -48,9 +48,11 @@ namespace net {
 					std::shared_ptr<connection<T>> newConnection = std::make_shared<connection<T>>(connection<T>::owner::server,
 						m_asio_context, std::move(socket), m_safe_deque_incoming_messages);
 
+					newConnection->setServer(this);
+
 					if (onClientConnect(newConnection)) {
 						m_deque_connections.push_back(std::move(newConnection));
-						m_deque_connections.back()->connectToClient(this);
+						m_deque_connections.back()->connectToClient();
 					}
 					else {
 						std::cout << "[-----] Connection Denied\n";
@@ -111,17 +113,16 @@ namespace net {
 			}
 		}
 
-		virtual void onClientValidated(std::shared_ptr<connection<T>> connection) {
+		virtual void onClientValidated(std::shared_ptr<connection<T>> connection) {}
 
-		}
+		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) {}
 
 	protected:
 		virtual bool onClientConnect(std::shared_ptr<connection<T>> connection) {
 			return true;
 		}
 
-		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) {
-		}
+
 
 		virtual void onMessage(std::shared_ptr<connection<T>> connection, owned_message<T>& msg) {
 		}

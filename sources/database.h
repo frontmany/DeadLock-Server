@@ -35,9 +35,11 @@ public:
 	void updateUserName(const std::string& login, const std::string& newName);
 	void updateUserPassword(const std::string& login, const std::string& passwordHash);
 	void updateUserPhoto(const std::string& login, const Photo& photo, size_t photoSize);
+	void updateUserLogin(const std::string& oldLogin, const std::string& newLogin);
 	void updateUserStatus(const std::string& login, std::string lastSeen);
 
 	bool checkPassword(const std::string& login, const std::string& passwordHash);
+	bool checkNewLogin(const std::string& newLogin);
 	std::string getCurrentDateTime();
 
 private:

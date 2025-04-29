@@ -128,11 +128,20 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     else if (type == QueryType::UPDATE_MY_PHOTO) {
         updateUserPhoto(connection, stringPacket);
     }
+    else if (type == QueryType::UPDATE_MY_LOGIN) {
+        updateUserLogin(connection, stringPacket);
+    }
     else if (type == QueryType::LOAD_FRIEND_INFO) {
         returnUserInfo(connection, stringPacket);
     }
     else if (type == QueryType::LOAD_ALL_FRIENDS_STATUSES) {
         findFriendsStatuses(connection, stringPacket);
+    }
+    else if (type == QueryType::VERIFY_PASSWORD) {
+        verifyPassword(connection, stringPacket);
+    }
+    else if (type == QueryType::CHECK_NEW_LOGIN) {
+        checkNewLogin(connection, stringPacket);
     }
 }
 
@@ -178,6 +187,46 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
+}
+
+void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string login;
+    std::getline(iss, login);
+
+
+    bool isAvailable = m_db.checkNewLogin(login);
+
+    net::message<QueryType> msgResponse;
+    if (isAvailable) {
+        msgResponse.header.type = QueryType::NEW_LOGIN_SUCCESS;
+        msgResponse << login;
+    }
+    else
+        msgResponse.header.type = QueryType::NEW_LOGIN_FAIL;
+
+    sendResponse(connection, msgResponse);
+}
+
+void Server::verifyPassword(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string login;
+    std::getline(iss, login);
+
+    std::string passwordHash;
+    std::getline(iss, passwordHash);
+
+    bool isPasswordsMatch = m_db.checkPassword(login, passwordHash);
+
+    net::message<QueryType> msgResponse;
+    if (isPasswordsMatch) 
+        msgResponse.header.type = QueryType::VERIFY_PASSWORD_SUCCESS;
+    else
+        msgResponse.header.type = QueryType::VERIFY_PASSWORD_FAIL;
+
+    sendResponse(connection, msgResponse);
 }
 
 void Server::returnUserInfo(connectionT connection, const std::string& stringPacket) {
@@ -230,7 +279,9 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
                 }
             }
             else {
-                statuses.push_back("recently");
+                // This must not happen
+                logins.push_back(line);
+                statuses.push_back("requested status of unknown user");
             }
         }
     }
@@ -241,7 +292,6 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
     msgResponse << response;
 
     sendResponse(connection, msgResponse);
-    sendPendingMessages(connection);
 }
 
 void Server::sendPendingMessages(connectionT connection) {
@@ -260,6 +310,10 @@ void Server::sendPendingMessages(connectionT connection) {
             sendResponse(user->getConnection(), msgResponse);
         }
     }
+
+    net::message<QueryType> msgResponse;
+    msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
+    sendResponse(connection, msgResponse);
 }
 
 void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
@@ -301,6 +355,8 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
         sendResponse(connection, msgResponse);
     }
+
+    sendPendingMessages(connection);
 }
 
 void Server::registerUser(connectionT connection, const std::string& stringPacket) {
@@ -356,8 +412,10 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
         }
         else {
             responseType = QueryType::CHAT_CREATE_SUCCESS;
-            response = "ghgfhfghfijghfgjhiofjoihfjig";
+            response = m_sender.get_chatCreateSuccessStr(user);
         }
+
+        delete user;
     }
 
     net::message<QueryType> msgResponse;
@@ -503,9 +561,70 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
     }
 }
 
+void Server::updateUserLogin(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
 
+    std::string oldLogin;
+    std::getline(iss, oldLogin);
+
+    std::string newLogin;
+    std::getline(iss, newLogin);
+
+    std::string vecBegin;
+    std::getline(iss, vecBegin);
+
+    std::vector<std::string> logins;
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "VEC_END") {
+            break;
+        }
+        else {
+            logins.push_back(line);
+        }
+    }
+
+    // 0. Проверка, что oldLogin существует
+    auto mapIt = m_map_online_users.find(oldLogin);
+    if (mapIt == m_map_online_users.end()) {
+        return;
+    }
+
+    User* user = mapIt->second;
+
+    // 1. Сначала обновляем в БД
+    m_db.updateUserLogin(oldLogin, newLogin);
+ 
+
+    // 2. Обновляем локальные данные
+    
+    auto node = m_map_online_users.extract(mapIt);
+    node.key() = newLogin;
+    m_map_online_users.insert(std::move(node));
+    
+
+    // 3. Рассылаем уведомления
+    for (auto friendLogin : logins) {
+        if (auto it = m_map_online_users.find(friendLogin); it != m_map_online_users.end()) {
+            // Онлайн-друг
+            std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::USER_INFO;
+            msgResponse << packetU;
+            sendResponse(it->second->getConnection(), msgResponse);
+        }
+        else {
+            // Офлайн-друг
+            std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
+            m_db.collect(friendLogin, packetU, QueryType::USER_INFO);
+        }
+    }
+
+    user->setLogin(newLogin);
+}
 
 
 void Server::sendResponse(connectionT connection, net::message<QueryType>& msg) {
+    msg.header.size = msg.size();
     sendMessage(connection, msg);
 }

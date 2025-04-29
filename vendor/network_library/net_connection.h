@@ -36,6 +36,12 @@ namespace net {
 
 		virtual ~connection() {}
 
+		void setServer(server_interface<T>* server) {
+			if (m_owner_type == owner::server) {
+				m_server = server;
+			}
+		}
+
 		void connectToServer(const asio::ip::tcp::resolver::results_type& endpoint) {
 			if (m_owner_type == owner::client) {
 				asio::async_connect(m_socket, endpoint,
@@ -43,7 +49,6 @@ namespace net {
 						if (!ec) {
 							std::cout << "Connected to: " << endpoint << std::endl;
 							readValidation();
-							readHeader();
 						}
 						else {
 							std::cerr << "Connection failed: " << ec.message() << std::endl;
@@ -52,11 +57,11 @@ namespace net {
 			}
 		}
 
-		void connectToClient(server_interface<T>* server) {
+		void connectToClient() {
 			if (m_owner_type == owner::server) {
 				if (m_socket.is_open()) {
 					writeValidation();
-					readValidation(server);
+					readValidation();
 				}
 			}
 		}
@@ -95,6 +100,8 @@ namespace net {
 					}
 					else {
 						m_socket.close();
+						m_server->onClientDisconnect(this->shared_from_this());
+						
 					}
 				});
 		}
@@ -107,6 +114,7 @@ namespace net {
 					}
 					else {
 						m_socket.close();
+						m_server->onClientDisconnect(this->shared_from_this());
 					}
 				});
 		}
@@ -152,6 +160,7 @@ namespace net {
 					}
 					else {
 						m_socket.close();
+						m_server->onClientDisconnect(this->shared_from_this());
 					}
 				});
 		}
@@ -171,12 +180,13 @@ namespace net {
 					}
 					else
 						m_socket.close();
+					m_server->onClientDisconnect(this->shared_from_this());
 				});
 		}
 
-		void readValidation(server_interface<T>* server = nullptr) {
+		void readValidation() {
 			asio::async_read(m_socket, asio::buffer(&m_hand_shake_in, sizeof(uint64_t)),
-				[this, server](std::error_code ec, std::size_t length) {
+				[this](std::error_code ec, std::size_t length) {
 					if (!ec) {
 						if (m_owner_type == owner::client) {
 							m_hand_shake_out = scramble(m_hand_shake_in);
@@ -185,7 +195,7 @@ namespace net {
 						else {
 							if (m_hand_shake_in == m_hand_shake_check) {
 								std::cout << "Client Validated\n";
-								server->onClientValidated(this->shared_from_this());
+								m_server->onClientValidated(this->shared_from_this());
 								readHeader();
 							}
 							else {
@@ -196,6 +206,7 @@ namespace net {
 					}
 					else {
 						m_socket.close();
+						m_server->onClientDisconnect(this->shared_from_this());
 					}
 						
 				});
@@ -207,6 +218,8 @@ namespace net {
 		owner					m_owner_type = owner::server;
 		asio::ip::tcp::socket	m_socket;
 		asio::io_context&		m_asio_context;
+
+		server_interface<T>*	m_server;
 
 		safe_deque<message<T>> m_safe_deque_outgoing_messages;
 		safe_deque<owned_message<T>>& m_safe_deque_incoming_messages;
