@@ -325,9 +325,12 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
     std::string passwordHash;
     std::getline(iss, passwordHash);
 
+    QueryType type = QueryType::_;
+
     if (m_map_online_users.find(login) != m_map_online_users.end()) {
         net::message<QueryType> msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
+        type = QueryType::AUTHORIZATION_FAIL;
         sendResponse(connection, msgResponse);
         return;
     }
@@ -347,16 +350,20 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
 
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::AUTHORIZATION_SUCCESS;
+            type = QueryType::AUTHORIZATION_SUCCESS;
             sendResponse(connection, msgResponse);
         }
     }
     else {
         net::message<QueryType> msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
+        type = QueryType::AUTHORIZATION_FAIL;
         sendResponse(connection, msgResponse);
     }
 
-    sendPendingMessages(connection);
+    if (type == QueryType::AUTHORIZATION_SUCCESS) {
+        sendPendingMessages(connection);
+    }
 }
 
 void Server::registerUser(connectionT connection, const std::string& stringPacket) {
