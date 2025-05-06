@@ -23,6 +23,8 @@ typedef std::shared_ptr<net::connection<QueryType>> connectionT;
 
 class User {
 public:
+    User() = default;
+
     User(const std::string& login, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, connectionT connection)
         : m_login(login), m_password_hash(passwordHash),
         m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo), m_connection(connection) {}
@@ -51,6 +53,7 @@ public:
     void setPhoto(const Photo& photo) { m_photo = photo; m_is_has_photo = true; }
 
     const bool getIsHasPhoto() const { return m_is_has_photo; }
+    void setIsHasPhoto(bool isHasPhoto) { m_is_has_photo = isHasPhoto; }
 
     const std::string& getLastSeen() const { return m_last_seen; }
     void setLastSeen(const std::string& lastSeen) { m_last_seen = lastSeen; }

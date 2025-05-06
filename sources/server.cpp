@@ -143,6 +143,9 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     else if (type == QueryType::CHECK_NEW_LOGIN) {
         checkNewLogin(connection, stringPacket);
     }
+    else if (type == QueryType::FIND_USER) {
+        findUser(connection, stringPacket);
+    }
 }
 
 void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
@@ -187,6 +190,24 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
+}
+
+void Server::findUser(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string myLogin;
+    std::getline(iss, myLogin);
+
+    std::string text;
+    std::getline(iss, text);
+
+    std::vector<User*> vec;
+    m_db.findUsers(myLogin, text, vec);
+
+    net::message<QueryType> msgResponse;
+    msgResponse.header.type = QueryType::FIND_USER_RESULTS;
+    msgResponse << m_sender.get_usersStr(vec);
+    sendResponse(connection, msgResponse);
 }
 
 void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {

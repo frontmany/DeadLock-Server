@@ -43,6 +43,7 @@ private:
     void createChat(connectionT connection, const std::string& stringPacket);
     void verifyPassword(connectionT connection, const std::string& stringPacket);
     void checkNewLogin(connectionT connection, const std::string& stringPacket);
+    void findUser(connectionT connection, const std::string& stringPacket);
 
     void updateUserName(connectionT connection, const std::string& stringPacket);
     void updateUserPassword(connectionT connection, const std::string& stringPacket);

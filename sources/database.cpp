@@ -227,14 +227,12 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
     int rc;
     std::vector<std::pair<std::string, QueryType>> packets;
 
-    // Подготовка SELECT-запроса
     rc = sqlite3_prepare_v2(m_db, selectSql, -1, &selectStmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare SELECT statement: " << sqlite3_errmsg(m_db) << std::endl;
         return packets;
     }
 
-    // Привязка параметра для SELECT-запроса
     rc = sqlite3_bind_text(selectStmt, 1, login.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to bind login in SELECT statement: " << sqlite3_errmsg(m_db) << std::endl;
@@ -242,26 +240,21 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
         return packets;
     }
 
-    // Чтение данных
     while ((rc = sqlite3_step(selectStmt)) == SQLITE_ROW) {
-        // Получаем PACKET
         const char* packet = reinterpret_cast<const char*>(sqlite3_column_text(selectStmt, 0));
-        if (!packet) continue;  // Пропускаем NULL
+        if (!packet) continue;
 
-        // Получаем PACKET_TYPE (предполагается, что QueryType — enum, хранящийся как INTEGER)
+        
         QueryType type = static_cast<QueryType>(sqlite3_column_int(selectStmt, 1));
 
-        // Добавляем в результат
         packets.emplace_back(packet, type);
 
-        // Подготовка DELETE-запроса (удаляем после выборки)
         rc = sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr);
         if (rc != SQLITE_OK) {
             std::cerr << "Failed to prepare DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
             continue;
         }
 
-        // Привязка параметров для DELETE
         rc = sqlite3_bind_text(deleteStmt, 1, login.c_str(), -1, SQLITE_STATIC);
         if (rc != SQLITE_OK) {
             std::cerr << "Failed to bind login in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
@@ -276,7 +269,6 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
             continue;
         }
 
-        // Выполнение DELETE
         rc = sqlite3_step(deleteStmt);
         if (rc != SQLITE_DONE) {
             std::cerr << "Failed to delete packet: " << sqlite3_errmsg(m_db) << std::endl;
@@ -311,7 +303,6 @@ void Database::updateUserName(const std::string & login, const std::string & new
     sqlite3_finalize(stmt);
 }
 
-// Обновляет только пароль
 void Database::updateUserPassword(const std::string& login, const std::string& passwordHash) {
     const char* sql = "UPDATE USER SET PASSWORD_HASH = ? WHERE LOGIN = ?;";
 
@@ -328,7 +319,6 @@ void Database::updateUserPassword(const std::string& login, const std::string& p
     sqlite3_finalize(stmt);
 }
 
-// Обновляет только фото
 void Database::updateUserPhoto(const std::string& login, const Photo& photo, size_t photoSize) {
     const char* sql = "UPDATE USER SET IS_HAS_PHOTO = ?, PHOTO_PATH = ? , PHOTO_SIZE = ? WHERE LOGIN = ?;";
 
@@ -350,7 +340,6 @@ void Database::updateUserPhoto(const std::string& login, const Photo& photo, siz
 void Database::updateUserLogin(const std::string& oldLogin, const std::string& newLogin) {
     if (oldLogin == newLogin) return;
 
-    // 1. Сначала проверим, не существует ли уже пользователя с новым логином
     const char* checkSql = "SELECT 1 FROM USER WHERE LOGIN = ?;";
     sqlite3_stmt* checkStmt;
 
@@ -368,13 +357,11 @@ void Database::updateUserLogin(const std::string& oldLogin, const std::string& n
     }
     sqlite3_finalize(checkStmt);
 
-    // 2. Начинаем транзакцию для атомарности
     if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
         std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
         return;
     }
 
-    // 3. Создаем временную копию пользователя с новым логином
     const char* copySql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE) "
         "SELECT ?, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE "
         "FROM USER WHERE LOGIN = ?;";
@@ -397,7 +384,6 @@ void Database::updateUserLogin(const std::string& oldLogin, const std::string& n
     }
     sqlite3_finalize(copyStmt);
 
-    // 4. Удаляем старую запись
     const char* deleteSql = "DELETE FROM USER WHERE LOGIN = ?;";
     sqlite3_stmt* deleteStmt;
 
@@ -417,14 +403,12 @@ void Database::updateUserLogin(const std::string& oldLogin, const std::string& n
     }
     sqlite3_finalize(deleteStmt);
 
-    // 6. Завершаем транзакцию
     if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
         std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
         sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
     }
 }
 
-// Вспомогательная функция для выполнения SQL и проверки результата
 void Database::executeAndCheck(sqlite3_stmt* stmt, const std::string& operation) {
     int rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
@@ -466,6 +450,67 @@ void Database::updateUserStatus(const std::string& login, std::string lastSeen) 
     sqlite3_finalize(stmt);
 }
 
+
+std::vector<User*> Database::findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*> foundUsers) {
+    const char* sql =
+        "SELECT login, name, photo FROM users "
+        "WHERE (login LIKE ? OR name LIKE ?) "
+        "AND login != ? "
+        "LIMIT 20;";
+
+    sqlite3_stmt* stmt = nullptr;
+
+    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return foundUsers;
+    }
+
+    std::string searchPattern = "%" + searchText + "%";
+
+    sqlite3_bind_text(stmt, 1, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, currentUserLogin.c_str(), -1, SQLITE_TRANSIENT);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        User* user = new User();
+
+        user->setLogin(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        user->setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+
+        bool hasPhoto = sqlite3_column_int(stmt, 2) != 0;
+        user->setIsHasPhoto(hasPhoto);
+
+        if (hasPhoto) {
+            const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            int photoSize = sqlite3_column_int(stmt, 4);
+
+            
+            Photo* photo = new Photo(photoPath);
+            user->setPhoto(*photo);
+        }
+
+        foundUsers.push_back(user);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "Search failed: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return foundUsers;
+}
+
+
+
+
+
+
+
+
+
+
+
 std::string Database::friendsToString(const std::vector<std::string>& friends) {
     std::stringstream ss;
     for (size_t i = 0; i < friends.size(); ++i) {
@@ -504,7 +549,6 @@ std::string Database::getCurrentDateTime() {
 }
 
 bool Database::checkNewLogin(const std::string& newLogin) {
-    // Проверка на пустой логин
     if (newLogin.empty()) {
         std::cerr << "Login cannot be empty" << std::endl;
         return false;

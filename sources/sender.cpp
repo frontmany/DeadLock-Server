@@ -22,6 +22,23 @@ std::string SendStringsGenerator::get_friendsStatusesSuccessStr(const std::vecto
     return oss.str();
 }
 
+std::string SendStringsGenerator::get_usersStr(const std::vector<User*>& usersVec) {
+    std::ostringstream oss;
+
+    oss << std::to_string(usersVec.size()) << '\n';
+
+    for (auto user : usersVec) {
+        oss << user->getLogin() << '\n'
+            << user->getName() << '\n'
+            << user->getLastSeen() << '\n'
+            << (user->getIsHasPhoto() ? "true" : "false") << '\n'
+            << std::to_string(user->getPhoto().getSize()) << '\n'
+            << user->getPhoto().serialize() << '\n';
+    }
+
+    return oss.str();
+}
+
 std::string SendStringsGenerator::get_chatCreateSuccessStr(User* user) {
     std::ostringstream oss;
     oss << user->getLogin() << '\n'

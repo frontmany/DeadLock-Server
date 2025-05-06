@@ -31,6 +31,7 @@ public:
 	void collect(const std::string& login, const std::string& packet, QueryType type);
 	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& login);
 	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
+	std::vector<User*> findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*> foundUsers);
 
 	void updateUserName(const std::string& login, const std::string& newName);
 	void updateUserPassword(const std::string& login, const std::string& passwordHash);
