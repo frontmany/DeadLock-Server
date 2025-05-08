@@ -50,7 +50,7 @@ public:
     void setName(const std::string& name) { m_name = name; }
 
     const Photo& getPhoto() const { return m_photo; }
-    void setPhoto(const Photo& photo) { m_photo = photo; m_is_has_photo = true; }
+    void setPhoto(const Photo& photo) { m_photo = photo; }
 
     const bool getIsHasPhoto() const { return m_is_has_photo; }
     void setIsHasPhoto(bool isHasPhoto) { m_is_has_photo = isHasPhoto; }
@@ -62,7 +62,7 @@ public:
     void setLastSeenToOnline();
 
 private:
-    bool                                    m_is_has_photo;
+    bool                                    m_is_has_photo = false;
     std::string			                    m_last_seen;
     std::string			                    m_name;
     std::string			                    m_login;
