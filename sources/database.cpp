@@ -451,11 +451,11 @@ void Database::updateUserStatus(const std::string& login, std::string lastSeen) 
 }
 
 
-std::vector<User*> Database::findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*> foundUsers) {
+std::vector<User*> Database::findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*>& foundUsers) {
     const char* sql =
-        "SELECT login, name, photo FROM users "
-        "WHERE (login LIKE ? OR name LIKE ?) "
-        "AND login != ? "
+        "SELECT LOGIN, NAME, PHOTO_PATH FROM USER "
+        "WHERE (LOGIN LIKE ? OR NAME LIKE ?) "
+        "AND LOGIN != ? "
         "LIMIT 20;";
 
     sqlite3_stmt* stmt = nullptr;
@@ -478,16 +478,13 @@ std::vector<User*> Database::findUsers(const std::string& currentUserLogin, cons
         user->setLogin(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
         user->setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
 
-        bool hasPhoto = sqlite3_column_int(stmt, 2) != 0;
-        user->setIsHasPhoto(hasPhoto);
-
-        if (hasPhoto) {
-            const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-            int photoSize = sqlite3_column_int(stmt, 4);
+        const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
 
             
-            Photo* photo = new Photo(photoPath);
-            user->setPhoto(*photo);
+        Photo* photo = new Photo(photoPath);
+        user->setPhoto(*photo);
+        if (photo->getPhotoPath() != "") {
+            user->setIsHasPhoto(true);
         }
 
         foundUsers.push_back(user);

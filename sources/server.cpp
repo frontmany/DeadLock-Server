@@ -206,7 +206,8 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
 
     net::message<QueryType> msgResponse;
     msgResponse.header.type = QueryType::FIND_USER_RESULTS;
-    msgResponse << m_sender.get_usersStr(vec);
+    std::string s = m_sender.get_usersStr(vec);
+    msgResponse << s;
     sendResponse(connection, msgResponse);
 }
 
