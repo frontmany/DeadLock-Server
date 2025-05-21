@@ -179,6 +179,12 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
             msgResponse << iss.str();
             sendResponse(user->getConnection(), msgResponse);
         }
+        else if (type == QueryType::TYPING) {
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::TYPING;
+            msgResponse << iss.str();
+            sendResponse(user->getConnection(), msgResponse);
+        }
     }
 }
 

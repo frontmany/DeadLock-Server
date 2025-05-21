@@ -123,7 +123,6 @@ namespace net {
 		}
 
 
-
 		virtual void onMessage(std::shared_ptr<connection<T>> connection, owned_message<T>& msg) {
 		}
 
