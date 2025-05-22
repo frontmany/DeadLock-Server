@@ -47,9 +47,9 @@ bool Server::onClientConnect(connectionT connection) {
     return true;
 }
 
-void Server::onMessage(connectionT connection, ownedMessageT& msg) {
+void Server::onMessage(connectionT connection, MessageT msg) {
     std::string messageStr;
-    msg.msg >> messageStr;
+    msg >> messageStr;
     std::istringstream iss(messageStr);
 
     std::string classificationStr;
@@ -57,13 +57,13 @@ void Server::onMessage(connectionT connection, ownedMessageT& msg) {
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (classificationStr == "GET") {
-        handleGet(connection, remainingStr, msg.msg.header.type);
+        handleGet(connection, remainingStr, msg.header.type);
     }
     else if (classificationStr == "RPL") {
-        handleRpl(connection, remainingStr, msg.msg.header.type);
+        handleRpl(connection, remainingStr, msg.header.type);
     }
     else if (classificationStr == "BROADCAST") {
-        handleBroadcast(connection, remainingStr, msg.msg.header.type);
+        handleBroadcast(connection, remainingStr, msg.header.type);
     }
 }
 
@@ -146,6 +146,16 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     else if (type == QueryType::FIND_USER) {
         findUser(connection, stringPacket);
     }
+    else if (type == QueryType::PREPARE_TO_RECEIVE_FILE) {
+        prepareToReceiveFile(connection, stringPacket);
+    }
+    else if (type == QueryType::BIND) {
+        bindFilesConnectionToUser(connection, stringPacket);
+    }
+    else if (type == QueryType::SEND_ME_FILE) {
+        sendFileToUser(connection, stringPacket);
+    }
+    
 }
 
 void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
@@ -188,6 +198,119 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
     }
 }
 
+void Server::onFile(net::file<QueryType> file) {
+    auto it = m_map_online_users.find(file.receiverLogin);
+
+    std::string fileName = std::filesystem::path(file.filePath).filename().string();
+    std::string filePreviewStr = m_sender.get_filePreviewStr(file.receiverLogin, file.senderLogin, fileName, file.id);
+
+
+    // 100mb
+    if (file.fileSize > 104857600) {
+        
+        if (it == m_map_online_users.end()) {
+            m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+        }
+        else {
+            User* user = it->second;
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::FILE_PREVIEW;
+            msgResponse << filePreviewStr;
+            sendResponse(user->getConnection(), msgResponse);
+        }
+    }
+    else {
+        if (it == m_map_online_users.end()) {
+            m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_FAST_FORWARD);
+        }
+        else {
+            User* user = it->second;
+            
+            std::ostringstream oss;
+            oss << file.receiverLogin << "\n"
+                << file.senderLogin << "\n"
+                << file.filePath << "\n"
+                << file.id << "\n";
+
+            sendFileToUser(user->getFilesConnection(), oss.str());
+        }
+    }
+    
+}
+
+void Server::sendFileToUser(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string myLogin;
+    std::getline(iss, myLogin);
+
+    std::string friendLogin;
+    std::getline(iss, friendLogin);
+
+    std::string filename;
+    std::getline(iss, filename);
+
+    std::string fileId;
+    std::getline(iss, fileId);
+
+    const std::string directory = "ReceivedFiles";
+    std::string foundFilePath = "";
+
+    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.is_regular_file()) {
+            std::string currentFilename = entry.path().filename().string();
+            if (currentFilename.find(fileId) != std::string::npos) {
+                foundFilePath = entry.path().string();
+                break;
+            }
+        }
+    }
+
+    if (!std::filesystem::exists(foundFilePath)) {
+        std::cerr << "Error: File " << foundFilePath << " does not exist\n";
+        return;
+    }
+
+    std::ifstream fileStream(foundFilePath, std::ios::binary | std::ios::ate);
+    if (!fileStream) {
+        std::cerr << "Error: Failed to open file " << foundFilePath
+            << " (Error code: " << strerror(errno) << ")\n";
+        return;
+    }
+
+    std::streamsize fileSize = fileStream.tellg();
+    if (fileSize == -1) {
+        std::cerr << "Error: Could not determine file size\n";
+        fileStream.close();
+        return;
+    }
+
+    fileStream.seekg(0);
+    fileStream.close();
+
+
+    auto it = m_map_online_users.find(myLogin);
+
+    if (it != m_map_online_users.end()) {
+        User* user = it->second;
+
+        net::message<QueryType> msg;
+        msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
+
+        std::string packetStr = m_sender.get_prepareToReceiveFileStr(myLogin, friendLogin, fileSize, std::filesystem::path(foundFilePath).filename().string(), fileId);
+        msg << packetStr;
+
+        sendMessageOnFileConnection(user->getFilesConnection(), msg);
+
+        net::file<QueryType> file{ myLogin, friendLogin, foundFilePath, fileId, static_cast<uint32_t>(fileSize) };
+        sendFileOnFileConnection(user->getFilesConnection(), file);
+    }
+    else {
+        std::cout << "cannot find user while trying send file";
+    }
+
+}
+
 std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     std::string remainingStr;
     std::string line;
@@ -196,6 +319,31 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
+}
+
+void Server::prepareToReceiveFile(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string fromLogin;
+    std::getline(iss, fromLogin);
+
+    std::string toLogin;
+    std::getline(iss, toLogin);
+
+    std::string fileName;
+    std::getline(iss, fileName);
+
+    std::string fileSize;
+    std::getline(iss, fileSize);
+
+    std::string fileId;
+    std::getline(iss, fileId);
+
+    std::filesystem::create_directory("ReceivedFiles");
+    const std::string filePath = "ReceivedFiles/" + fileId + fileName;
+
+    connection->supplyFileData(fromLogin, toLogin, filePath, std::stoi(fileSize), fileId);
+    connection->readFile();
 }
 
 void Server::findUser(connectionT connection, const std::string& stringPacket) {
@@ -215,6 +363,25 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
     std::string s = m_sender.get_usersStr(vec);
     msgResponse << s;
     sendResponse(connection, msgResponse);
+}
+
+void Server::bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket) {
+    connection->redefineAsFileConnection(&m_safe_deque_of_incoming_files);
+    std::istringstream iss(stringPacket);
+
+    std::string myLogin;
+    std::getline(iss, myLogin);
+
+    auto it = m_map_online_users.find(myLogin);
+    if (it != m_map_online_users.end()) {
+        User* user = it->second;
+        user->setFilesConnection(connection);
+
+        sendPendingMessages(connection);
+    }
+    else {
+        std::cout << "cannot bind files connection to " + myLogin << std::endl;
+    }
 }
 
 void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
@@ -332,16 +499,21 @@ void Server::sendPendingMessages(connectionT connection) {
 
         auto packets = m_db.getCollected(user->getLogin());
         for (auto& [packet, type] : packets) {
+            if (type == QueryType::FILE_FAST_FORWARD) {
+                sendFileToUser(user->getFilesConnection(), packet);
+            }
+
             net::message<QueryType> msgResponse;
             msgResponse.header.type = type;
             msgResponse << packet;
             sendResponse(user->getConnection(), msgResponse);
         }
-    }
 
-    net::message<QueryType> msgResponse;
-    msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
-    sendResponse(connection, msgResponse);
+
+        net::message<QueryType> msgResponse;
+        msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
+        sendResponse(user->getConnection(), msgResponse);
+    }
 }
 
 void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
@@ -387,10 +559,6 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
         type = QueryType::AUTHORIZATION_FAIL;
         sendResponse(connection, msgResponse);
-    }
-
-    if (type == QueryType::AUTHORIZATION_SUCCESS) {
-        sendPendingMessages(connection);
     }
 }
 
@@ -619,7 +787,6 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
         }
     }
 
-    // 0. Проверка, что oldLogin существует
     auto mapIt = m_map_online_users.find(oldLogin);
     if (mapIt == m_map_online_users.end()) {
         return;
@@ -627,21 +794,16 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 
     User* user = mapIt->second;
 
-    // 1. Сначала обновляем в БД
     m_db.updateUserLogin(oldLogin, newLogin);
  
-
-    // 2. Обновляем локальные данные
     
     auto node = m_map_online_users.extract(mapIt);
     node.key() = newLogin;
     m_map_online_users.insert(std::move(node));
     
 
-    // 3. Рассылаем уведомления
     for (auto friendLogin : logins) {
         if (auto it = m_map_online_users.find(friendLogin); it != m_map_online_users.end()) {
-            // Онлайн-друг
             std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::USER_INFO;
@@ -649,7 +811,6 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
-            // Офлайн-друг
             std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
             m_db.collect(friendLogin, packetU, QueryType::USER_INFO);
         }
@@ -662,4 +823,38 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 void Server::sendResponse(connectionT connection, net::message<QueryType>& msg) {
     msg.header.size = msg.size();
     sendMessage(connection, msg);
+}
+
+
+
+void Server::onSendMessageError(net::message<QueryType> unsentMessage) {
+    std::string messageStr;
+    unsentMessage >> messageStr;
+    std::istringstream iss(messageStr);
+
+    QueryType type = unsentMessage.header.type;
+
+    if (type == QueryType::MESSAGE) {
+        std::string friendLogin;
+        std::getline(iss, friendLogin);
+
+        m_db.collect(friendLogin, iss.str(), QueryType::MESSAGE);
+    }
+    else if (type == QueryType::MESSAGES_READ_CONFIRMATION) {
+        std::string friendLogin;
+        std::getline(iss, friendLogin);
+
+        m_db.collect(friendLogin, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
+    }  
+    else if (type == QueryType::FILE_PREVIEW) {
+        std::string friendLogin;
+        std::getline(iss, friendLogin);
+
+        m_db.collect(friendLogin, iss.str(), QueryType::FILE_PREVIEW);
+    }
+}
+
+
+void Server::onSendFileError(net::file<QueryType> unsentFille) {
+
 }

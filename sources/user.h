@@ -40,6 +40,9 @@ public:
     connectionT getConnection() const { return m_connection; }
     void setConnection(connectionT connection) { m_connection = connection; }
 
+    connectionT getFilesConnection() const { return m_files_connection; }
+    void setFilesConnection(connectionT filesConnection) { m_files_connection = filesConnection; }
+
     const std::string& getLogin() const { return m_login; }
     void setLogin(const std::string& login) { m_login = login; }
 
@@ -69,5 +72,6 @@ private:
     std::string			                    m_password_hash;
     Photo			                        m_photo;
     connectionT                             m_connection;
+    connectionT                             m_files_connection;
 };
 

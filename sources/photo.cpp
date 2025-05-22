@@ -40,7 +40,7 @@ Photo Photo::deserialize(const std::string& data, size_t size, const std::string
         return Photo();
     }
 
-    const std::string saveDirectory = "./ReceivedFiles";
+    const std::string saveDirectory = "./ReceivedPhotos";
     try {
         std::filesystem::create_directories(saveDirectory);
     }

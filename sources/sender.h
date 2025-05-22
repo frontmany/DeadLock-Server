@@ -13,6 +13,8 @@ public:
     std::string get_userInfoPacket(User* user, const std::string newLogin = "");
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);
+    std::string get_filePreviewStr(const std::string& friendLogin, const std::string& myLogin, const std::string& filePath, const std::string& fileId);
+    std::string get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, size_t fileSize, const std::string& fileName, const std::string& fileId);
 
 private:
     const std::string vecBegin = "VEC_BEGIN";

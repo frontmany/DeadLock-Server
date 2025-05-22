@@ -19,7 +19,7 @@
 #include "net.h"
 
 typedef std::shared_ptr<net::connection<QueryType>> connectionT;
-typedef net::owned_message<QueryType> ownedMessageT;
+typedef net::message<QueryType> MessageT;
 
 class Server : public net::server_interface<QueryType> {
 public:
@@ -32,7 +32,14 @@ private:
 
     void onClientDisconnect(connectionT connection) override;
     bool onClientConnect(connectionT connection) override;
-    void onMessage(connectionT connection, ownedMessageT& msg) override;
+    void onMessage(connectionT connection, MessageT msg) override;
+    void onSendMessageError(net::message<QueryType> unsentMessage) override;
+    void onSendFileError(net::file<QueryType> unsentFille) override;
+    void onFile(net::file<QueryType> file) override;
+
+    void prepareToReceiveFile(connectionT connection, const std::string& stringPacket);
+    void bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket);
+    void sendFileToUser(connectionT connection, const std::string& stringPacket);
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(connectionT connection);

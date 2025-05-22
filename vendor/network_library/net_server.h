@@ -9,8 +9,8 @@ namespace net {
 	template<typename T>
 	class server_interface {
 	public:
-		server_interface(uint16_t port) 
-		: m_asio_acceptor(m_asio_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {
+		server_interface(uint16_t port)
+			: m_asio_acceptor(m_asio_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {
 
 		}
 
@@ -32,7 +32,7 @@ namespace net {
 		}
 
 		void stop() {
-			m_asio_context.stop(); 
+			m_asio_context.stop();
 
 			if (m_context_thread.joinable())
 				m_context_thread.join();
@@ -46,13 +46,14 @@ namespace net {
 					std::cout << "[SERVER] New Connection: " << socket.remote_endpoint() << "\n";
 
 					std::shared_ptr<connection<T>> newConnection = std::make_shared<connection<T>>(connection<T>::owner::server,
-						m_asio_context, std::move(socket), m_safe_deque_incoming_messages);
-
-					newConnection->setServer(this);
+						m_asio_context,
+						std::move(socket),
+						m_safe_deque_incoming_messages,
+						[this](std::shared_ptr<connection<T>> connectionPtr) {this->onClientDisconnect(connectionPtr); });
 
 					if (onClientConnect(newConnection)) {
-						m_deque_connections.push_back(std::move(newConnection));
-						m_deque_connections.back()->connectToClient();
+						m_set_connections.push_back(std::move(newConnection));
+						m_set_connections.back()->connectToClient();
 					}
 					else {
 						std::cout << "[-----] Connection Denied\n";
@@ -63,28 +64,58 @@ namespace net {
 				}
 
 				waitForClientConnections();
-			});
+				});
 		}
 
 		void sendMessage(std::shared_ptr<connection<T>> connection, const message<T>& msg) {
 			if (connection && connection->isConnected())
-				connection->send(msg);
+				connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
 			else {
 				onClientDisconnect(connection);
 				connection.reset();
+				auto it = std::find(m_set_connections.begin(), m_set_connections.end(), connection);
+				if (it != m_set_connections.end()) {
+					m_set_connections.erase(it);
+				}
+			}
+		}
 
-				m_deque_connections.erase(std::remove(m_deque_connections.begin(), 
-					m_deque_connections.end(), connection), m_deque_connections.end());
+
+		void sendFileOnFileConnection(std::shared_ptr<connection<T>> connection, const file<T>& file)
+		{
+			if (isConnected(connection))
+				connection->sendFile(file, [this](net::file<T> file) {this->onSendFileError(file); });
+			else {
+				onClientDisconnect(connection);
+				connection.reset();
+				auto it = std::find(m_set_connections.begin(), m_set_connections.end(), connection);
+				if (it != m_set_connections.end()) {
+					m_set_connections.erase(it);
+				}
+			}
+		}
+
+		void sendMessageOnFileConnection(std::shared_ptr<connection<T>> connection, const message<T>& msg)
+		{
+			if (isConnected(connection))
+				connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
+			else {
+				onClientDisconnect(connection);
+				connection.reset();
+				auto it = std::find(m_set_connections.begin(), m_set_connections.end(), connection);
+				if (it != m_set_connections.end()) {
+					m_set_connections.erase(it);
+				}
 			}
 		}
 
 		void broadcastMessage(const message<T>& msg, std::shared_ptr<connection<T>> connectionToIgnore = nullptr) {
 			bool isInvalidConnectionAppears = false;
 
-			for (auto& connection : m_deque_connections) {
+			for (auto& connection : m_set_connections) {
 				if (connection && connection->isConnected()) {
 					if (connection != connectionToIgnore) {
-						connection->send(msg);
+						connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
 					}
 					else {
 						onClientDisconnect(connection);
@@ -92,43 +123,51 @@ namespace net {
 						isInvalidConnectionAppears = true;
 					}
 				}
-			} 
+			}
 
 			if (isInvalidConnectionAppears) {
-				m_deque_connections.erase(std::remove(m_deque_connections.begin(),
-					m_deque_connections.end(), nullptr), m_deque_connections.end());
+				m_set_connections.erase_if([](const auto& ptr) { return ptr.get() == nullptr; });
 			}
 		}
 
 		void update(size_t maxMessagesCount = std::numeric_limits<unsigned long long>::max()) {
-			m_safe_deque_incoming_messages.wait();
+			size_t processedMessages = 0;
 
-			size_t  processedMessagesCount = 0;
-			while (processedMessagesCount < maxMessagesCount && !m_safe_deque_incoming_messages.empty()) {
-				auto msg = m_safe_deque_incoming_messages.pop_front();
+			while (true) {
+				if (!m_safe_deque_of_incoming_files.empty()) {
+					net::owned_file<T> file = m_safe_deque_of_incoming_files.pop_front();
+					onFile(std::move(file.file));
+				}
 
-				onMessage(msg.remote, msg);
+				if (!m_safe_deque_incoming_messages.empty() && processedMessages < maxMessagesCount) {
+					net::owned_message<T> msg = m_safe_deque_incoming_messages.pop_front();
+					onMessage(msg.remote, std::move(msg.msg));
+					processedMessages++;
+				}
 
-				processedMessagesCount++;
+				std::this_thread::yield();
 			}
 		}
 
-		virtual void onClientValidated(std::shared_ptr<connection<T>> connection) {}
-
-		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) {}
+		bool isConnected(std::shared_ptr<connection<T>>& connection) {
+			if (connection)
+				return connection->isConnected();
+			else
+				return false;
+		}
 
 	protected:
-		virtual bool onClientConnect(std::shared_ptr<connection<T>> connection) {
-			return true;
-		}
-
-
-		virtual void onMessage(std::shared_ptr<connection<T>> connection, owned_message<T>& msg) {
-		}
+		virtual void onMessage(std::shared_ptr<connection<T>> connection, message<T> msg) = 0;
+		virtual void onFile(net::file<T> file) = 0;
+		virtual void onSendMessageError(net::message<T> unsentMessage) = 0;
+		virtual void onSendFileError(net::file<T> unsentFille) = 0;
+		virtual bool onClientConnect(std::shared_ptr<connection<T>> connection) = 0;
+		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) = 0;
 
 	protected:
 		safe_deque<owned_message<T>>				m_safe_deque_incoming_messages;
-		std::deque<std::shared_ptr<connection<T>>>  m_deque_connections;
+		safe_deque<owned_file<T>>					m_safe_deque_of_incoming_files;
+		std::deque<std::shared_ptr<connection<T>>>	m_set_connections;
 
 		asio::io_context		m_asio_context;
 		std::thread			m_context_thread;

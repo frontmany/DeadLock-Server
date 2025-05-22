@@ -64,10 +64,31 @@ std::string SendStringsGenerator::get_userInfoPacket(User* user, const std::stri
     return oss.str();
 }
 
+std::string SendStringsGenerator::get_filePreviewStr(const std::string& friendLogin, const std::string& myLogin, const std::string& fileName, const std::string& fileId) {
+    std::ostringstream oss;
+    oss << myLogin << '\n'
+        << friendLogin << '\n'
+        << fileName << '\n'
+        << fileId << '\n';
+
+    return oss.str();
+}
+
 std::string SendStringsGenerator::get_statusStr(const std::string& login, const std::string& status) {
     std::ostringstream oss;
     oss << login << '\n'
         << status;
+
+    return oss.str();
+}
+
+std::string SendStringsGenerator::get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, size_t fileSize, const std::string& fileName, const std::string& fileId) {
+    std::ostringstream oss;
+    oss << myLogin << '\n'
+        << friendLogin << '\n'
+        << std::to_string(fileSize)<< '\n'
+        << fileName << '\n'
+        << fileId << '\n';
 
     return oss.str();
 }
