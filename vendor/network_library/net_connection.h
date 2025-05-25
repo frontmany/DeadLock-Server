@@ -134,41 +134,9 @@ namespace net {
 		}
 
 		void readFile() {
-			std::error_code ec; 
-			std::string originalPath = m_file_tmp.filePath;
-			std::string newPath = originalPath;
-			int counter = 1;
-
-			auto make_new_path = [&]() {
-				size_t dotPos = originalPath.find_last_of('.');
-				if (dotPos != std::string::npos && dotPos > 0) {
-					return originalPath.substr(0, dotPos) +
-						"(" + std::to_string(counter) + ")" +
-						originalPath.substr(dotPos);
-				}
-				return originalPath + "(" + std::to_string(counter) + ")";
-				};
-
-			while (std::filesystem::exists(newPath, ec) && !ec) {
-				newPath = make_new_path();
-				counter++;
-
-				if (counter > 1000) {
-					std::cerr << "Cannot find available filename for: " << originalPath << "\n";
-					break;
-				}
-			}
-
-			if (ec) {
-				std::cerr << "Filesystem error: " << ec.message() << "\n";
-				return;
-			}
-
-			m_file_tmp.filePath = newPath;
-
-			m_receive_file_stream.open(newPath, std::ios::binary | std::ios::app);
+			m_receive_file_stream.open(m_file_tmp.filePath, std::ios::binary | std::ios::app);
 			if (!m_receive_file_stream) {
-				std::cerr << "Failed to create file: " << newPath << "\n";
+				std::cerr << "Failed to create file: " << m_file_tmp.filePath << "\n";
 				return;
 			}
 
@@ -193,12 +161,13 @@ namespace net {
 				});
 		}
 
-		void supplyFileData(std::string senderLogin, std::string receiverLogin, std::string filePath, uint32_t fileSize, std::string fileId) {
+		void supplyFileData(std::string myLogin, std::string friendLogin, std::string filePath, std::string fileId, uint32_t fileSize, std::string caption) {
 			m_file_tmp.filePath = filePath;
-			m_file_tmp.senderLogin = senderLogin;
-			m_file_tmp.receiverLogin = receiverLogin;
+			m_file_tmp.senderLogin = myLogin;
+			m_file_tmp.receiverLogin = friendLogin;
 			m_file_tmp.fileSize = fileSize;
 			m_file_tmp.id = fileId;
+			m_file_tmp.caption = caption;
 
 			m_number_of_full_occurrences = m_file_tmp.fileSize / m_receive_file_buffer.size();
 			int lastPacketSize = m_file_tmp.fileSize - (m_number_of_full_occurrences * m_receive_file_buffer.size());

@@ -14,6 +14,7 @@ namespace net
         std::string filePath;
         std::string id;
         uint32_t fileSize;
+        std::string caption;
     };
 
     template <typename T>

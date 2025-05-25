@@ -64,7 +64,7 @@ namespace net {
 				}
 
 				waitForClientConnections();
-				});
+			});
 		}
 
 		void sendMessage(std::shared_ptr<connection<T>> connection, const message<T>& msg) {

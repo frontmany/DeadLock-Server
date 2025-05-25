@@ -200,14 +200,10 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
 
 void Server::onFile(net::file<QueryType> file) {
     auto it = m_map_online_users.find(file.receiverLogin);
-
-    std::string fileName = std::filesystem::path(file.filePath).filename().string();
-    std::string filePreviewStr = m_sender.get_filePreviewStr(file.receiverLogin, file.senderLogin, fileName, file.id);
-
-
     // 100mb
-    if (file.fileSize > 104857600) {
-        
+    if (file.fileSize > 104857600) {        
+        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.caption);
+
         if (it == m_map_online_users.end()) {
             m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
         }
@@ -220,19 +216,15 @@ void Server::onFile(net::file<QueryType> file) {
         }
     }
     else {
+        std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.caption);
+
         if (it == m_map_online_users.end()) {
-            m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_FAST_FORWARD);
+            m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
         }
         else {
             User* user = it->second;
-            
-            std::ostringstream oss;
-            oss << file.receiverLogin << "\n"
-                << file.senderLogin << "\n"
-                << file.filePath << "\n"
-                << file.id << "\n";
 
-            sendFileToUser(user->getFilesConnection(), oss.str());
+            sendFileToUser(user->getFilesConnection(), fileFastForwardStr);
         }
     }
     
@@ -252,6 +244,25 @@ void Server::sendFileToUser(connectionT connection, const std::string& stringPac
 
     std::string fileId;
     std::getline(iss, fileId);
+
+    std::string fileSizeStr;
+    std::getline(iss, fileSizeStr);
+    uint32_t fileSize = std::stoi(fileSizeStr);
+
+    std::string messageBegin;
+    std::getline(iss, messageBegin);
+
+    std::string caption;
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "MESSAGE_END") {
+            break;
+        }
+        else {
+            caption += line;
+            caption += '\n';
+        }
+    }
 
     const std::string directory = "ReceivedFiles";
     std::string foundFilePath = "";
@@ -278,13 +289,6 @@ void Server::sendFileToUser(connectionT connection, const std::string& stringPac
         return;
     }
 
-    std::streamsize fileSize = fileStream.tellg();
-    if (fileSize == -1) {
-        std::cerr << "Error: Could not determine file size\n";
-        fileStream.close();
-        return;
-    }
-
     fileStream.seekg(0);
     fileStream.close();
 
@@ -296,13 +300,12 @@ void Server::sendFileToUser(connectionT connection, const std::string& stringPac
 
         net::message<QueryType> msg;
         msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
-
-        std::string packetStr = m_sender.get_prepareToReceiveFileStr(myLogin, friendLogin, fileSize, std::filesystem::path(foundFilePath).filename().string(), fileId);
+        std::string packetStr = m_sender.get_prepareToReceiveFileStr(myLogin, friendLogin, std::filesystem::path(foundFilePath).filename().string(), fileId, fileSizeStr, caption);
         msg << packetStr;
 
         sendMessageOnFileConnection(user->getFilesConnection(), msg);
 
-        net::file<QueryType> file{ myLogin, friendLogin, foundFilePath, fileId, static_cast<uint32_t>(fileSize) };
+        net::file<QueryType> file{ myLogin, friendLogin, foundFilePath, fileId, fileSize, caption };
         sendFileOnFileConnection(user->getFilesConnection(), file);
     }
     else {
@@ -324,25 +327,42 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
 void Server::prepareToReceiveFile(connectionT connection, const std::string& stringPacket) {
     std::istringstream iss(stringPacket);
 
-    std::string fromLogin;
-    std::getline(iss, fromLogin);
+    std::string myLogin;
+    std::getline(iss, myLogin);
 
-    std::string toLogin;
-    std::getline(iss, toLogin);
+    std::string friendLogin;
+    std::getline(iss, friendLogin);
 
     std::string fileName;
     std::getline(iss, fileName);
 
+    std::string fileId;
+    std::getline(iss, fileId);
+
     std::string fileSize;
     std::getline(iss, fileSize);
 
-    std::string fileId;
-    std::getline(iss, fileId);
+    std::string messageBegin;
+    std::getline(iss, messageBegin);
+
+    std::string caption;
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "MESSAGE_END") {
+            break;
+        }
+        else {
+            caption += line;
+            caption += '\n';
+        }
+    }
+    caption.pop_back();
+
 
     std::filesystem::create_directory("ReceivedFiles");
     const std::string filePath = "ReceivedFiles/" + fileId + fileName;
 
-    connection->supplyFileData(fromLogin, toLogin, filePath, std::stoi(fileSize), fileId);
+    connection->supplyFileData(myLogin, friendLogin, filePath, fileId, std::stoi(fileSize), caption);
     connection->readFile();
 }
 
@@ -377,7 +397,7 @@ void Server::bindFilesConnectionToUser(connectionT connection, const std::string
         User* user = it->second;
         user->setFilesConnection(connection);
 
-        sendPendingMessages(connection);
+        sendPendingMessages(user->getConnection());
     }
     else {
         std::cout << "cannot bind files connection to " + myLogin << std::endl;

@@ -64,16 +64,6 @@ std::string SendStringsGenerator::get_userInfoPacket(User* user, const std::stri
     return oss.str();
 }
 
-std::string SendStringsGenerator::get_filePreviewStr(const std::string& friendLogin, const std::string& myLogin, const std::string& fileName, const std::string& fileId) {
-    std::ostringstream oss;
-    oss << myLogin << '\n'
-        << friendLogin << '\n'
-        << fileName << '\n'
-        << fileId << '\n';
-
-    return oss.str();
-}
-
 std::string SendStringsGenerator::get_statusStr(const std::string& login, const std::string& status) {
     std::ostringstream oss;
     oss << login << '\n'
@@ -82,13 +72,47 @@ std::string SendStringsGenerator::get_statusStr(const std::string& login, const 
     return oss.str();
 }
 
-std::string SendStringsGenerator::get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, size_t fileSize, const std::string& fileName, const std::string& fileId) {
+std::string SendStringsGenerator::get_filePreviewStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption) {
     std::ostringstream oss;
+
     oss << myLogin << '\n'
         << friendLogin << '\n'
-        << std::to_string(fileSize)<< '\n'
         << fileName << '\n'
-        << fileId << '\n';
+        << fileId << '\n'
+        << fileSize << '\n'
+        << messageBegin << '\n'
+        << caption << '\n'
+        << messageEnd << '\n';
+
+    return oss.str();
+}
+
+std::string SendStringsGenerator::get_fileFastForwardStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption) {
+    std::ostringstream oss;
+
+    oss << myLogin << '\n'
+        << friendLogin << '\n'
+        << fileName << '\n'
+        << fileId << '\n'
+        << fileSize << '\n'
+        << messageBegin << '\n'
+        << caption << '\n'
+        << messageEnd << '\n';
+
+    return oss.str();
+}
+
+std::string SendStringsGenerator::get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption) {
+    std::ostringstream oss;
+
+    oss << myLogin << '\n'
+        << friendLogin << '\n'
+        << fileName << '\n'
+        << fileId << '\n'
+        << fileSize << '\n'
+        << messageBegin << '\n'
+        << caption << '\n'
+        << messageEnd << '\n';
 
     return oss.str();
 }
