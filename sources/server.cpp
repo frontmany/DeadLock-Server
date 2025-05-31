@@ -153,7 +153,7 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
         bindFilesConnectionToUser(connection, stringPacket);
     }
     else if (type == QueryType::SEND_ME_FILE) {
-        sendFileToUser(connection, stringPacket);
+        onSendMeFile(connection, stringPacket);
     }
     
 }
@@ -198,39 +198,7 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
     }
 }
 
-void Server::onFile(net::file<QueryType> file) {
-    auto it = m_map_online_users.find(file.receiverLogin);
-    // 100mb
-    if (file.fileSize > 104857600) {        
-        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.caption);
-
-        if (it == m_map_online_users.end()) {
-            m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-        }
-        else {
-            User* user = it->second;
-            net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::FILE_PREVIEW;
-            msgResponse << filePreviewStr;
-            sendResponse(user->getConnection(), msgResponse);
-        }
-    }
-    else {
-        std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.caption);
-
-        if (it == m_map_online_users.end()) {
-            m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-        }
-        else {
-            User* user = it->second;
-
-            sendFileToUser(user->getFilesConnection(), fileFastForwardStr);
-        }
-    }
-    
-}
-
-void Server::sendFileToUser(connectionT connection, const std::string& stringPacket) {
+void Server::onSendMeFile(connectionT connection, const std::string& stringPacket) {
     std::istringstream iss(stringPacket);
 
     std::string myLogin;
@@ -239,15 +207,17 @@ void Server::sendFileToUser(connectionT connection, const std::string& stringPac
     std::string friendLogin;
     std::getline(iss, friendLogin);
 
-    std::string filename;
-    std::getline(iss, filename);
+    std::string fileName;
+    std::getline(iss, fileName);
 
     std::string fileId;
     std::getline(iss, fileId);
 
-    std::string fileSizeStr;
-    std::getline(iss, fileSizeStr);
-    uint32_t fileSize = std::stoi(fileSizeStr);
+    std::string fileTimestamp;
+    std::getline(iss, fileTimestamp);
+
+    std::string fileSize;
+    std::getline(iss, fileSize);
 
     std::string messageBegin;
     std::getline(iss, messageBegin);
@@ -263,49 +233,99 @@ void Server::sendFileToUser(connectionT connection, const std::string& stringPac
             caption += '\n';
         }
     }
+    caption.pop_back();
 
-    const std::string directory = "ReceivedFiles";
-    std::string foundFilePath = "";
+    std::string filesCountInBlobStr;
+    std::getline(iss, filesCountInBlobStr);
+    size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
 
-    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-        if (entry.is_regular_file()) {
-            std::string currentFilename = entry.path().filename().string();
-            if (currentFilename.find(fileId) != std::string::npos) {
-                foundFilePath = entry.path().string();
-                break;
+    std::string blobUID;
+    std::getline(iss, blobUID);
+
+
+    const std::string filePath = "ReceivedFiles/" + fileId + fileName;
+    std::ifstream fileStream(filePath);
+    bool isPresent = fileStream.good();
+
+    if (isPresent) {
+        net::file<QueryType> file;
+        file.blobUID = blobUID;
+        file.caption = caption;
+        file.filePath = filePath;
+        file.filesInBlobCount = filesCountInBlob;
+        file.fileSize = std::stoi(fileSize);
+        file.id = fileId;
+        file.receiverLogin = friendLogin;
+        file.senderLogin = myLogin;
+        file.timestamp = fileTimestamp;
+
+        sendFileToUser(connection, file, true);
+    }
+    else {
+        net::message<QueryType> msgResponse;
+        msgResponse.header.type = QueryType::UNEXISTING_FILE;
+        msgResponse << stringPacket;
+        sendResponse(connection, msgResponse);
+    }
+}
+
+void Server::onFile(net::file<QueryType> file) {
+    filesBlob<QueryType>& blob = m_map_pending_files_blobs.at(file.blobUID);
+    blob.received++;
+    blob.filesVec.push_back(file);
+
+    if (blob.received == blob.overAllCount) {
+        auto it = m_map_online_users.find(file.receiverLogin);
+        
+        for (auto file : blob.filesVec) {
+            if (it == m_map_online_users.end()) {
+                // 100mb
+                if (file.fileSize > 104857600) {
+                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+                }
+                else {
+                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
+                }
+            }
+            // 100mb
+            else {
+                if (file.fileSize > 104857600) {
+                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    User* user = it->second;
+                    net::message<QueryType> msgResponse;
+                    msgResponse.header.type = QueryType::FILE_PREVIEW;
+                    msgResponse << filePreviewStr;
+                    sendResponse(user->getConnection(), msgResponse);
+                }
+                else {
+                    User* user = it->second;
+                    sendFileToUser(user->getFilesConnection(), file, false);
+                }
             }
         }
     }
+}
 
-    if (!std::filesystem::exists(foundFilePath)) {
-        std::cerr << "Error: File " << foundFilePath << " does not exist\n";
-        return;
-    }
-
-    std::ifstream fileStream(foundFilePath, std::ios::binary | std::ios::ate);
-    if (!fileStream) {
-        std::cerr << "Error: Failed to open file " << foundFilePath
-            << " (Error code: " << strerror(errno) << ")\n";
-        return;
-    }
-
-    fileStream.seekg(0);
-    fileStream.close();
-
-
-    auto it = m_map_online_users.find(myLogin);
+void Server::sendFileToUser(connectionT connection, net::file<QueryType> file, bool isRequested) {
+    auto it = m_map_online_users.find(file.receiverLogin);
 
     if (it != m_map_online_users.end()) {
         User* user = it->second;
 
         net::message<QueryType> msg;
-        msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
-        std::string packetStr = m_sender.get_prepareToReceiveFileStr(myLogin, friendLogin, std::filesystem::path(foundFilePath).filename().string(), fileId, fileSizeStr, caption);
+        if (isRequested) {
+            msg.header.type = QueryType::PREPARE_TO_RECEIVE_REQUESTED_FILE;
+        }
+        else {
+            msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
+        }
+
+        std::string packetStr = m_sender.get_prepareToReceiveFileStr(file.receiverLogin, file.senderLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
         msg << packetStr;
 
         sendMessageOnFileConnection(user->getFilesConnection(), msg);
-
-        net::file<QueryType> file{ myLogin, friendLogin, foundFilePath, fileId, fileSize, caption };
         sendFileOnFileConnection(user->getFilesConnection(), file);
     }
     else {
@@ -339,6 +359,9 @@ void Server::prepareToReceiveFile(connectionT connection, const std::string& str
     std::string fileId;
     std::getline(iss, fileId);
 
+    std::string fileTimestamp;
+    std::getline(iss, fileTimestamp);
+
     std::string fileSize;
     std::getline(iss, fileSize);
 
@@ -358,11 +381,22 @@ void Server::prepareToReceiveFile(connectionT connection, const std::string& str
     }
     caption.pop_back();
 
+    std::string filesCountInBlobStr;
+    std::getline(iss, filesCountInBlobStr);
+    size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+
+    std::string blobUID;
+    std::getline(iss, blobUID);
+
+    if (m_map_pending_files_blobs.contains(blobUID)) {}
+    else {
+        m_map_pending_files_blobs.emplace(blobUID, filesBlob<QueryType>(0, filesCountInBlob, {}));
+    }
 
     std::filesystem::create_directory("ReceivedFiles");
     const std::string filePath = "ReceivedFiles/" + fileId + fileName;
 
-    connection->supplyFileData(myLogin, friendLogin, filePath, fileId, std::stoi(fileSize), caption);
+    connection->supplyFileData(myLogin, friendLogin, filePath, fileId, std::stoi(fileSize), fileTimestamp, caption, blobUID, filesCountInBlob);
     connection->readFile();
 }
 
@@ -520,7 +554,69 @@ void Server::sendPendingMessages(connectionT connection) {
         auto packets = m_db.getCollected(user->getLogin());
         for (auto& [packet, type] : packets) {
             if (type == QueryType::FILE_FAST_FORWARD) {
-                sendFileToUser(user->getFilesConnection(), packet);
+                std::istringstream iss(packet);
+
+                std::string myLogin;
+                std::getline(iss, myLogin);
+
+                std::string friendLogin;
+                std::getline(iss, friendLogin);
+
+                std::string fileName;
+                std::getline(iss, fileName);
+
+                std::string fileId;
+                std::getline(iss, fileId);
+
+                std::string fileTimestamp;
+                std::getline(iss, fileTimestamp);
+
+                std::string fileSize;
+                std::getline(iss, fileSize);
+
+                std::string messageBegin;
+                std::getline(iss, messageBegin);
+
+                std::string caption;
+                std::string line;
+                while (std::getline(iss, line)) {
+                    if (line == "MESSAGE_END") {
+                        break;
+                    }
+                    else {
+                        caption += line;
+                        caption += '\n';
+                    }
+                }
+                caption.pop_back();
+
+                std::string filesCountInBlobStr;
+                std::getline(iss, filesCountInBlobStr);
+                size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+
+                std::string blobUID;
+                std::getline(iss, blobUID);
+
+
+                const std::string filePath = "ReceivedFiles/" + fileId + fileName;
+                std::ifstream fileStream(filePath);
+                bool isPresent = fileStream.good();
+
+                if (isPresent) {
+                    net::file<QueryType> file;
+                    file.blobUID = blobUID;
+                    file.caption = caption;
+                    file.filePath = filePath;
+                    file.filesInBlobCount = filesCountInBlob;
+                    file.fileSize = std::stoi(fileSize);
+                    file.id = fileId;
+                    file.receiverLogin = friendLogin;
+                    file.senderLogin = myLogin;
+                    file.timestamp = fileTimestamp;
+
+                    sendFileToUser(connection, file, false);
+                }
+                continue;
             }
 
             net::message<QueryType> msgResponse;
@@ -873,7 +969,6 @@ void Server::onSendMessageError(net::message<QueryType> unsentMessage) {
         m_db.collect(friendLogin, iss.str(), QueryType::FILE_PREVIEW);
     }
 }
-
 
 void Server::onSendFileError(net::file<QueryType> unsentFille) {
 

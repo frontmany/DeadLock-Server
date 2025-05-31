@@ -14,9 +14,9 @@ public:
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);
 
-    std::string get_filePreviewStr(const std::string& friendLogin, const std::string& myLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption);
-    std::string get_fileFastForwardStr(const std::string& friendLogin, const std::string& myLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption);
-    std::string get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& caption);
+    std::string get_filePreviewStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, uint32_t filesInBlobCount);
+    std::string get_fileFastForwardStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, uint32_t filesInBlobCount);
+    std::string get_prepareToReceiveFileStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, uint32_t filesInBlobCount);
 
 private:
     const std::string vecBegin = "VEC_BEGIN";

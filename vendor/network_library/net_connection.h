@@ -161,13 +161,17 @@ namespace net {
 				});
 		}
 
-		void supplyFileData(std::string myLogin, std::string friendLogin, std::string filePath, std::string fileId, uint32_t fileSize, std::string caption) {
+		void supplyFileData(std::string myLogin, std::string friendLogin, std::string filePath, std::string fileId, uint32_t fileSize, std::string timestamp, std::string caption, const std::string& blobUID, size_t filesInBlobCount) {
 			m_file_tmp.filePath = filePath;
 			m_file_tmp.senderLogin = myLogin;
 			m_file_tmp.receiverLogin = friendLogin;
 			m_file_tmp.fileSize = fileSize;
 			m_file_tmp.id = fileId;
+			m_file_tmp.timestamp = timestamp;
 			m_file_tmp.caption = caption;
+			m_file_tmp.blobUID = blobUID;
+			m_file_tmp.filesInBlobCount = filesInBlobCount;
+
 
 			m_number_of_full_occurrences = m_file_tmp.fileSize / m_receive_file_buffer.size();
 			int lastPacketSize = m_file_tmp.fileSize - (m_number_of_full_occurrences * m_receive_file_buffer.size());

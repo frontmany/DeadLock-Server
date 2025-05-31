@@ -4,6 +4,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <queue>
 #include <string>
@@ -13,6 +14,7 @@
 
 
 #include "database.h"
+#include "blob.h"
 #include "queryType.h"
 #include "sender.h"
 #include "user.h"
@@ -39,7 +41,8 @@ private:
 
     void prepareToReceiveFile(connectionT connection, const std::string& stringPacket);
     void bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket);
-    void sendFileToUser(connectionT connection, const std::string& stringPacket);
+    void sendFileToUser(connectionT connection, net::file<QueryType> file, bool isRequested);
+    void onSendMeFile(connectionT connection, const std::string& stringPacket);
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(connectionT connection);
@@ -78,4 +81,7 @@ private:
     int                                 m_port;
 
     std::unordered_map<std::string, User*>  m_map_online_users;
+
+    // blob UID to current received count
+    std::unordered_map<std::string, filesBlob<QueryType>> m_map_pending_files_blobs;
 };
