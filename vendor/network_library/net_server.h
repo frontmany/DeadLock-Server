@@ -189,11 +189,18 @@ namespace net {
 					this->onConnectError(ec);
 				}
 			);
+
+			connection->setOnFileSent(
+				[this](net::file<T> file) {
+					this->onFileSent(std::move(file));
+				}
+			);
 		}
 
 	protected:
 		virtual void onMessage(std::shared_ptr<connection<T>> connection, message<T> msg) = 0;
 		virtual void onFile(net::file<T> file) = 0;
+		virtual void onFileSent(net::file<T> sentFile) = 0;
 
 		virtual bool onClientConnect(std::shared_ptr<connection<T>> connection) = 0;
 		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) = 0;

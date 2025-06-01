@@ -168,6 +168,12 @@ namespace net {
 						this->onConnectError(ec);
 					}
 				);
+
+				m_files_connection->setOnFileSent(
+					[this](net::file<T> file) {
+						this->onFileSent(std::move(file));
+					}
+				);
 			}
 		}
 
@@ -179,13 +185,14 @@ namespace net {
 	protected:
 		virtual void onMessage(net::message<T> message) = 0;
 		virtual void onFile(net::file<T> file) = 0;
+		virtual void onFileSent(net::file<T> sentFile) = 0;
 
 		//errors
 		virtual void onSendMessageError(std::error_code ec, net::message<T> unsentMessage) = 0;
-		virtual void onSendFileError(std::error_code ec, net::file<T> unsentFille) = 0;
+		virtual void onSendFileError(std::error_code ec, net::file<T> unsentFile) = 0;
 
 		virtual void onReadMessageError(std::error_code ec) = 0;
-		virtual void onReadFileError(std::error_code ec, net::file<T> unreadFille) = 0;
+		virtual void onReadFileError(std::error_code ec, net::file<T> unreadFile) = 0;
 
 		virtual void onConnectError(std::error_code ec) = 0;
 

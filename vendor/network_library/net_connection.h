@@ -73,7 +73,12 @@ namespace net {
 
 		virtual ~connection() {}
 
-		// new 
+		// new
+		void setOnFileSent(std::function<void(net::file<T>)> callback) {
+			m_on_file_sent = std::move(callback);
+		}
+
+		// errors
 		void setOnSendMessageError(std::function<void(std::error_code, net::message<T>)> callback) {
 			m_on_send_message_error = std::move(callback);
 		}
@@ -93,6 +98,7 @@ namespace net {
 		void setOnConnectError(std::function<void(std::error_code)> callback) {
 			m_on_connect_error = std::move(callback);
 		}
+
 
 		bool removePartiallyDownloadedFile() {
 			std::string path = m_file_tmp.filePath;
@@ -356,6 +362,8 @@ namespace net {
 			else
 				m_safe_deque_incoming_files->push_back({ nullptr, m_file_tmp });
 
+			m_on_file_sent(std::move(m_file_tmp));
+
 			m_received_file_size = 0;
 			m_curent_number_of_occurrences = 0;
 			m_number_of_full_occurrences = 0;
@@ -527,6 +535,9 @@ namespace net {
 		uint64_t					  m_hand_shake_check;
 
 		// callbacks
+		std::function<void(net::file<T>)> m_on_file_sent;
+
+		// errors
 		std::function<void(std::error_code, net::message<T>)> m_on_send_message_error;
 		std::function<void(std::error_code, net::file<T>)> m_on_send_file_chunk_error;
 

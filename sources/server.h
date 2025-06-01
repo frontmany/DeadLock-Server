@@ -32,6 +32,7 @@ public:
 private:
     void processIncomingMessagesQueue();
 
+    void onFileSent(net::file<QueryType> sentFile) override;
 
     // errors
     void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
