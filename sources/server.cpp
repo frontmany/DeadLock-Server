@@ -25,11 +25,9 @@ void Server::startServer() {
 
 void Server::stopServer() {
     stop();
-
 }
 
 void Server::onClientDisconnect(connectionT connection) {
-
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
         [connection](const auto& pair) { return pair.second->getConnection() == connection; });
 
@@ -943,7 +941,8 @@ void Server::sendResponse(connectionT connection, net::message<QueryType>& msg) 
 
 
 
-void Server::onSendMessageError(net::message<QueryType> unsentMessage) {
+// errors
+void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) {
     std::string messageStr;
     unsentMessage >> messageStr;
     std::istringstream iss(messageStr);
@@ -961,15 +960,134 @@ void Server::onSendMessageError(net::message<QueryType> unsentMessage) {
         std::getline(iss, friendLogin);
 
         m_db.collect(friendLogin, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
-    }  
-    else if (type == QueryType::FILE_PREVIEW) {
-        std::string friendLogin;
-        std::getline(iss, friendLogin);
+    }
 
-        m_db.collect(friendLogin, iss.str(), QueryType::FILE_PREVIEW);
+    handleError(ec);
+}
+
+void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) {
+    auto it = m_map_pending_files_blobs.find(unsentFile.blobUID);
+    auto& [blobUID, blob] = *it;
+    for (auto& file : blob.filesVec) {
+        if (file.fileSize > 104857600) {
+            std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+            m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+        }
+        else {
+            std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+            m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
+        }
+    }
+    m_map_pending_files_blobs.erase(unsentFile.blobUID);
+    handleError(ec);
+}
+
+
+void Server::onReadMessageError(std::error_code ec) {
+    handleError(ec);
+}
+
+void Server::onReadFileError(std::error_code ec, net::file<QueryType> unreadFile) {
+    auto it = m_map_pending_files_blobs.find(unreadFile.blobUID);
+    if (it != m_map_pending_files_blobs.end()) {
+        m_map_pending_files_blobs.erase(unreadFile.blobUID);
+    }
+
+    handleError(ec);
+}
+
+void Server::handleError(std::error_code ec) {
+    if (ec == asio::error::connection_reset) {
+        std::cerr << "Client forcibly closed connection during file transfer: "
+             << std::endl;
+    }
+    else if (ec == asio::error::eof) {
+        std::cerr << "Client disconnected during file transfer: "
+             << std::endl;
+    }
+    else if (ec == asio::error::operation_aborted) {
+        std::cerr << "File transfer cancelled by server: "
+             << std::endl;
+    }
+    else if (ec == asio::error::timed_out) {
+        std::cerr << "Network timeout during file transfer: "
+            << std::endl;
+    }
+    else if (ec == asio::error::network_down ||
+        ec == asio::error::network_reset ||
+        ec == asio::error::host_unreachable) {
+        std::cerr << "Network problem detected during file transfer: "
+            << ec.message() << std::endl;
+    }
+    else {
+        std::cerr << "Unknown error during file transfer (" << ec << "): "
+            << ec.message() << ", file: " <<  std::endl;
+    }
+
+    if (!hasInternetConnection()) {
+        handleFileBlobsOnInternetConnectionFail();
+        stopServer();
     }
 }
 
-void Server::onSendFileError(net::file<QueryType> unsentFille) {
+void Server::handleFileBlobsOnInternetConnectionFail() {
+    for (auto [blobUID, blob] : m_map_pending_files_blobs) {
+        if (blob.received == blob.overAllCount) {
+            for (auto& file : blob.filesVec) {
+                if (file.fileSize > 104857600) {
+                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+                }
+                else {
+                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
+                }
+            }
+        }
+        else {
+            m_map_pending_files_blobs.erase(blobUID);
+        }
+    }
+}
 
+void Server::onConnectError(std::error_code ec) {
+    handleError(ec);
+}
+
+bool Server::hasInternetConnection() {
+    try {
+        asio::io_context io_context;
+        asio::ip::icmp::socket socket(io_context, asio::ip::icmp::v4());
+
+        asio::ip::icmp::endpoint endpoint(
+            asio::ip::make_address_v4("1.1.1.1"), 0);
+
+        std::string request("\x08\x00\x00\x00\x00\x01\x00\x00", 8);
+        socket.send_to(asio::buffer(request), endpoint);
+
+        asio::steady_timer timer(io_context);
+        timer.expires_after(std::chrono::seconds(2));
+
+        bool received_reply = false;
+        asio::streambuf reply_buffer;
+        socket.async_receive(reply_buffer.prepare(1024),
+            [&](std::error_code ec, size_t length) {
+                if (!ec) {
+                    reply_buffer.commit(length);
+                    received_reply = true;
+                }
+                timer.cancel();
+            });
+
+        timer.async_wait([&socket](const std::error_code&) {
+            socket.cancel();
+            });
+
+        io_context.run();
+        return received_reply;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ping error: " << e.what() << std::endl;
+        return false;
+    }
 }

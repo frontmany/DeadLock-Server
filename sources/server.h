@@ -32,12 +32,24 @@ public:
 private:
     void processIncomingMessagesQueue();
 
+
+    // errors
+    void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
+    void onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) override;
+
+    void onReadMessageError(std::error_code ec) override;
+    void onReadFileError(std::error_code ec, net::file<QueryType> unreadFile) override;
+
+    void onConnectError(std::error_code ec) override;
+
+
+    void onMessage(connectionT connection, MessageT msg) override;
+    void onFile(net::file<QueryType> file) override;
+
     void onClientDisconnect(connectionT connection) override;
     bool onClientConnect(connectionT connection) override;
-    void onMessage(connectionT connection, MessageT msg) override;
-    void onSendMessageError(net::message<QueryType> unsentMessage) override;
-    void onSendFileError(net::file<QueryType> unsentFille) override;
-    void onFile(net::file<QueryType> file) override;
+
+
 
     void prepareToReceiveFile(connectionT connection, const std::string& stringPacket);
     void bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket);
@@ -71,6 +83,10 @@ private:
 
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
 
+    bool hasInternetConnection();
+    void handleError(std::error_code ec);
+    void handleFileBlobsOnInternetConnectionFail();
+
 private:
     std::thread                         m_worker_thread;
 
@@ -80,8 +96,8 @@ private:
     std::string                         m_ipAddress;
     int                                 m_port;
 
-    std::unordered_map<std::string, User*>  m_map_online_users;
+    std::unordered_map<std::string, User*> m_map_online_users;
 
-    // blob UID to current received count
+    // blob UID to blob
     std::unordered_map<std::string, filesBlob<QueryType>> m_map_pending_files_blobs;
 };

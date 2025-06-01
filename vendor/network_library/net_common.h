@@ -22,4 +22,5 @@
 #define ASIO_STANDALONE
 #include "asio.hpp"
 #include <asio/ts/buffer.hpp>
+#include <asio/ip/icmp.hpp>
 #include <asio/ts/internet.hpp>

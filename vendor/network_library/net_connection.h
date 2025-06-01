@@ -15,18 +15,16 @@ namespace net {
 	public:
 
 		enum class owner {
-			server, 
+			server,
 			client
 		};
 
-		connection(owner owner, asio::io_context& asioContext, 
-			asio::ip::tcp::socket socket, 
-			safe_deque<owned_message<T>>& safeDequeIncomingMessages,
-			std::function<void(std::shared_ptr<connection<T>>)> onDisconnectCallback)
-			: m_asio_context(asioContext), 
-			m_socket(std::move(socket)), 
-			m_safe_deque_incoming_messages(safeDequeIncomingMessages),
-			m_on_disconnect_callback(onDisconnectCallback)
+		connection(owner owner, asio::io_context& asioContext,
+			asio::ip::tcp::socket socket,
+			safe_deque<owned_message<T>>& safeDequeIncomingMessages)
+			: m_asio_context(asioContext),
+			m_socket(std::move(socket)),
+			m_safe_deque_incoming_messages(safeDequeIncomingMessages)
 		{
 			m_last_packet_size = 0;
 			m_hand_shake_out = 0;
@@ -49,13 +47,11 @@ namespace net {
 		connection(owner owner, asio::io_context& asioContext,
 			asio::ip::tcp::socket socket,
 			safe_deque<owned_message<T>>& safeDequeIncomingMessages,
-			safe_deque<owned_file<T>>* safeDequeIncomingFiles,
-			std::function<void(std::shared_ptr<connection<T>>)> onDisconnectCallback)
+			safe_deque<owned_file<T>>* safeDequeIncomingFiles)
 			: m_asio_context(asioContext),
 			m_socket(std::move(socket)),
 			m_safe_deque_incoming_messages(safeDequeIncomingMessages),
-			m_safe_deque_incoming_files(safeDequeIncomingFiles),
-			m_on_disconnect_callback(onDisconnectCallback)
+			m_safe_deque_incoming_files(safeDequeIncomingFiles)
 		{
 			m_last_packet_size = 0;
 			m_hand_shake_out = 0;
@@ -77,18 +73,60 @@ namespace net {
 
 		virtual ~connection() {}
 
+		// new 
+		void setOnSendMessageError(std::function<void(std::error_code, net::message<T>)> callback) {
+			m_on_send_message_error = std::move(callback);
+		}
+
+		void setOnSendFileChunkError(std::function<void(std::error_code, net::file<T>)> callback) {
+			m_on_send_file_chunk_error = std::move(callback);
+		}
+
+		void setOnReadMessageError(std::function<void(std::error_code)> callback) {
+			m_on_read_message_error = std::move(callback);
+		}
+
+		void setOnReadFileChunkError(std::function<void(std::error_code, net::file<T>)> callback) {
+			m_on_read_file_chunk_error = std::move(callback);
+		}
+
+		void setOnConnectError(std::function<void(std::error_code)> callback) {
+			m_on_connect_error = std::move(callback);
+		}
+
+		bool removePartiallyDownloadedFile() {
+			std::string path = m_file_tmp.filePath;
+
+			if (path.empty()) {
+				return false;
+			}
+
+			std::error_code ec;
+			bool removed = std::filesystem::remove(path, ec);
+
+			if (ec) {
+				std::cerr << "Failed to delete " << path << ": " << ec.message() << "\n";
+				return false;
+			}
+
+			return removed;
+		}
+
+
 		void connectToServer(const asio::ip::tcp::resolver::results_type& endpoint) {
 			if (m_owner_type == owner::client) {
 				asio::async_connect(m_socket, endpoint,
 					[this](std::error_code ec, const asio::ip::tcp::endpoint& endpoint) {
-						if (!ec) {
-							std::cout << "Connected to: " << endpoint << std::endl;
-							readValidation();
+						if (ec) {
+							disconnect();
+							if (m_on_connect_error) {
+								m_on_connect_error(ec);
+							}
+							std::cerr << "Connection failed: " << ec.message() << std::endl;
 						}
 						else {
-							disconnect();
-							m_on_disconnect_callback(this->shared_from_this());
-							std::cerr << "Connection failed: " << ec.message() << std::endl;
+							std::cout << "Connected to: " << endpoint << std::endl;
+							readValidation();
 						}
 					});
 			}
@@ -123,20 +161,52 @@ namespace net {
 			return m_socket.is_open();
 		}
 
-		void send(const message<T>& msg, std::function<void(message<T>)> errorCallbackSendMessage, std::function<void(net::file<T>)> errorCallbackSendFile) {
-			asio::post(m_asio_context, [this, msg, callBackMessage = std::move(errorCallbackSendMessage), callBackFile = std::move(errorCallbackSendFile)]() {
-			 	bool isAbleToWrite = m_safe_deque_outgoing_messages.empty();
+		void send(const message<T>& msg) {
+			asio::post(m_asio_context, [this, msg]() {
+				bool isAbleToWrite = m_safe_deque_outgoing_messages.empty();
 				m_safe_deque_outgoing_messages.push_back(msg);
 				if (isAbleToWrite) {
-					writeHeader(std::move(callBackMessage), std::move(callBackFile));
+					writeHeader();
 				}
-			});
+				});
 		}
 
 		void readFile() {
-			m_receive_file_stream.open(m_file_tmp.filePath, std::ios::binary | std::ios::app);
+			std::error_code ec;
+			std::string originalPath = m_file_tmp.filePath;
+			std::string newPath = originalPath;
+			int counter = 1;
+
+			auto make_new_path = [&]() {
+				size_t dotPos = originalPath.find_last_of('.');
+				if (dotPos != std::string::npos && dotPos > 0) {
+					return originalPath.substr(0, dotPos) +
+						"(" + std::to_string(counter) + ")" +
+						originalPath.substr(dotPos);
+				}
+				return originalPath + "(" + std::to_string(counter) + ")";
+				};
+
+			while (std::filesystem::exists(newPath, ec) && !ec) {
+				newPath = make_new_path();
+				counter++;
+
+				if (counter > 1000) {
+					std::cerr << "Cannot find available filename for: " << originalPath << "\n";
+					break;
+				}
+			}
+
+			if (ec) {
+				std::cerr << "Filesystem error: " << ec.message() << "\n";
+				return;
+			}
+
+			m_file_tmp.filePath = newPath;
+
+			m_receive_file_stream.open(newPath, std::ios::binary | std::ios::app);
 			if (!m_receive_file_stream) {
-				std::cerr << "Failed to create file: " << m_file_tmp.filePath << "\n";
+				std::cerr << "Failed to create file: " << newPath << "\n";
 				return;
 			}
 
@@ -146,17 +216,17 @@ namespace net {
 		void readHeader() {
 			asio::async_read(m_socket, asio::buffer(&m_message_tmp.header, sizeof(message_header<T>)),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
+					if (ec) {
+						m_on_read_message_error(ec);
+						disconnect();
+					}
+					else {
 						if (m_message_tmp.header.size > sizeof(message_header<T>)) {
 							m_message_tmp.body.resize(m_message_tmp.header.size - sizeof(message_header<T>));
 							readBody();
 						}
 						else
 							addToIncomingMessagesQueue();
-					}
-					else {
-						disconnect();
-						m_on_disconnect_callback(this->shared_from_this());
 					}
 				});
 		}
@@ -182,27 +252,29 @@ namespace net {
 				m_last_packet_size = lastPacketSize;
 			}
 		}
-		
-		void sendFile(const net::file<T>& file, std::function<void(net::file<T>)> errorCallbackSendFile) {
+
+		void sendFile(const net::file<T>& file) {
 			if (m_is_for_files) {
-				asio::post(m_asio_context, [this, file, callBackFile = std::move(errorCallbackSendFile)]() mutable {
+				asio::post(m_asio_context, [this, file]() {
 					bool isAbleToWrite = m_safe_deque_outgoing_files.empty() && m_safe_deque_outgoing_messages.empty();
 					m_safe_deque_outgoing_files.push_back(file);
 					if (isAbleToWrite) {
-						writeFileChunk(std::move(callBackFile));
+						writeFileChunk();
 					}
 					});
 			}
 		}
 
-		void writeFileChunk(std::function<void(net::file<T>)> errorCallbackSendFile)
-		{
-			if (!m_send_file_stream.is_open())
-			{
+		void writeFileChunk() {
+			if (!m_send_file_stream.is_open()) {
 				m_send_file_stream.open(m_safe_deque_outgoing_files.front().filePath, std::ios::binary);
-				if (!m_send_file_stream.is_open())
-				{
-					if (errorCallbackSendFile) errorCallbackSendFile(m_safe_deque_outgoing_files.front());  // Уведомляем об ошибке открытия файла
+				if (!m_send_file_stream.is_open()) {
+					if (m_on_send_file_chunk_error) {
+						m_on_send_file_chunk_error(
+							std::make_error_code(std::errc::no_such_file_or_directory),
+							m_safe_deque_outgoing_files.front()
+						);
+					}
 					return;
 				}
 			}
@@ -210,28 +282,24 @@ namespace net {
 			m_send_file_stream.read(m_send_file_buffer.data(), m_send_file_buffer.size());
 			std::streamsize bytesRead = m_send_file_stream.gcount();
 
-			if (bytesRead > 0)
-			{
+			if (bytesRead > 0) {
 				asio::async_write(
 					m_socket,
-					asio::buffer(m_send_file_buffer.data(), m_send_file_buffer.size()), 
-					[this, callBackFile = std::move(errorCallbackSendFile)](std::error_code ec, std::size_t) mutable
-					{
-						if (!ec)
-						{
-							writeFileChunk(std::move(callBackFile));
-						}
-						else
-						{
-							m_send_file_stream.close();
+					asio::buffer(m_send_file_buffer.data(), bytesRead),
+					[this](std::error_code ec, std::size_t) {
+						if (ec) {
+							if (m_on_send_file_chunk_error) {
+								m_on_send_file_chunk_error(ec, m_safe_deque_outgoing_files.front());
+							}
 							disconnect();
-							if (callBackFile) callBackFile(m_safe_deque_outgoing_files.front()); 
+						}
+						else {
+							writeFileChunk();
 						}
 					}
 				);
 			}
-			else
-			{
+			else {
 				m_send_file_stream.close();
 				m_safe_deque_outgoing_files.pop_front();
 			}
@@ -240,13 +308,21 @@ namespace net {
 		bool isFileConnection() {
 			return m_is_for_files;
 		}
-		
+
 	private:
 		void readFileChunk() {
 			m_socket.async_read_some(
 				asio::buffer(m_receive_file_buffer.data(), m_receive_file_buffer.size()),
 				[this](std::error_code ec, std::size_t bytes_transferred) {
-					if (!ec) {
+					if (ec) {
+						disconnect();
+						removePartiallyDownloadedFile();
+						if (m_on_read_file_chunk_error) {
+							m_on_read_file_chunk_error(ec, m_file_tmp);
+						}
+						return;
+					}
+					else {
 						m_received_file_size += bytes_transferred;
 						m_curent_number_of_occurrences++;
 
@@ -269,10 +345,7 @@ namespace net {
 							finalizeFileTransfer();
 						}
 					}
-					else {
-						disconnect();
-						m_on_disconnect_callback(this->shared_from_this());
-					}
+
 				});
 		}
 
@@ -292,20 +365,20 @@ namespace net {
 		}
 
 		void readBody() {
-			asio::async_read(m_socket, asio::buffer(m_message_tmp.body.data(), m_message_tmp.body.size()), 
+			asio::async_read(m_socket, asio::buffer(m_message_tmp.body.data(), m_message_tmp.body.size()),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						addToIncomingMessagesQueue();
+					if (ec) {
+						m_on_read_message_error(ec);
+						disconnect();
 					}
 					else {
-						disconnect();
-						m_on_disconnect_callback(this->shared_from_this());
+						addToIncomingMessagesQueue();
 					}
 				});
 		}
 
 		void addToIncomingMessagesQueue() {
-			if (m_owner_type == owner::server) 
+			if (m_owner_type == owner::server)
 				m_safe_deque_incoming_messages.push_back({ this->shared_from_this(), m_message_tmp });
 			else
 				m_safe_deque_incoming_messages.push_back({ nullptr, m_message_tmp });
@@ -317,20 +390,21 @@ namespace net {
 			}
 		}
 
-		void writeHeader(std::function<void(message<T>)> errorCallbackSendMessage,
-			std::function<void(file<T>)> errorCallbackSendFile)
-		{
+		void writeHeader() {
 			asio::async_write(
 				m_socket,
 				asio::buffer(&m_safe_deque_outgoing_messages.front().header, sizeof(message_header<T>)),
-				[this, callBackMessage = std::move(errorCallbackSendMessage),
-				callBackFile = std::move(errorCallbackSendFile)](std::error_code ec, std::size_t length) mutable
-				{
-					if (!ec)
+				[this](std::error_code ec, std::size_t length) {
+					if (ec)
+					{
+						disconnect();
+						m_on_send_message_error(ec, m_safe_deque_outgoing_messages.pop_front());
+					}
+					else
 					{
 						if (m_safe_deque_outgoing_messages.front().body.size() > 0)
 						{
-							writeBody(std::move(callBackMessage), std::move(callBackFile));
+							writeBody();
 						}
 						else
 						{
@@ -338,52 +412,41 @@ namespace net {
 
 							if (!m_safe_deque_outgoing_messages.empty())
 							{
-								writeHeader(std::move(callBackMessage), std::move(callBackFile));
+								writeHeader();
 							}
 							else if (!m_safe_deque_outgoing_files.empty())
 							{
-								writeFileChunk(std::move(callBackFile));
+								writeFileChunk();
 							}
 						}
 					}
-					else
-					{
-						disconnect();
-						callBackMessage(m_safe_deque_outgoing_messages.front());
-						m_safe_deque_outgoing_messages.pop_front();
-					}
+
 				}
 			);
 		}
 
-		void writeBody(std::function<void(message<T>)> errorCallbackSendMessage,
-			std::function<void(file<T>)> errorCallbackSendFile)
-		{
+		void writeBody() {
 			asio::async_write(
 				m_socket,
 				asio::buffer(m_safe_deque_outgoing_messages.front().body.data(),
 					m_safe_deque_outgoing_messages.front().body.size()),
-				[this, callBackMessage = std::move(errorCallbackSendMessage),
-				callBackFile = std::move(errorCallbackSendFile)](std::error_code ec, std::size_t length) mutable
+				[this](std::error_code ec, std::size_t length)
 				{
-					if (!ec)
-					{
+					if (ec) {
+						disconnect();
+						m_on_send_message_error(ec, m_safe_deque_outgoing_messages.pop_front());
+					}
+					else {
 						m_safe_deque_outgoing_messages.pop_front();
 
 						if (!m_safe_deque_outgoing_messages.empty())
 						{
-							writeHeader(std::move(callBackMessage), std::move(callBackFile));
+							writeHeader();
 						}
 						else if (!m_safe_deque_outgoing_files.empty())
 						{
-							writeFileChunk(std::move(callBackFile));
+							writeFileChunk();
 						}
-					}
-					else
-					{
-						disconnect();
-						callBackMessage(m_safe_deque_outgoing_messages.front());
-						m_safe_deque_outgoing_messages.pop_front();
 					}
 				}
 			);
@@ -398,13 +461,13 @@ namespace net {
 		void writeValidation() {
 			asio::async_write(m_socket, asio::buffer(&m_hand_shake_out, sizeof(uint64_t)),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						if (m_owner_type == owner::client)
-							readHeader();
+					if (ec) {
+						disconnect();
+						m_on_connect_error(ec);
 					}
 					else {
-						disconnect();
-						m_on_disconnect_callback(this->shared_from_this());
+						if (m_owner_type == owner::client)
+							readHeader();
 					}
 				});
 		}
@@ -412,7 +475,11 @@ namespace net {
 		void readValidation() {
 			asio::async_read(m_socket, asio::buffer(&m_hand_shake_in, sizeof(uint64_t)),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
+					if (ec) {
+						disconnect();
+						m_on_connect_error(ec);
+					}
+					else {
 						if (m_owner_type == owner::client) {
 							m_hand_shake_out = scramble(m_hand_shake_in);
 							writeValidation();
@@ -424,15 +491,9 @@ namespace net {
 							}
 							else {
 								disconnect();
-								m_on_disconnect_callback(this->shared_from_this());
 							}
 						}
 					}
-					else {
-						disconnect();
-						m_on_disconnect_callback(this->shared_from_this());
-					}
-						
 				});
 		}
 
@@ -451,20 +512,27 @@ namespace net {
 
 		owner						  m_owner_type;
 		asio::ip::tcp::socket		  m_socket;
-		asio::io_context&			  m_asio_context;
+		asio::io_context& m_asio_context;
 
 		safe_deque<message<T>>		  m_safe_deque_outgoing_messages;
 		safe_deque<owned_message<T>>& m_safe_deque_incoming_messages;
 		message<T>					  m_message_tmp;
 
 		safe_deque<file<T>>			  m_safe_deque_outgoing_files;
-		safe_deque<owned_file<T>>*	  m_safe_deque_incoming_files;
+		safe_deque<owned_file<T>>* m_safe_deque_incoming_files;
 		file<T>						  m_file_tmp;
 
 		uint64_t					  m_hand_shake_out;
 		uint64_t					  m_hand_shake_in;
 		uint64_t					  m_hand_shake_check;
 
-		std::function<void(std::shared_ptr<connection<T>>)> m_on_disconnect_callback;
+		// callbacks
+		std::function<void(std::error_code, net::message<T>)> m_on_send_message_error;
+		std::function<void(std::error_code, net::file<T>)> m_on_send_file_chunk_error;
+
+		std::function<void(std::error_code)> m_on_read_message_error;
+		std::function<void(std::error_code, net::file<T>)> m_on_read_file_chunk_error;
+
+		std::function<void(std::error_code)> m_on_connect_error;
 	};
 }

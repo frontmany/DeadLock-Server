@@ -48,8 +48,9 @@ namespace net {
 					std::shared_ptr<connection<T>> newConnection = std::make_shared<connection<T>>(connection<T>::owner::server,
 						m_asio_context,
 						std::move(socket),
-						m_safe_deque_incoming_messages,
-						[this](std::shared_ptr<connection<T>> connectionPtr) {this->onClientDisconnect(connectionPtr); });
+						m_safe_deque_incoming_messages);
+
+					bindCallbacks(newConnection);
 
 					if (onClientConnect(newConnection)) {
 						m_set_connections.push_back(std::move(newConnection));
@@ -64,12 +65,12 @@ namespace net {
 				}
 
 				waitForClientConnections();
-			});
+				});
 		}
 
 		void sendMessage(std::shared_ptr<connection<T>> connection, const message<T>& msg) {
 			if (connection && connection->isConnected())
-				connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
+				connection->send(msg);
 			else {
 				onClientDisconnect(connection);
 				connection.reset();
@@ -84,7 +85,7 @@ namespace net {
 		void sendFileOnFileConnection(std::shared_ptr<connection<T>> connection, const file<T>& file)
 		{
 			if (isConnected(connection))
-				connection->sendFile(file, [this](net::file<T> file) {this->onSendFileError(file); });
+				connection->sendFile(file);
 			else {
 				onClientDisconnect(connection);
 				connection.reset();
@@ -98,7 +99,7 @@ namespace net {
 		void sendMessageOnFileConnection(std::shared_ptr<connection<T>> connection, const message<T>& msg)
 		{
 			if (isConnected(connection))
-				connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
+				connection->send(msg);
 			else {
 				onClientDisconnect(connection);
 				connection.reset();
@@ -115,7 +116,7 @@ namespace net {
 			for (auto& connection : m_set_connections) {
 				if (connection && connection->isConnected()) {
 					if (connection != connectionToIgnore) {
-						connection->send(msg, [this](net::message<T> msg) {this->onSendMessageError(msg); }, [this](net::file<T> file) {this->onSendFileError(file); });
+						connection->send(msg);
 					}
 					else {
 						onClientDisconnect(connection);
@@ -156,13 +157,55 @@ namespace net {
 				return false;
 		}
 
+		void bindCallbacks(std::shared_ptr<connection<T>> connection) {
+			if (!connection) return;
+
+			connection->setOnSendMessageError(
+				[this](std::error_code ec, net::message<T> msg) {
+					this->onSendMessageError(ec, std::move(msg));
+				}
+			);
+
+			connection->setOnReadMessageError(
+				[this](std::error_code ec) {
+					this->onReadMessageError(ec);
+				}
+			);
+
+			connection->setOnSendFileChunkError(
+				[this](std::error_code ec, net::file<T> file) {
+					this->onSendFileError(ec, std::move(file));
+				}
+			);
+
+			connection->setOnReadFileChunkError(
+				[this](std::error_code ec, net::file<T> file) {
+					this->onReadFileError(ec, std::move(file));
+				}
+			);
+
+			connection->setOnConnectError(
+				[this](std::error_code ec) {
+					this->onConnectError(ec);
+				}
+			);
+		}
+
 	protected:
 		virtual void onMessage(std::shared_ptr<connection<T>> connection, message<T> msg) = 0;
 		virtual void onFile(net::file<T> file) = 0;
-		virtual void onSendMessageError(net::message<T> unsentMessage) = 0;
-		virtual void onSendFileError(net::file<T> unsentFille) = 0;
+
 		virtual bool onClientConnect(std::shared_ptr<connection<T>> connection) = 0;
 		virtual void onClientDisconnect(std::shared_ptr<connection<T>> connection) = 0;
+
+		//errors
+		virtual void onSendMessageError(std::error_code ec, net::message<T> unsentMessage) = 0;
+		virtual void onSendFileError(std::error_code ec, net::file<T> unsentFile) = 0;
+
+		virtual void onReadMessageError(std::error_code ec) = 0;
+		virtual void onReadFileError(std::error_code ec, net::file<T> unreadFile) = 0;
+
+		virtual void onConnectError(std::error_code ec) = 0;
 
 	protected:
 		safe_deque<owned_message<T>>				m_safe_deque_incoming_messages;
