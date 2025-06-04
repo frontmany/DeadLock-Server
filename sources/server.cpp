@@ -257,6 +257,25 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
         file.senderLogin = myLogin;
         file.timestamp = fileTimestamp;
 
+        auto itUsers = m_map_online_users.find(myLogin);
+        User* user = itUsers->second;
+
+        auto it = m_map_sendFile_calls.find(myLogin);
+        if (it == m_map_sendFile_calls.end()) {
+            m_map_sendFile_calls.emplace(myLogin, std::queue<std::function<void()>>());
+        }
+        auto [receiverLogin, queue] = *it;
+        if (queue.size() == 0) {
+            queue.push([this, user, file]() {
+                sendFileToUser(user->getFilesConnection(), file, false);
+                });
+            sendFileToUser(user->getFilesConnection(), file, false);
+        }
+        else {
+            queue.push([this, user, file]() {
+                sendFileToUser(user->getFilesConnection(), file, false);
+                });
+        }
         sendFileToUser(connection, file, true);
     }
     else {
@@ -299,7 +318,23 @@ void Server::onFile(net::file<QueryType> file) {
                 }
                 else {
                     User* user = it->second;
-                    sendFileToUser(user->getFilesConnection(), file, false);
+                    auto it = m_map_sendFile_calls.find(file.receiverLogin);
+                    if (it == m_map_sendFile_calls.end()){
+                        m_map_sendFile_calls.emplace(file.receiverLogin, std::queue<std::function<void()>>());
+                    }
+                    auto [receiverLogin, queue] = *it;
+
+                    if (queue.size() == 0) {
+                        queue.push([this, user, file]() {
+                            sendFileToUser(user->getFilesConnection(), file, false);
+                        });
+                        sendFileToUser(user->getFilesConnection(), file, false);
+                    }
+                    else {
+                        queue.push([this, user, file]() {
+                            sendFileToUser(user->getFilesConnection(), file, false);
+                        });
+                    }
                 }
             }
         }
@@ -357,11 +392,11 @@ void Server::prepareToReceiveFile(connectionT connection, const std::string& str
     std::string fileId;
     std::getline(iss, fileId);
 
-    std::string fileTimestamp;
-    std::getline(iss, fileTimestamp);
-
     std::string fileSize;
     std::getline(iss, fileSize);
+
+    std::string fileTimestamp;
+    std::getline(iss, fileTimestamp);
 
     std::string messageBegin;
     std::getline(iss, messageBegin);
@@ -418,7 +453,9 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
 }
 
 void Server::bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket) {
+    
     connection->redefineAsFileConnection(&m_safe_deque_of_incoming_files);
+
     std::istringstream iss(stringPacket);
 
     std::string myLogin;
@@ -612,7 +649,26 @@ void Server::sendPendingMessages(connectionT connection) {
                     file.senderLogin = myLogin;
                     file.timestamp = fileTimestamp;
 
-                    sendFileToUser(connection, file, false);
+                    auto itUsers = m_map_online_users.find(myLogin);
+                    User* user = itUsers->second;
+
+                    auto it = m_map_sendFile_calls.find(myLogin);
+                    if (it == m_map_sendFile_calls.end()) {
+                        m_map_sendFile_calls.emplace(myLogin, std::queue<std::function<void()>>());
+                    }
+                    auto [receiverLogin, queue] = *it;
+                    if (queue.size() == 0) {
+                        queue.push([this, user, file]() {
+                            sendFileToUser(user->getFilesConnection(), file, false);
+                            });
+                        sendFileToUser(user->getFilesConnection(), file, false);
+                    }
+                    else {
+                        queue.push([this, user, file]() {
+                            sendFileToUser(user->getFilesConnection(), file, false);
+                            });
+                    }
+                    sendFileToUser(connection, file, true);
                 }
                 continue;
             }
@@ -986,13 +1042,28 @@ void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile
 }
 
 
-void Server::onReadMessageError(std::error_code ec) {
+void Server::onReadMessageError(connectionT connection, std::error_code ec) {
+    onClientDisconnect(connection);
     handleError(ec);
 }
 
 void Server::onReadFileError(std::error_code ec, net::file<QueryType> unreadFile) {
     auto it = m_map_pending_files_blobs.find(unreadFile.blobUID);
     if (it != m_map_pending_files_blobs.end()) {
+        auto [blobUID, blob] = *it;
+        for (auto& file : blob.filesVec) {
+            std::string path = file.filePath;
+            if (path.empty()) {
+            }
+
+            std::error_code ec;
+            bool removed = std::filesystem::remove(path, ec);
+
+            if (ec) {
+                std::cerr << "Failed to delete (onReadFileError)" << path << ": " << ec.message() << "\n";
+            }
+        }
+
         m_map_pending_files_blobs.erase(unreadFile.blobUID);
     }
 
@@ -1001,8 +1072,11 @@ void Server::onReadFileError(std::error_code ec, net::file<QueryType> unreadFile
 
 void Server::handleError(std::error_code ec) {
     if (ec == asio::error::connection_reset) {
+        // also happends on regular disconnects, so it's commented for better performance
+        /*
         std::cerr << "Client forcibly closed connection during file transfer: "
              << std::endl;
+        */
     }
     else if (ec == asio::error::eof) {
         std::cerr << "Client disconnected during file transfer: "
@@ -1058,10 +1132,22 @@ void Server::onConnectError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::file<QueryType> sentFile) {
+    
     namespace fs = std::filesystem;
 
-    auto it = m_map_pending_files_blobs.find(sentFile.blobUID);
-    auto [blobUId, blob] = *it;
+    auto it = m_map_sendFile_calls.find(sentFile.receiverLogin);
+    auto [receiverLogin, queue] = *it;
+    queue.pop();
+    if (queue.size() != 0) {
+        auto sendFunc = queue.front();
+        sendFunc();
+    }
+    else {
+        m_map_sendFile_calls.erase(sentFile.receiverLogin);
+    }
+
+    auto itFiles = m_map_pending_files_blobs.find(sentFile.blobUID);
+    auto [blobUId, blob] = *itFiles;
     blob.sent++;
     if (blob.sent == blob.received) {
         for (auto& file : blob.filesVec) {
@@ -1080,6 +1166,7 @@ void Server::onFileSent(net::file<QueryType> sentFile) {
         }
 
         m_map_pending_files_blobs.erase(blobUId);
+        
     }
 }
 

@@ -38,7 +38,7 @@ private:
     void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
     void onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) override;
 
-    void onReadMessageError(std::error_code ec) override;
+    void onReadMessageError(connectionT connection, std::error_code ec) override;
     void onReadFileError(std::error_code ec, net::file<QueryType> unreadFile) override;
 
     void onConnectError(std::error_code ec) override;
@@ -98,6 +98,9 @@ private:
     int                                 m_port;
 
     std::unordered_map<std::string, User*> m_map_online_users;
+
+    // receiver login to callQueue
+    std::unordered_map<std::string, std::queue<std::function<void()>>> m_map_sendFile_calls;
 
     // blob UID to blob
     std::unordered_map<std::string, filesBlob<QueryType>> m_map_pending_files_blobs;

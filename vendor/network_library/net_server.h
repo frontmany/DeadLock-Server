@@ -167,8 +167,8 @@ namespace net {
 			);
 
 			connection->setOnReadMessageError(
-				[this](std::error_code ec) {
-					this->onReadMessageError(ec);
+				[this](std::shared_ptr<net::connection<T>> connection, std::error_code ec) {
+					this->onReadMessageError(connection, ec);
 				}
 			);
 
@@ -209,7 +209,7 @@ namespace net {
 		virtual void onSendMessageError(std::error_code ec, net::message<T> unsentMessage) = 0;
 		virtual void onSendFileError(std::error_code ec, net::file<T> unsentFile) = 0;
 
-		virtual void onReadMessageError(std::error_code ec) = 0;
+		virtual void onReadMessageError(std::shared_ptr<net::connection<QueryType>>, std::error_code ec) = 0;
 		virtual void onReadFileError(std::error_code ec, net::file<T> unreadFile) = 0;
 
 		virtual void onConnectError(std::error_code ec) = 0;
