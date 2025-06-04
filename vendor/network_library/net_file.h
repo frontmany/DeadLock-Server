@@ -14,6 +14,7 @@ namespace net
         std::string senderLogin;
         std::string receiverLogin;
         std::string filePath;
+        std::string fileName;
         std::string id;
         std::string timestamp;
         uint32_t fileSize;

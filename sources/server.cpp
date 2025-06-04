@@ -241,8 +241,15 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
     std::getline(iss, blobUID);
 
 
-    const std::string filePath = "ReceivedFiles/" + fileId + fileName;
-    std::ifstream fileStream(filePath);
+    const std::string filePath = "ReceivedFiles/" + fileId;
+    size_t dotPos = fileName.find_last_of('.');
+
+    std::string fullPath;
+    if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
+        std::string extension = fileName.substr(dotPos + 1);
+        fullPath = filePath + "." + extension;
+    }
+    std::ifstream fileStream(fullPath);
     bool isPresent = fileStream.good();
 
     if (isPresent) {
@@ -264,7 +271,8 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
         if (it == m_map_sendFile_calls.end()) {
             m_map_sendFile_calls.emplace(myLogin, std::queue<std::function<void()>>());
         }
-        auto [receiverLogin, queue] = *it;
+        auto it2 = m_map_sendFile_calls.find(myLogin);
+        auto [receiverLogin, queue] = *it2;
         if (queue.size() == 0) {
             queue.push([this, user, file]() {
                 sendFileToUser(user->getFilesConnection(), file, false);
@@ -296,20 +304,18 @@ void Server::onFile(net::file<QueryType> file) {
         
         for (auto file : blob.filesVec) {
             if (it == m_map_online_users.end()) {
-                // 100mb
-                if (file.fileSize > 104857600) {
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                if (file.fileSize > 104857600) { // 100mb
+                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
                     m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
                 }
                 else {
-                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
                     m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
                 }
             }
-            // 100mb
             else {
-                if (file.fileSize > 104857600) {
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                if (file.fileSize > 104857600) { // 100mb
+                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
                     User* user = it->second;
                     net::message<QueryType> msgResponse;
                     msgResponse.header.type = QueryType::FILE_PREVIEW;
@@ -355,7 +361,7 @@ void Server::sendFileToUser(connectionT connection, net::file<QueryType> file, b
             msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
         }
 
-        std::string packetStr = m_sender.get_prepareToReceiveFileStr(file.receiverLogin, file.senderLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+        std::string packetStr = m_sender.get_prepareToReceiveFileStr(file.receiverLogin, file.senderLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
         msg << packetStr;
 
         sendMessageOnFileConnection(user->getFilesConnection(), msg);
@@ -427,9 +433,16 @@ void Server::prepareToReceiveFile(connectionT connection, const std::string& str
     }
 
     std::filesystem::create_directory("ReceivedFiles");
-    const std::string filePath = "ReceivedFiles/" + fileId + fileName;
+    const std::string filePath = "ReceivedFiles/" + fileId;
+    size_t dotPos = fileName.find_last_of('.');
 
-    connection->supplyFileData(myLogin, friendLogin, filePath, fileId, std::stoi(fileSize), fileTimestamp, caption, blobUID, filesCountInBlob);
+    std::string fullPath;
+    if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
+        std::string extension = fileName.substr(dotPos + 1);
+        fullPath = filePath + "." + extension;
+    }
+
+    connection->supplyFileData(myLogin, friendLogin, fullPath, fileName, fileId, std::stoi(fileSize), fileTimestamp, caption, blobUID, filesCountInBlob);
     connection->readFile();
 }
 
@@ -603,11 +616,11 @@ void Server::sendPendingMessages(connectionT connection) {
                 std::string fileId;
                 std::getline(iss, fileId);
 
-                std::string fileTimestamp;
-                std::getline(iss, fileTimestamp);
-
                 std::string fileSize;
                 std::getline(iss, fileSize);
+
+                std::string fileTimestamp;
+                std::getline(iss, fileTimestamp);
 
                 std::string messageBegin;
                 std::getline(iss, messageBegin);
@@ -633,15 +646,24 @@ void Server::sendPendingMessages(connectionT connection) {
                 std::getline(iss, blobUID);
 
 
-                const std::string filePath = "ReceivedFiles/" + fileId + fileName;
-                std::ifstream fileStream(filePath);
+                const std::string filePath = "ReceivedFiles/" + fileId;
+                size_t dotPos = fileName.find_last_of('.');
+
+                std::string fullPath;
+                if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
+                    std::string extension = fileName.substr(dotPos + 1);
+                    fullPath = filePath + "." + extension;
+                }
+
+                std::ifstream fileStream(fullPath);
                 bool isPresent = fileStream.good();
 
                 if (isPresent) {
                     net::file<QueryType> file;
                     file.blobUID = blobUID;
                     file.caption = caption;
-                    file.filePath = filePath;
+                    file.filePath = fullPath;
+                    file.fileName = fileName;
                     file.filesInBlobCount = filesCountInBlob;
                     file.fileSize = std::stoi(fileSize);
                     file.id = fileId;
@@ -649,18 +671,19 @@ void Server::sendPendingMessages(connectionT connection) {
                     file.senderLogin = myLogin;
                     file.timestamp = fileTimestamp;
 
-                    auto itUsers = m_map_online_users.find(myLogin);
+                    auto itUsers = m_map_online_users.find(friendLogin);
                     User* user = itUsers->second;
 
-                    auto it = m_map_sendFile_calls.find(myLogin);
+                    auto it = m_map_sendFile_calls.find(friendLogin);
                     if (it == m_map_sendFile_calls.end()) {
-                        m_map_sendFile_calls.emplace(myLogin, std::queue<std::function<void()>>());
+                        m_map_sendFile_calls.emplace(friendLogin, std::queue<std::function<void()>>());
                     }
-                    auto [receiverLogin, queue] = *it;
+                    auto it2 = m_map_sendFile_calls.find(friendLogin);
+                    auto [receiverLogin, queue] = *it2;
                     if (queue.size() == 0) {
                         queue.push([this, user, file]() {
                             sendFileToUser(user->getFilesConnection(), file, false);
-                            });
+                        });
                         sendFileToUser(user->getFilesConnection(), file, false);
                     }
                     else {
@@ -668,7 +691,6 @@ void Server::sendPendingMessages(connectionT connection) {
                             sendFileToUser(user->getFilesConnection(), file, false);
                             });
                     }
-                    sendFileToUser(connection, file, true);
                 }
                 continue;
             }
@@ -1137,7 +1159,10 @@ void Server::onFileSent(net::file<QueryType> sentFile) {
 
     auto it = m_map_sendFile_calls.find(sentFile.receiverLogin);
     auto [receiverLogin, queue] = *it;
-    queue.pop();
+    if (queue.size() > 0) {
+        queue.pop();
+    }
+
     if (queue.size() != 0) {
         auto sendFunc = queue.front();
         sendFunc();

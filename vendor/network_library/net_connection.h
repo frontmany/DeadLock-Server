@@ -67,7 +67,6 @@ namespace net {
 			m_hand_shake_out = 0;
 			m_hand_shake_in = 0;
 			m_hand_shake_check = 0;
-			m_safe_deque_incoming_files = nullptr;
 			m_received_file_size = 0;
 			m_curent_number_of_occurrences = 0;
 			m_number_of_full_occurrences = 0;
@@ -289,8 +288,9 @@ namespace net {
 				});
 		}
 
-		void supplyFileData(std::string myLogin, std::string friendLogin, std::string filePath, std::string fileId, uint32_t fileSize, std::string timestamp, std::string caption, const std::string& blobUID, size_t filesInBlobCount) {
+		void supplyFileData(std::string myLogin, std::string friendLogin, std::string filePath, std::string fileName, std::string fileId, uint32_t fileSize, std::string timestamp, std::string caption, const std::string& blobUID, size_t filesInBlobCount) {
 			m_file_tmp.filePath = filePath;
+			m_file_tmp.fileName = fileName;
 			m_file_tmp.senderLogin = myLogin;
 			m_file_tmp.receiverLogin = friendLogin;
 			m_file_tmp.fileSize = fileSize;
