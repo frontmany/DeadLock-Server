@@ -54,7 +54,7 @@ private:
 
     void prepareToReceiveFile(connectionT connection, const std::string& stringPacket);
     void bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket);
-    void sendFileToUser(connectionT connection, net::file<QueryType> file, bool isRequested);
+    void sendFileToUser(connectionT connection, net::file<QueryType>& file, bool isRequested);
     void onSendMeFile(connectionT connection, const std::string& stringPacket);
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
@@ -88,6 +88,9 @@ private:
     void handleError(std::error_code ec);
     void handleFileBlobsOnInternetConnectionFail();
 
+
+    void trySendNewBlob(const std::string& login);
+
 private:
     std::thread                         m_worker_thread;
 
@@ -99,9 +102,6 @@ private:
 
     std::unordered_map<std::string, User*> m_map_online_users;
 
-    // receiver login to callQueue
-    std::unordered_map<std::string, std::queue<std::function<void()>>> m_map_sendFile_calls;
-
-    // blob UID to blob
-    std::unordered_map<std::string, filesBlob<QueryType>> m_map_pending_files_blobs;
+    // login to pair of "is able to start sending process immediately flag" and map of blob UID to blob
+    std::unordered_map<std::string, std::pair<bool, std::unordered_map<std::string, filesBlob<QueryType>>>> m_map_pending_files_blobs;
 };
