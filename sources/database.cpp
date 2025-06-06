@@ -43,6 +43,33 @@ void Database::init() {
     std::cout << "Table COLLECTED_PACKETS created successfully" << std::endl;
 }
 
+std::vector<std::string> Database::getAllRegisteredUserLogins() {
+    std::vector<std::string> logins;
+
+    const char* sql = "SELECT LOGIN FROM USER;";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return logins;
+    }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const unsigned char* login = sqlite3_column_text(stmt, 0);
+        if (login != nullptr) {
+            logins.emplace_back(reinterpret_cast<const char*>(login));
+        }
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "Error during iteration: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return logins;
+}
+
 void Database::addUser(const std::string& login, const std::string& name, const std::string& lastSeen, const std::string& passwordHash) {
     const char* sql = "INSERT INTO USER (LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE) "
         "VALUES (?, ?, ?, ?, 0, '', 0);";

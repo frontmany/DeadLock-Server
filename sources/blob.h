@@ -13,6 +13,7 @@ struct filesBlob {
         this->overAllCount = overAllCount;
         this->filesVec = vec;
     }
+    bool isRequested = false;
     size_t sent = 0;
     size_t received = 0;
     size_t overAllCount = 0;

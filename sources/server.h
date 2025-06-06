@@ -90,6 +90,7 @@ private:
 
 
     void trySendNewBlob(const std::string& login);
+    void initPendingFilesMap();
 
 private:
     std::thread                         m_worker_thread;
