@@ -6,11 +6,14 @@
 #include <deque>
 #include <optional>
 #include <vector>
+#include <set>
+#include <variant>
 #include <fstream>
 #include <iostream>
 #include <system_error>
 #include <filesystem>
-#include <unordered_set>
+#include <unordered_set>  
+#include <system_error> 
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -22,5 +25,17 @@
 #define ASIO_STANDALONE
 #include "asio.hpp"
 #include <asio/ts/buffer.hpp>
-#include <asio/ip/icmp.hpp>
 #include <asio/ts/internet.hpp>
+
+
+namespace net {
+	enum class owner {
+		server,
+		client
+	};
+
+	enum class connection_type {
+		messages,
+		files
+	};
+}
