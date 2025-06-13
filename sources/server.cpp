@@ -19,7 +19,6 @@ Server::Server(int port) : net::server_interface<QueryType>(port), m_db(Database
 
 void Server::startServer() {
     m_db.init();
-    initPendingFilesMap();
     start();
     processIncomingMessagesQueue();
 }
@@ -28,48 +27,19 @@ void Server::stopServer() {
     stop();
 }
 
-void Server::initPendingFilesMap() {
-    std::vector<std::string> loginsVec = m_db.getAllRegisteredUserLogins();
-    for (auto& login : loginsVec) {
-        m_map_pending_files_blobs.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(login),
-            std::forward_as_tuple(true,
-            std::unordered_map<std::string, filesBlob<QueryType>>{}));
-    }
-}
-
 void Server::onClientDisconnect(connectionT connection) {
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
         [connection](const auto& pair) { return pair.second->getConnection() == connection; });
 
     if (it != m_map_online_users.end()) {
         User* user = it->second;
-
         m_db.updateUserStatus(user->getLogin(), m_db.getCurrentDateTime());
         m_map_online_users.erase(user->getLogin());
-
-        auto& pair = m_map_pending_files_blobs.at(user->getLogin());
-        auto& [isAbleToStart, map] = pair;
-        for (auto& [blobUID, blob] : map) {
-            for (auto currentFile : blob.filesVec) {
-                if (currentFile.fileSize > 100000000) { // 100mb
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-                }
-                else {
-                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-                }
-            }
-        }
-        isAbleToStart = true;
-
         delete user;
     }
 }
 
-bool Server::onClientConnect(connectionT connection) {
+bool Server::isConnectionAllowed(connection_variant& connection) {
     return true;
 }
 
@@ -171,12 +141,6 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     }
     else if (type == QueryType::FIND_USER) {
         findUser(connection, stringPacket);
-    }
-    else if (type == QueryType::PREPARE_TO_RECEIVE_FILE) {
-        prepareToReceiveFile(connection, stringPacket);
-    }
-    else if (type == QueryType::BIND) {
-        bindFilesConnectionToUser(connection, stringPacket);
     }
     else if (type == QueryType::SEND_ME_FILE) {
         onSendMeFile(connection, stringPacket);
@@ -286,28 +250,17 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
         file.blobUID = blobUID;
         file.caption = caption;
         file.filePath = fullPath;
-        file.fileName = fileName; // was added at 5.30 am test if it work afterr sleep
+        file.fileName = fileName;
         file.filesInBlobCount = filesCountInBlob;
         file.fileSize = std::stoi(fileSize);
         file.id = fileId;
         file.receiverLogin =  myLogin;
         file.senderLogin = friendLogin;
         file.timestamp = fileTimestamp;
+        file.isRequested = true;
 
-        auto itUsers = m_map_online_users.find(myLogin);
-        User* user = itUsers->second;
-
-        auto& pair = m_map_pending_files_blobs.at(myLogin);
-        auto& [isAbleToStart, map] = pair;
-        filesBlob<QueryType> fakeBlob(0, 1, std::vector<net::file<QueryType>>{file});
-        fakeBlob.isRequested = true;
-        map.emplace(blobUID, fakeBlob);
-
-        if (isAbleToStart) {
-            auto user = m_map_online_users.at(myLogin);
-            sendFileToUser(user->getFilesConnection(), file, true);
-            isAbleToStart = false;
-        }
+        auto user = m_map_online_users.at(myLogin);
+        sendFile(user->getFilesConnection(), file);
     }
     else {
         net::message<QueryType> msgResponse;
@@ -318,78 +271,26 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
 }
 
 void Server::onFile(net::file<QueryType> file) {
-    auto itBlobs = m_map_pending_files_blobs.find(file.receiverLogin);
-    if (itBlobs != m_map_pending_files_blobs.end()) {
-        auto& [login, pair] = *itBlobs;
-        auto& [isAbleToStart, map] = pair;
-        filesBlob<QueryType>& blob = map.at(file.blobUID);
-        blob.received++;
-        blob.filesVec.push_back(file);
-
-        if (blob.received == blob.overAllCount) {
-            auto it = m_map_online_users.find(file.receiverLogin);
-
-            if (it == m_map_online_users.end()) {
-                for (auto currentFile : blob.filesVec) {
-                    if (currentFile.fileSize > 100000000) { // 100mb
-                        std::string filePreviewStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                        m_db.collect(currentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-                    }
-                    else {
-                        std::string fileFastForwardStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                        m_db.collect(currentFile.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-                    }
-                }
-                map.erase(file.blobUID);
-            }
-            else {
-                auto& firstFile = blob.filesVec[0];
-                if (blob.filesVec[0].fileSize > 100000000) { // 100mb
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(firstFile.senderLogin, firstFile.receiverLogin, firstFile.fileName, firstFile.id, std::to_string(firstFile.fileSize), firstFile.timestamp, firstFile.caption, firstFile.blobUID, firstFile.filesInBlobCount);
-                    User* user = it->second;
-                    net::message<QueryType> msgResponse;
-                    msgResponse.header.type = QueryType::FILE_PREVIEW;
-                    msgResponse << filePreviewStr;
-                    sendResponse(user->getConnection(), msgResponse);
-                    blob.sent++;
-                }
-                else {
-                    User* user = it->second;
-                    if (isAbleToStart) {
-                        sendFileToUser(user->getFilesConnection(), firstFile, false);
-                        isAbleToStart = false;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void Server::sendFileToUser(connectionT connection, net::file<QueryType>& file, bool isRequested) {
     auto it = m_map_online_users.find(file.receiverLogin);
 
-    if (it != m_map_online_users.end()) {
-        User* user = it->second;
-
-        net::message<QueryType> msg;
-        if (isRequested) {
-            msg.header.type = QueryType::PREPARE_TO_RECEIVE_REQUESTED_FILE;
-        }
-        else {
-            msg.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
-        }
-
-        std::string packetStr = m_sender.get_prepareToReceiveFileStr(file.receiverLogin, file.senderLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-        msg << packetStr;
-
-        sendMessageOnFileConnection(user->getFilesConnection(), msg);
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
-        sendFileOnFileConnection(user->getFilesConnection(), file);
+    if (it == m_map_online_users.end()) {
+        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+        m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
     }
     else {
-        std::cout << "cannot find user while trying send file";
+        if (file.fileSize > 100000000) { // 100mb
+            std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+            User* user = it->second;
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::FILE_PREVIEW;
+            msgResponse << filePreviewStr;
+            sendResponse(user->getConnection(), msgResponse);
+        }
+        else {
+            User* user = it->second;
+            sendFile(user->getFilesConnection(), file);
+        }
     }
-
 }
 
 std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
@@ -400,77 +301,6 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     }
     remainingStr.pop_back();
     return remainingStr;
-}
-
-void Server::prepareToReceiveFile(connectionT connection, const std::string& stringPacket) {
-    std::istringstream iss(stringPacket);
-
-    std::string myLogin;
-    std::getline(iss, myLogin);
-
-    std::string friendLogin;
-    std::getline(iss, friendLogin);
-
-    std::string fileName;
-    std::getline(iss, fileName);
-
-    std::string fileId;
-    std::getline(iss, fileId);
-
-    std::string fileSize;
-    std::getline(iss, fileSize);
-
-    std::string fileTimestamp;
-    std::getline(iss, fileTimestamp);
-
-    std::string messageBegin;
-    std::getline(iss, messageBegin);
-
-    std::string caption;
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (line == "MESSAGE_END") {
-            break;
-        }
-        else {
-            caption += line;
-            caption += '\n';
-        }
-    }
-    caption.pop_back();
-
-    std::string filesCountInBlobStr;
-    std::getline(iss, filesCountInBlobStr);
-    size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
-
-    std::string blobUID;
-    std::getline(iss, blobUID);
-
-    if (m_map_pending_files_blobs.contains(friendLogin)) {
-        auto it = m_map_pending_files_blobs.find(friendLogin);
-        auto& [login, pair] = *it;
-        auto& [isAbleToStart, map] = pair;
-        if (map.find(blobUID) == map.end()) {
-            map.emplace(
-                std::piecewise_construct,
-                std::forward_as_tuple(blobUID),
-                std::forward_as_tuple(0, filesCountInBlob, std::vector<net::file<QueryType>>())  // Параметры конструктора filesBlob
-            );
-        }
-    }
-
-    std::filesystem::create_directory("ReceivedFiles");
-    const std::string filePath = "ReceivedFiles/" + fileId;
-    size_t dotPos = fileName.find_last_of('.');
-
-    std::string fullPath;
-    if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
-        std::string extension = fileName.substr(dotPos + 1);
-        fullPath = filePath + "." + extension;
-    }
-
-    connection->supplyFileData(myLogin, friendLogin, fullPath, fileName, fileId, std::stoi(fileSize), fileTimestamp, caption, blobUID, filesCountInBlob);
-    connection->readFile();
 }
 
 void Server::findUser(connectionT connection, const std::string& stringPacket) {
@@ -490,36 +320,6 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
     std::string s = m_sender.get_usersStr(vec);
     msgResponse << s;
     sendResponse(connection, msgResponse);
-}
-
-void Server::bindFilesConnectionToUser(connectionT connection, const std::string& stringPacket) {
-    
-    connection->redefineAsFileConnection(&m_safe_deque_of_incoming_files);
-
-    std::istringstream iss(stringPacket);
-
-    std::string myLogin;
-    std::getline(iss, myLogin);
-
-    auto itFilesMap = m_map_pending_files_blobs.find(myLogin);
-    if (itFilesMap == m_map_pending_files_blobs.end()) {
-        m_map_pending_files_blobs.emplace(
-            std::piecewise_construct,  
-            std::forward_as_tuple(myLogin), 
-            std::forward_as_tuple(true, 
-            std::unordered_map<std::string, filesBlob<QueryType>>{}));
-    }
-
-    auto it = m_map_online_users.find(myLogin);
-    if (it != m_map_online_users.end()) {
-        User* user = it->second;
-        user->setFilesConnection(connection);
-
-        sendPendingMessages(user->getConnection());
-    }
-    else {
-        std::cout << "cannot bind files connection to " + myLogin << std::endl;
-    }
 }
 
 void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
@@ -638,7 +438,7 @@ void Server::sendPendingMessages(connectionT connection) {
         auto packets = m_db.getCollected(user->getLogin());
         std::unordered_map<std::string, std::vector<net::file<QueryType>>> filesMap;
         for (auto& [packet, type] : packets) {
-            if (type == QueryType::FILE_FAST_FORWARD || type == QueryType::FILE_PREVIEW) {
+            if (type == QueryType::FILE_PREVIEW) {
                 std::istringstream iss(packet);
 
                 std::string myLogin;
@@ -707,55 +507,23 @@ void Server::sendPendingMessages(connectionT connection) {
                     file.senderLogin = myLogin;
                     file.timestamp = fileTimestamp;
                         
-                    auto it = filesMap.find(blobUID);
-                    if (it == filesMap.end()) {
-                        filesMap.emplace(blobUID, std::vector<net::file<QueryType>>());
-                        auto& vec = filesMap.at(blobUID);
-                        vec.push_back(file);
+                    if (file.fileSize > 100000000) {
+                        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                        net::message<QueryType> msgResponse;
+                        msgResponse.header.type = QueryType::FILE_PREVIEW;
+                        msgResponse << filePreviewStr;
+                        sendResponse(user->getConnection(), msgResponse);
                     }
                     else {
-                        auto& vec = filesMap.at(blobUID);
-                        vec.push_back(file);
+                        sendFile(user->getFilesConnection(), file);
                     }
-
-                    continue;
                 }
             }
-
-            net::message<QueryType> msgResponse;
-            msgResponse.header.type = type;
-            msgResponse << packet;
-            sendResponse(user->getConnection(), msgResponse);
-        }
-
-        auto& pair = m_map_pending_files_blobs.at(user->getLogin());
-        auto& [isAbleToStart, map] = pair;
-
-        for (auto& [uid, vec] : filesMap) {
-            filesBlob<QueryType> newBlob(vec.size(), vec.size(), std::move(vec));
-            map.emplace(uid, newBlob);
-        }
-
-        if (map.size() > 0) {
-            auto it = map.begin();
-            auto& [blobUID, blob] = *it;
-            for (auto& file : blob.filesVec) {
-                if (file.fileSize > 100000000) {
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-                    net::message<QueryType> msgResponse;
-                    msgResponse.header.type = QueryType::FILE_PREVIEW;
-                    msgResponse << filePreviewStr;
-                    sendResponse(user->getConnection(), msgResponse);
-                    blob.sent++;
-                    if (blob.sent == blob.overAllCount) {
-                        map.erase(blobUID);
-                    }
-                }
-                else if (isAbleToStart) {
-                    sendFileToUser(user->getFilesConnection(), file, false);
-                    isAbleToStart = false;
-                    break;
-                }
+            else {
+                net::message<QueryType> msgResponse;
+                msgResponse.header.type = type;
+                msgResponse << packet;
+                sendResponse(user->getConnection(), msgResponse);
             }
         }
 
@@ -922,6 +690,18 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
             std::string packetU = m_sender.get_userInfoPacket(user);
             m_db.collect(friendLogin, packetU, QueryType::USER_INFO);
         }
+    }
+}
+
+void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) {
+    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [&login, this](const auto& pair) {
+        return pair.first == login;
+    });
+
+    if (it != m_map_online_users.end()) {
+        auto& [login, user] = *it;
+        user->setFilesConnection(filesConnection);
+        sendPendingMessages(user->getConnection());
     }
 }
 
@@ -1101,55 +881,19 @@ void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unse
 }
 
 void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) {
-    auto it = m_map_pending_files_blobs.find(unsentFile.receiverLogin);
-    if (it != m_map_pending_files_blobs.end()) {
-        auto& [login, pair] = *it;
-        auto& [isAbleToStart, map] = pair;
-        auto& blob = map.at(unsentFile.blobUID);
-        for (auto& file : blob.filesVec) {
-            if (file.fileSize > 100000000) {
-                std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-                m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-            }
-            else {
-                std::string fileFastForwardStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, std::filesystem::path(file.filePath).filename().string(), file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-                m_db.collect(file.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-            }
-        }
-        map.erase(unsentFile.blobUID);
-    }
-    
+    std::string filePreviewStr = m_sender.get_filePreviewStr(unsentFile.senderLogin, unsentFile.receiverLogin, std::filesystem::path(unsentFile.filePath).filename().string(), unsentFile.id, std::to_string(unsentFile.fileSize), unsentFile.timestamp, unsentFile.caption, unsentFile.blobUID, unsentFile.filesInBlobCount);
+    m_db.collect(unsentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+
     handleError(ec);
 }
 
 
-void Server::onReadMessageError(connectionT connection, std::error_code ec) {
+void Server::onReceiveMessageError(connectionT connection, std::error_code ec) {
     onClientDisconnect(connection);
     handleError(ec);
 }
 
-void Server::onReadFileError(std::error_code ec, net::file<QueryType> unreadFile) {
-    auto it = m_map_pending_files_blobs.find(unreadFile.receiverLogin);
-    if (it != m_map_pending_files_blobs.end()) {
-        auto& [login, pair] = *it;
-        auto& [isAbleToStart, map] = pair;
-        auto& blob = map.at(unreadFile.blobUID);
-        for (auto& file : blob.filesVec) {
-            std::string path = file.filePath;
-            if (path.empty()) {
-            }
-
-            std::error_code ec;
-            bool removed = std::filesystem::remove(path, ec);
-
-            if (ec) {
-                std::cerr << "Failed to delete (onReadFileError)" << path << ": " << ec.message() << "\n";
-            }
-        }
-
-        map.erase(unreadFile.blobUID);
-    }
-
+void Server::onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) {
     handleError(ec);
 }
 
@@ -1185,27 +929,7 @@ void Server::handleError(std::error_code ec) {
     }
 
     if (!hasInternetConnection()) {
-        handleFileBlobsOnInternetConnectionFail();
         stopServer();
-    }
-}
-
-void Server::handleFileBlobsOnInternetConnectionFail() {
-    for (auto& [login, pair] : m_map_pending_files_blobs) {
-        auto& [isAbleToStart, map] = pair;
-        for (auto& [blobUID, blob] : map) {
-            for (auto currentFile : blob.filesVec) {
-                if (currentFile.fileSize > 100000000) { // 100mb
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-                }
-                else {
-                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-                }
-            }
-        }
-        isAbleToStart = true;
     }
 }
 
@@ -1214,126 +938,7 @@ void Server::onConnectError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::file<QueryType> sentFile) {
-    namespace fs = std::filesystem;
-
-    auto& pair = m_map_pending_files_blobs.at(sentFile.receiverLogin);
-    auto& [isAbleToStart, map] = pair;
-    auto& blob = map.at(sentFile.blobUID);
-    blob.sent++;
-
-    
-
-    if (blob.sent == blob.overAllCount) {
-        for (auto& file : blob.filesVec) {
-            try {
-                fs::path filePath = file.filePath; 
-                if (fs::exists(filePath)) {        
-                    fs::remove(filePath);        
-                }
-                else {
-                    std::cerr << "file not found while trying to delete after complete sent: " << filePath << std::endl;
-                }
-            }
-            catch (const fs::filesystem_error& e) {
-                std::cerr << "Error when deleting a file: " << e.what() << std::endl;
-            }
-        }
-        map.erase(sentFile.blobUID);
-        if (map.size() == 0) {
-            isAbleToStart = true;
-        }
-        else {
-            trySendNewBlob(sentFile.receiverLogin);
-        }
-    }
-    else {
-        auto it = m_map_online_users.find(sentFile.receiverLogin);
-        if (it != m_map_online_users.end()) {
-            auto& [login, user] = *it;
-            auto& file = blob.filesVec[blob.sent];
-            if (blob.filesVec[blob.sent].fileSize > 100000000) {
-                std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-                User* user = it->second;
-                net::message<QueryType> msgResponse;
-                msgResponse.header.type = QueryType::FILE_PREVIEW;
-                msgResponse << filePreviewStr;
-                sendResponse(user->getConnection(), msgResponse);
-                blob.sent++;
-            }
-            else {
-                if (blob.isRequested) {
-                    sendFileToUser(user->getFilesConnection(), file, true);
-                }
-                else {
-                    sendFileToUser(user->getFilesConnection(), file, false);
-                }
-                isAbleToStart = false;
-            }
-            
-        }
-        else {
-            for (auto currentFile : blob.filesVec) {
-                if (currentFile.fileSize > 100000000) { // 100mb
-                    std::string filePreviewStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
-                }
-                else {
-                    std::string fileFastForwardStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                    m_db.collect(currentFile.receiverLogin, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-                }
-            }
-            m_map_pending_files_blobs.erase(sentFile.receiverLogin);
-        }
-    }
-}
-
-void Server::trySendNewBlob(const std::string& login) {
-    auto& pair = m_map_pending_files_blobs.at(login);
-    auto& [isAbleToStart, map] = pair;
-    auto it = map.begin();
-    auto& [blobUID, blob] = *it;
-    auto& filesVec = blob.filesVec;
-    auto& file = filesVec[0];
-    auto itUsers = m_map_online_users.find(login);
-    if (itUsers == m_map_online_users.end()) {
-        for (auto currentFile : blob.filesVec) {
-            if (currentFile.fileSize > 100000000) { // 100mb
-                std::string filePreviewStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                m_db.collect(login, filePreviewStr, QueryType::FILE_PREVIEW);
-            }
-            else {
-                std::string fileFastForwardStr = m_sender.get_filePreviewStr(currentFile.senderLogin, currentFile.receiverLogin, currentFile.fileName, currentFile.id, std::to_string(currentFile.fileSize), currentFile.timestamp, currentFile.caption, currentFile.blobUID, currentFile.filesInBlobCount);
-                m_db.collect(login, fileFastForwardStr, QueryType::FILE_FAST_FORWARD);
-            }
-        }
-        map.erase(file.blobUID);
-        if (map.size() == 0) {
-            isAbleToStart = true;
-        }
-    }
-    else {
-        auto& [login, user] = *itUsers;
-        if (file.fileSize > 100000000) { // 100mb
-            std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
-            net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::FILE_PREVIEW;
-            msgResponse << filePreviewStr;
-            sendResponse(user->getConnection(), msgResponse);
-            blob.sent++;
-        }
-        else {
-            if (map.size() == 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                if (blob.isRequested) {
-                    sendFileToUser(user->getFilesConnection(), file, true);
-                }
-                else {
-                    sendFileToUser(user->getFilesConnection(), file, false);
-                }
-                isAbleToStart = false;
-            }
-        }
-    }
+    // nopthing to do on server
 }
 
 bool Server::hasInternetConnection() {
