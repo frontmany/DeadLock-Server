@@ -199,6 +199,7 @@ namespace net {
 				);
 			}
 			else {
+				m_total_bytes_sent = 0;
 				m_send_file_stream.close();
 				m_msg_tmp_for_send_metadata = message<T>();
 

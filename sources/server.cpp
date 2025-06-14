@@ -938,7 +938,7 @@ void Server::onConnectError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::file<QueryType> sentFile) {
-    // nopthing to do on server
+    std::filesystem::remove(sentFile.filePath);
 }
 
 bool Server::hasInternetConnection() {
