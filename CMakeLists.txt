@@ -13,6 +13,9 @@ file(GLOB_RECURSE SOURCES
     "vendor/base_64/base64.cpp"
 )
 
+file(GLOB_RECURSE NET_LIB "vendor/network_library/*.h")
+source_group("Source Files\\Net Library Files" FILES ${NET_LIB})
+
 include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite" "vendor/network_library") 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${NET_LIB})
 target_link_libraries(${PROJECT_NAME})

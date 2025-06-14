@@ -3,6 +3,14 @@
 #include "net_common.h"
 #include "net_safe_deque.h"
 #include "net_message.h"
+#include "net_file.h"
+
+#include <fstream>              
+#include <filesystem>          
+#include <system_error>          
+#include <string>              
+#include <locale>                
+#include <codecvt>   
 
 namespace net {
 
@@ -12,73 +20,38 @@ namespace net {
 	template<typename T>
 	class connection : public std::enable_shared_from_this<connection<T>> {
 	public:
+		uint32_t m_current_bytes_sent = 0;
 
-		enum class owner {
-			server, 
-			client
-		};
-
-		connection(owner owner, asio::io_context& asioContext, asio::ip::tcp::socket socket, safe_deque<owned_message<T>>& safeDequeIncomingMessages) 
-			: m_asio_context(asioContext), m_socket(std::move(socket)), m_safe_deque_incoming_messages(safeDequeIncomingMessages) {
-		
-			m_owner_type = owner;
-
-			if (m_owner_type == owner::server) {
-				m_hand_shake_out = uint64_t(std::chrono::system_clock::now().time_since_epoch().count());
-
-				m_hand_shake_check = scramble(m_hand_shake_out);
-			}
-			else {
-				m_hand_shake_in = 0;
-				m_hand_shake_out = 0;
-			}
+		connection(owner owner, asio::io_context& asioContext,
+			asio::ip::tcp::socket socket,
+			safe_deque<owned_message<T>>& safeDequeIncomingMessages,
+			std::function<void(std::error_code, net::message<T>)> onSendError,
+			std::function<void(std::shared_ptr<connection<T>> connection, std::error_code)> onReceiveError)
+			: m_asio_context(asioContext),
+			m_socket(std::move(socket)),
+			m_safe_deque_incoming_messages(safeDequeIncomingMessages),
+			m_on_send_message_error(std::move(onSendError)),
+			m_on_receive_message_error(std::move(onReceiveError))
+		{
+			m_owner = owner;
+			readHeader();
 		}
 
 		virtual ~connection() {}
-
-		void setServer(server_interface<T>* server) {
-			if (m_owner_type == owner::server) {
-				m_server = server;
-			}
-		}
-
-		void connectToServer(const asio::ip::tcp::resolver::results_type& endpoint) {
-			if (m_owner_type == owner::client) {
-				asio::async_connect(m_socket, endpoint,
-					[this](std::error_code ec, const asio::ip::tcp::endpoint& endpoint) {
-						if (!ec) {
-							std::cout << "Connected to: " << endpoint << std::endl;
-							readValidation();
-						}
-						else {
-							std::cerr << "Connection failed: " << ec.message() << std::endl;
-						}
-					});
-			}
-		}
-
-		void connectToClient() {
-			if (m_owner_type == owner::server) {
-				if (m_socket.is_open()) {
-					writeValidation();
-					readValidation();
-				}
-			}
-		}
-
-		void disconnect() {
-			if (isConnected()) {
-				asio::post(m_asio_context, [this]() { m_socket.close(); });
-			}
-		}
 
 		bool isConnected() const {
 			return m_socket.is_open();
 		}
 
+		void disconnect() {
+			if (m_socket.is_open()) {
+				asio::post(m_asio_context, [this]() { m_socket.close(); });
+			}
+		}
+
 		void send(const message<T>& msg) {
 			asio::post(m_asio_context, [this, msg]() {
-			 	bool isAbleToWrite = m_safe_deque_outgoing_messages.empty();
+				bool isAbleToWrite = m_safe_deque_outgoing_messages.empty();
 				m_safe_deque_outgoing_messages.push_back(msg);
 				if (isAbleToWrite) {
 					writeHeader();
@@ -87,10 +60,68 @@ namespace net {
 		}
 
 	private:
+		void writeHeader() {
+			asio::async_write(
+				m_socket,
+				asio::buffer(&m_safe_deque_outgoing_messages.front().header, sizeof(message_header<T>)),
+				[this](std::error_code ec, std::size_t length) {
+					if (ec)
+					{
+						disconnect();
+						m_on_send_message_error(ec, m_safe_deque_outgoing_messages.pop_front());
+					}
+					else
+					{
+						if (m_safe_deque_outgoing_messages.front().body.size() > 0)
+						{
+							writeBody();
+						}
+						else
+						{
+							m_safe_deque_outgoing_messages.pop_front();
+
+							if (!m_safe_deque_outgoing_messages.empty())
+							{
+								writeHeader();
+							}
+						}
+					}
+
+				}
+			);
+		}
+
+		void writeBody() {
+			asio::async_write(
+				m_socket,
+				asio::buffer(m_safe_deque_outgoing_messages.front().body.data(),
+					m_safe_deque_outgoing_messages.front().body.size()),
+				[this](std::error_code ec, std::size_t length)
+				{
+					if (ec) {
+						disconnect();
+						m_on_send_message_error(ec, m_safe_deque_outgoing_messages.pop_front());
+					}
+					else {
+						m_safe_deque_outgoing_messages.pop_front();
+
+						if (!m_safe_deque_outgoing_messages.empty())
+						{
+							writeHeader();
+						}
+					}
+				}
+			);
+		}
+
 		void readHeader() {
 			asio::async_read(m_socket, asio::buffer(&m_message_tmp.header, sizeof(message_header<T>)),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
+					if (ec) {
+						m_on_receive_message_error(this->shared_from_this(), ec);
+						disconnect();
+					}
+					else {
 						if (m_message_tmp.header.size > sizeof(message_header<T>)) {
 							m_message_tmp.body.resize(m_message_tmp.header.size - sizeof(message_header<T>));
 							readBody();
@@ -98,134 +129,43 @@ namespace net {
 						else
 							addToIncomingMessagesQueue();
 					}
-					else {
-						m_socket.close();
-						m_server->onClientDisconnect(this->shared_from_this());
-						
-					}
 				});
 		}
 
 		void readBody() {
-			asio::async_read(m_socket, asio::buffer(m_message_tmp.body.data(), m_message_tmp.body.size()), 
+			asio::async_read(m_socket, asio::buffer(m_message_tmp.body.data(), m_message_tmp.body.size()),
 				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						addToIncomingMessagesQueue();
+					if (ec) {
+						m_on_receive_message_error(this->shared_from_this(), ec);
+						disconnect();
 					}
 					else {
-						m_socket.close();
-						m_server->onClientDisconnect(this->shared_from_this());
+						addToIncomingMessagesQueue();
 					}
 				});
 		}
 
 		void addToIncomingMessagesQueue() {
-			if (m_owner_type == owner::server) 
+			if (m_owner == owner::server)
 				m_safe_deque_incoming_messages.push_back({ this->shared_from_this(), m_message_tmp });
 			else
 				m_safe_deque_incoming_messages.push_back({ nullptr, m_message_tmp });
-			
-			m_message_tmp = message<T>();
+
 			readHeader();
 		}
 
-		void writeHeader() {
-			asio::async_write(m_socket, asio::buffer(&m_safe_deque_outgoing_messages.front().header, sizeof(message_header<T>)), 
-				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						if (m_safe_deque_outgoing_messages.front().body.size() > 0) {
-							writeBody();
-						}
-						else {
-							m_safe_deque_outgoing_messages.pop_front();
+	private:
+		owner						  m_owner;
+		asio::ip::tcp::socket		  m_socket;
+		asio::io_context&			  m_asio_context;
 
-							if (!m_safe_deque_outgoing_messages.empty()) {
-								writeHeader();
-							}
-						}
-					}
-				});
-		}
-
-		void writeBody() {
-			asio::async_write(m_socket, asio::buffer(m_safe_deque_outgoing_messages.front().body.data(), m_safe_deque_outgoing_messages.front().body.size()),
-				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						m_safe_deque_outgoing_messages.pop_front();
-
-						if (!m_safe_deque_outgoing_messages.empty()) {
-							writeHeader();
-						}
-					
-					}
-					else {
-						m_socket.close();
-						m_server->onClientDisconnect(this->shared_from_this());
-					}
-				});
-		}
-
-		uint64_t scramble(uint64_t inputNumber) {
-			uint64_t out = inputNumber ^ 0xDEADBEEFC;
-			out = (out & 0xF0F0F0F0F) >> 4 | (out & 0x0F0F0F0F0F) << 4;
-			return out ^ 0xC0DEFACE12345678;
-		}
-
-		void writeValidation() {
-			asio::async_write(m_socket, asio::buffer(&m_hand_shake_out, sizeof(uint64_t)),
-				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						if (m_owner_type == owner::client)
-							readHeader();
-					}
-					else
-						m_socket.close();
-					m_server->onClientDisconnect(this->shared_from_this());
-				});
-		}
-
-		void readValidation() {
-			asio::async_read(m_socket, asio::buffer(&m_hand_shake_in, sizeof(uint64_t)),
-				[this](std::error_code ec, std::size_t length) {
-					if (!ec) {
-						if (m_owner_type == owner::client) {
-							m_hand_shake_out = scramble(m_hand_shake_in);
-							writeValidation();
-						}
-						else {
-							if (m_hand_shake_in == m_hand_shake_check) {
-								std::cout << "Client Validated\n";
-								m_server->onClientValidated(this->shared_from_this());
-								readHeader();
-							}
-							else {
-								std::cout << "Client Disconnected (Fail Validation)\n";
-								m_socket.close();
-							}
-						}
-					}
-					else {
-						m_socket.close();
-						m_server->onClientDisconnect(this->shared_from_this());
-					}
-						
-				});
-		}
-
-	protected:
-		message<T> m_message_tmp;
-
-		owner					m_owner_type = owner::server;
-		asio::ip::tcp::socket	m_socket;
-		asio::io_context&		m_asio_context;
-
-		server_interface<T>*	m_server;
-
-		safe_deque<message<T>> m_safe_deque_outgoing_messages;
+		safe_deque<message<T>>		  m_safe_deque_outgoing_messages;
 		safe_deque<owned_message<T>>& m_safe_deque_incoming_messages;
+		message<T>					  m_message_tmp;
 
-		uint64_t m_hand_shake_out = 0;
-		uint64_t m_hand_shake_in = 0;
-		uint64_t m_hand_shake_check = 0;
+		// errors
+		std::function<void(std::shared_ptr<connection<T>> connection, std::error_code)> m_on_receive_message_error;
+		std::function<void(std::error_code, net::message<T>)> m_on_send_message_error;
+
 	};
 }

@@ -71,3 +71,21 @@ std::string SendStringsGenerator::get_statusStr(const std::string& login, const 
 
     return oss.str();
 }
+
+std::string SendStringsGenerator::get_filePreviewStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, uint32_t filesInBlobCount) {
+    std::ostringstream oss;
+
+    oss << myLogin << '\n'
+        << friendLogin << '\n'
+        << fileName << '\n'
+        << fileId << '\n'
+        << fileSize << '\n'
+        << timestamp << '\n'
+        << messageBegin << '\n'
+        << caption << '\n'
+        << messageEnd << '\n'
+        << std::to_string(filesInBlobCount) << "\n"
+        << blobUID;
+
+    return oss.str();
+}
