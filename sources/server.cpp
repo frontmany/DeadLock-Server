@@ -25,31 +25,27 @@ void Server::startServer() {
 
 void Server::stopServer() {
     stop();
-
 }
 
 void Server::onClientDisconnect(connectionT connection) {
-
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
         [connection](const auto& pair) { return pair.second->getConnection() == connection; });
 
     if (it != m_map_online_users.end()) {
         User* user = it->second;
-
         m_db.updateUserStatus(user->getLogin(), m_db.getCurrentDateTime());
-
-        m_map_online_users.erase(it);
+        m_map_online_users.erase(user->getLogin());
         delete user;
     }
 }
 
-bool Server::onClientConnect(connectionT connection) {
+bool Server::isConnectionAllowed(connection_variant& connection) {
     return true;
 }
 
-void Server::onMessage(connectionT connection, ownedMessageT& msg) {
+void Server::onMessage(connectionT connection, MessageT msg) {
     std::string messageStr;
-    msg.msg >> messageStr;
+    msg >> messageStr;
     std::istringstream iss(messageStr);
 
     std::string classificationStr;
@@ -57,13 +53,13 @@ void Server::onMessage(connectionT connection, ownedMessageT& msg) {
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (classificationStr == "GET") {
-        handleGet(connection, remainingStr, msg.msg.header.type);
+        handleGet(connection, remainingStr, msg.header.type);
     }
     else if (classificationStr == "RPL") {
-        handleRpl(connection, remainingStr, msg.msg.header.type);
+        handleRpl(connection, remainingStr, msg.header.type);
     }
     else if (classificationStr == "BROADCAST") {
-        handleBroadcast(connection, remainingStr, msg.msg.header.type);
+        handleBroadcast(connection, remainingStr, msg.header.type);
     }
 }
 
@@ -146,6 +142,10 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     else if (type == QueryType::FIND_USER) {
         findUser(connection, stringPacket);
     }
+    else if (type == QueryType::SEND_ME_FILE) {
+        onSendMeFile(connection, stringPacket);
+    }
+    
 }
 
 void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
@@ -178,6 +178,117 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
             msgResponse.header.type = QueryType::MESSAGES_READ_CONFIRMATION;
             msgResponse << iss.str();
             sendResponse(user->getConnection(), msgResponse);
+        }
+        else if (type == QueryType::TYPING) {
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::TYPING;
+            msgResponse << iss.str();
+            sendResponse(user->getConnection(), msgResponse);
+        }
+    }
+}
+
+void Server::onSendMeFile(connectionT connection, const std::string& stringPacket) {
+    std::istringstream iss(stringPacket);
+
+    std::string myLogin;
+    std::getline(iss, myLogin);
+
+    std::string friendLogin;
+    std::getline(iss, friendLogin);
+
+    std::string fileName;
+    std::getline(iss, fileName);
+
+    std::string fileId;
+    std::getline(iss, fileId);
+
+    std::string fileSize;
+    std::getline(iss, fileSize);
+
+    std::string fileTimestamp;
+    std::getline(iss, fileTimestamp);
+
+
+    std::string messageBegin;
+    std::getline(iss, messageBegin);
+
+    std::string caption;
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line == "MESSAGE_END") {
+            break;
+        }
+        else {
+            caption += line;
+            caption += '\n';
+        }
+    }
+    caption.pop_back();
+
+    std::string filesCountInBlobStr;
+    std::getline(iss, filesCountInBlobStr);
+    size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+
+    std::string blobUID;
+    std::getline(iss, blobUID);
+
+
+    const std::string filePath = "ReceivedFiles/" + fileId;
+    size_t dotPos = fileName.find_last_of('.');
+
+    std::string fullPath;
+    if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
+        std::string extension = fileName.substr(dotPos + 1);
+        fullPath = filePath + "." + extension;
+    }
+    std::ifstream fileStream(fullPath);
+    bool isPresent = fileStream.good();
+
+    if (isPresent) {
+        net::file<QueryType> file;
+        file.blobUID = blobUID;
+        file.caption = caption;
+        file.filePath = fullPath;
+        file.fileName = fileName;
+        file.filesInBlobCount = filesCountInBlob;
+        file.fileSize = std::stoi(fileSize);
+        file.id = fileId;
+        file.receiverLogin =  myLogin;
+        file.senderLogin = friendLogin;
+        file.timestamp = fileTimestamp;
+        file.isRequested = true;
+
+        auto user = m_map_online_users.at(myLogin);
+        sendFile(user->getFilesConnection(), file);
+    }
+    else {
+        net::message<QueryType> msgResponse;
+        msgResponse.header.type = QueryType::UNEXISTING_FILE;
+        msgResponse << stringPacket;
+        sendResponse(connection, msgResponse);
+    }
+}
+
+void Server::onFile(net::file<QueryType> file) {
+    auto it = m_map_online_users.find(file.receiverLogin);
+
+    if (it == m_map_online_users.end()) {
+        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+        m_db.collect(file.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+    }
+    else {
+        if (file.fileSize > 100000000) { // 100mb
+            std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+            User* user = it->second;
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::FILE_PREVIEW;
+            msgResponse << filePreviewStr;
+            sendResponse(user->getConnection(), msgResponse);
+        }
+        else {
+            User* user = it->second;
+            sendFile(user->getFilesConnection(), file);
         }
     }
 }
@@ -319,23 +430,107 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
 void Server::sendPendingMessages(connectionT connection) {
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [connection](const auto& pair) {
         return pair.second->getConnection() == connection;
-        });
+    });
 
     if (it != m_map_online_users.end()) {
         User* user = it->second;
 
         auto packets = m_db.getCollected(user->getLogin());
+        std::unordered_map<std::string, std::vector<net::file<QueryType>>> filesMap;
         for (auto& [packet, type] : packets) {
-            net::message<QueryType> msgResponse;
-            msgResponse.header.type = type;
-            msgResponse << packet;
-            sendResponse(user->getConnection(), msgResponse);
-        }
-    }
+            if (type == QueryType::FILE_PREVIEW) {
+                std::istringstream iss(packet);
 
-    net::message<QueryType> msgResponse;
-    msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
-    sendResponse(connection, msgResponse);
+                std::string myLogin;
+                std::getline(iss, myLogin);
+
+                std::string friendLogin;
+                std::getline(iss, friendLogin);
+
+                std::string fileName;
+                std::getline(iss, fileName);
+
+                std::string fileId;
+                std::getline(iss, fileId);
+
+                std::string fileSize;
+                std::getline(iss, fileSize);
+
+                std::string fileTimestamp;
+                std::getline(iss, fileTimestamp);
+
+                std::string messageBegin;
+                std::getline(iss, messageBegin);
+
+                std::string caption;
+                std::string line;
+                while (std::getline(iss, line)) {
+                    if (line == "MESSAGE_END") {
+                        break;
+                    }
+                    else {
+                        caption += line;
+                        caption += '\n';
+                    }
+                }
+                caption.pop_back();
+
+                std::string filesCountInBlobStr;
+                std::getline(iss, filesCountInBlobStr);
+                size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+
+                std::string blobUID;
+                std::getline(iss, blobUID);
+
+                const std::string filePath = "ReceivedFiles/" + fileId;
+                size_t dotPos = fileName.find_last_of('.');
+
+                std::string fullPath;
+                if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
+                    std::string extension = fileName.substr(dotPos + 1);
+                    fullPath = filePath + "." + extension;
+                }
+
+                std::ifstream fileStream(fullPath);
+                bool isPresent = fileStream.good();
+
+                if (isPresent) {
+                    net::file<QueryType> file;
+                    file.blobUID = blobUID;
+                    file.caption = caption;
+                    file.filePath = fullPath;
+                    file.fileName = fileName;
+                    file.filesInBlobCount = filesCountInBlob;
+                    file.fileSize = std::stoi(fileSize);
+                    file.id = fileId;
+                    file.receiverLogin = friendLogin;
+                    file.senderLogin = myLogin;
+                    file.timestamp = fileTimestamp;
+                        
+                    if (file.fileSize > 100000000) {
+                        std::string filePreviewStr = m_sender.get_filePreviewStr(file.senderLogin, file.receiverLogin, file.fileName, file.id, std::to_string(file.fileSize), file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
+                        net::message<QueryType> msgResponse;
+                        msgResponse.header.type = QueryType::FILE_PREVIEW;
+                        msgResponse << filePreviewStr;
+                        sendResponse(user->getConnection(), msgResponse);
+                    }
+                    else {
+                        sendFile(user->getFilesConnection(), file);
+                    }
+                }
+            }
+            else {
+                net::message<QueryType> msgResponse;
+                msgResponse.header.type = type;
+                msgResponse << packet;
+                sendResponse(user->getConnection(), msgResponse);
+            }
+        }
+
+        net::message<QueryType> msgResponse;
+        msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
+        sendResponse(user->getConnection(), msgResponse);
+    }
 }
 
 void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
@@ -381,10 +576,6 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
         type = QueryType::AUTHORIZATION_FAIL;
         sendResponse(connection, msgResponse);
-    }
-
-    if (type == QueryType::AUTHORIZATION_SUCCESS) {
-        sendPendingMessages(connection);
     }
 }
 
@@ -502,6 +693,18 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
     }
 }
 
+void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) {
+    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [&login, this](const auto& pair) {
+        return pair.first == login;
+    });
+
+    if (it != m_map_online_users.end()) {
+        auto& [login, user] = *it;
+        user->setFilesConnection(filesConnection);
+        sendPendingMessages(user->getConnection());
+    }
+}
+
 void Server::updateUserPassword(connectionT connection, const std::string& stringPacket) {
     std::istringstream iss(stringPacket);
 
@@ -613,7 +816,6 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
         }
     }
 
-    // 0. Проверка, что oldLogin существует
     auto mapIt = m_map_online_users.find(oldLogin);
     if (mapIt == m_map_online_users.end()) {
         return;
@@ -621,21 +823,16 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 
     User* user = mapIt->second;
 
-    // 1. Сначала обновляем в БД
     m_db.updateUserLogin(oldLogin, newLogin);
  
-
-    // 2. Обновляем локальные данные
     
     auto node = m_map_online_users.extract(mapIt);
     node.key() = newLogin;
     m_map_online_users.insert(std::move(node));
     
 
-    // 3. Рассылаем уведомления
     for (auto friendLogin : logins) {
         if (auto it = m_map_online_users.find(friendLogin); it != m_map_online_users.end()) {
-            // Онлайн-друг
             std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::USER_INFO;
@@ -643,7 +840,6 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
-            // Офлайн-друг
             std::string packetU = m_sender.get_userInfoPacket(user, newLogin);
             m_db.collect(friendLogin, packetU, QueryType::USER_INFO);
         }
@@ -656,4 +852,102 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 void Server::sendResponse(connectionT connection, net::message<QueryType>& msg) {
     msg.header.size = msg.size();
     sendMessage(connection, msg);
+}
+
+
+
+// errors
+void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) {
+    std::string messageStr;
+    unsentMessage >> messageStr;
+    std::istringstream iss(messageStr);
+
+    QueryType type = unsentMessage.header.type;
+
+    if (type == QueryType::MESSAGE) {
+        std::string friendLogin;
+        std::getline(iss, friendLogin);
+
+        m_db.collect(friendLogin, iss.str(), QueryType::MESSAGE);
+    }
+    else if (type == QueryType::MESSAGES_READ_CONFIRMATION) {
+        std::string friendLogin;
+        std::getline(iss, friendLogin);
+
+        m_db.collect(friendLogin, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
+    }
+
+    handleError(ec);
+}
+
+void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) {
+    std::string filePreviewStr = m_sender.get_filePreviewStr(unsentFile.senderLogin, unsentFile.receiverLogin, std::filesystem::path(unsentFile.filePath).filename().string(), unsentFile.id, std::to_string(unsentFile.fileSize), unsentFile.timestamp, unsentFile.caption, unsentFile.blobUID, unsentFile.filesInBlobCount);
+    m_db.collect(unsentFile.receiverLogin, filePreviewStr, QueryType::FILE_PREVIEW);
+
+    handleError(ec);
+}
+
+
+void Server::onReceiveMessageError(connectionT connection, std::error_code ec) {
+    onClientDisconnect(connection);
+    handleError(ec);
+}
+
+void Server::onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) {
+    handleError(ec);
+}
+
+void Server::handleError(std::error_code ec) {
+    if (ec == asio::error::connection_reset) {
+        // also happends on regular disconnects, so it's commented for better performance
+        /*
+        std::cerr << "Client forcibly closed connection during file transfer: "
+             << std::endl;
+        */
+    }
+    else if (ec == asio::error::eof) {
+        std::cerr << "Client disconnected during file transfer: "
+             << std::endl;
+    }
+    else if (ec == asio::error::operation_aborted) {
+        std::cerr << "File transfer cancelled by server: "
+             << std::endl;
+    }
+    else if (ec == asio::error::timed_out) {
+        std::cerr << "Network timeout during file transfer: "
+            << std::endl;
+    }
+    else if (ec == asio::error::network_down ||
+        ec == asio::error::network_reset ||
+        ec == asio::error::host_unreachable) {
+        std::cerr << "Network problem detected during file transfer: "
+            << ec.message() << std::endl;
+    }
+    else {
+        std::cerr << "Unknown error during file transfer (" << ec << "): "
+            << ec.message() << ", file: " <<  std::endl;
+    }
+
+    if (!hasInternetConnection()) {
+        stopServer();
+    }
+}
+
+void Server::onConnectError(std::error_code ec) {
+    handleError(ec);
+}
+
+void Server::onFileSent(net::file<QueryType> sentFile) {
+    std::filesystem::remove(sentFile.filePath);
+}
+
+bool Server::hasInternetConnection() {
+#ifdef _WIN32
+    const char* ping_cmd = "ping -n 1 1.1.1.1 > nul";
+#else
+    const char* ping_cmd = "ping -c 1 1.1.1.1 > /dev/null";
+#endif
+
+    int result = std::system(ping_cmd);
+    return (result == 0);
 }

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <queue>
 #include <string>
@@ -13,13 +14,15 @@
 
 
 #include "database.h"
+#include "blob.h"
 #include "queryType.h"
 #include "sender.h"
 #include "user.h"
 #include "net.h"
 
 typedef std::shared_ptr<net::connection<QueryType>> connectionT;
-typedef net::owned_message<QueryType> ownedMessageT;
+typedef std::shared_ptr<net::files_connection<QueryType>> files_connectionT;
+typedef net::message<QueryType> MessageT;
 
 class Server : public net::server_interface<QueryType> {
 public:
@@ -30,9 +33,21 @@ public:
 private:
     void processIncomingMessagesQueue();
 
+    void onFileSent(net::file<QueryType> sentFile) override;
+    void onMessage(connectionT connection, MessageT msg) override;
+    void onFile(net::file<QueryType> file) override;
+    void onSendMeFile(connectionT connection, const std::string& stringPacket);
+
     void onClientDisconnect(connectionT connection) override;
-    bool onClientConnect(connectionT connection) override;
-    void onMessage(connectionT connection, ownedMessageT& msg) override;
+    bool isConnectionAllowed(connection_variant& connVariant) override;
+
+    // errors
+    void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
+    void onReceiveMessageError(connectionT connection, std::error_code ec) override;
+    void onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) override;
+    void onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) override;
+    void onConnectError(std::error_code ec) override;
+    void bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) override;
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(connectionT connection);
@@ -61,6 +76,9 @@ private:
 
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
 
+    bool hasInternetConnection();
+    void handleError(std::error_code ec);
+
 private:
     std::thread                         m_worker_thread;
 
@@ -70,5 +88,5 @@ private:
     std::string                         m_ipAddress;
     int                                 m_port;
 
-    std::unordered_map<std::string, User*>  m_map_online_users;
+    std::unordered_map<std::string, User*> m_map_online_users;
 };

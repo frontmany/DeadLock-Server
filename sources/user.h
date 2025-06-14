@@ -15,11 +15,15 @@
 namespace net {
     template <typename T>
     class connection;
+
+    template <typename T>
+    class files_connection;
 }
 
 enum class QueryType : uint32_t;
 
 typedef std::shared_ptr<net::connection<QueryType>> connectionT;
+typedef std::shared_ptr<net::files_connection<QueryType>> files_connectionT;
 
 class User {
 public:
@@ -39,6 +43,9 @@ public:
 
     connectionT getConnection() const { return m_connection; }
     void setConnection(connectionT connection) { m_connection = connection; }
+
+    files_connectionT getFilesConnection() const { return m_files_connection; }
+    void setFilesConnection(files_connectionT filesConnection) { m_files_connection = filesConnection; }
 
     const std::string& getLogin() const { return m_login; }
     void setLogin(const std::string& login) { m_login = login; }
@@ -69,5 +76,6 @@ private:
     std::string			                    m_password_hash;
     Photo			                        m_photo;
     connectionT                             m_connection;
+    files_connectionT                       m_files_connection;
 };
 

@@ -14,7 +14,11 @@ public:
     std::string get_chatCreateSuccessStr(User* user);
     std::string get_statusStr(const std::string& login, const std::string& status);
 
+    std::string get_filePreviewStr(const std::string& myLogin, const std::string& friendLogin, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, uint32_t filesInBlobCount);
+
 private:
     const std::string vecBegin = "VEC_BEGIN";
     const std::string vecEnd = "VEC_END";
+    static constexpr const char* messageBegin = "MESSAGE_BEGIN";
+    static constexpr const char* messageEnd = "MESSAGE_END";
 };
