@@ -110,7 +110,7 @@ namespace net {
 		}
 
 		void readFileChunk() {
-			m_socket.async_read_some(
+			asio::async_read(m_socket,
 				asio::buffer(m_receive_file_buffer.data(), c_chunkSize),
 				[this](std::error_code ec, std::size_t bytes_transferred) {
 					if (ec) {
@@ -269,9 +269,7 @@ namespace net {
 								}
 							}
 						);
-						
 					}
-
 				}
 			);
 		}
