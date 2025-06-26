@@ -180,6 +180,7 @@ namespace net {
                     m_asio_context,
                     std::move(socket),
                     m_safe_deque_of_incoming_files,
+                    &m_private_key,
                     [this](std::error_code ec, net::file<T> unreceivedFile) { onReceiveFileError(ec, unreceivedFile); },
                     [this](std::error_code ec, net::file<T> unsentFile) { onSendFileError(ec, unsentFile); },
                     [this](net::file<T> file) { onFileSent(file); },
@@ -247,6 +248,9 @@ namespace net {
         virtual void onConnectError(std::error_code ec) = 0;
 
     protected:
+        CryptoPP::RSA::PrivateKey m_private_key;
+        CryptoPP::RSA::PublicKey m_public_key;
+
         safe_deque<owned_message<T>> m_safe_deque_incoming_messages;
         safe_deque<owned_file<T>> m_safe_deque_of_incoming_files;
         std::deque<std::shared_ptr<connection_variant>> m_set_connections;

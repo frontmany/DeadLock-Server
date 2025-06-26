@@ -12,13 +12,14 @@
 #include <mutex>
 #include <stack>
 
-
 #include "database.h"
 #include "blob.h"
 #include "queryType.h"
-#include "sender.h"
+#include "packetsBuilder.h"
 #include "user.h"
 #include "net.h"
+
+#include "rsa.h"
 
 typedef std::shared_ptr<net::connection<QueryType>> connectionT;
 typedef std::shared_ptr<net::files_connection<QueryType>> files_connectionT;
@@ -29,6 +30,7 @@ public:
     Server(int port);
     void startServer();
     void stopServer();
+    void loadKeys();
 
 private:
     void processIncomingMessagesQueue();
@@ -52,6 +54,8 @@ private:
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(connectionT connection);
 
+    void onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket);
+    void onPublicKey(connectionT connection, const std::string& stringPacket);
     void authorizeUser(connectionT connection, const std::string& stringPacket);
     void registerUser(connectionT connection, const std::string& stringPacket);
 
@@ -74,19 +78,20 @@ private:
     void handleGet(connectionT connection, const std::string& stringPacket, QueryType type);
     void handleRpl(connectionT connection, const std::string& stringPacket, QueryType type);
 
+
+    std::string generateEncryptionPart(const std::string& salt);
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
 
     bool hasInternetConnection();
     void handleError(std::error_code ec);
 
 private:
-    std::thread                         m_worker_thread;
+    std::thread m_worker_thread;
+    PacketsBuilder m_packets_builder;
+    Database m_db;
 
-    SendStringsGenerator                m_sender;
-    Database                            m_db;
-
-    std::string                         m_ipAddress;
-    int                                 m_port;
+    std::string m_ipAddress;
+    int m_port;
 
     std::unordered_map<std::string, User*> m_map_online_users;
 };

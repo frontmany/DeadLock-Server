@@ -1,0 +1,725 @@
+﻿cryptlib.lib(cryptlib.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(filters.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(allocate.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rijndael.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(integer.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(algparam.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(modes.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(dll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(channels.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(queue.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(fipstest.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(pubkey.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(iterhash.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sha.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(asn.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hmac.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(files.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(basecode.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hex.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(mqueue.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(randpool.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rng.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(osrng.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(pkcspad.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(oaep.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rsa.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ripemd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(zdeflate.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(crc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gzip.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ida.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(base64.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(whrlpool.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(tiger.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(default.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cpu.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(misc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(fips140.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gfpcrypt.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gf2n.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ecp.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ec2n.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(luc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rw.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(xed25519.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(xtrcrypt.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(esign.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(pssr.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hrtimer.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(des.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(adler32.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(md5.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(keccak.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sha3.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(shake.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(blake2.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sm3.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh256.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh512.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rdrand.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(panama.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cmac.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cbcmac.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(vmac.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ttmac.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(chacha.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(poly1305.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(arc4.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(salsa.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rabbit.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hc128.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hc256.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sosemanuk.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(wake.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(seal.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(aria.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(seed.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(hight.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(camellia.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(shacal2.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(tea.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(authenc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ccm.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gcm.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(eax.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(xts.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(twofish.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(serpent.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cast.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rc6.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(mars.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(kalyna.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(threefish.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cham.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lea.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(simeck.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(simon.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(speck.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sm4.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(idea.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rc5.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(skipjack.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(blowfish.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(chachapoly.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(emsa2.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(md2.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(zinflate.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(zlib.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(nbtheory.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(padlkrng.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(base32.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rc2.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(3way.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gost.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(safer.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(shark.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(square.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(md4.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(scrypt.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(blumshub.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(donna_64.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(tweetnacl.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rabin.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(pch.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rijndael_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(rdtables.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sha_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(crc_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gf2_32.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(tigertab.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gf2n_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(xtr.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(dessp.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(keccak_core.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(blake2s_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(blake2b_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh256_avx.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh256_sse.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh512_avx.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lsh512_sse.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(chacha_avx.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(chacha_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(ariatab.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(shacal2_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gcm_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(tftables.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(casts.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(marss.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(kalynatab.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(cham_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(lea_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(simon128_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(speck128_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sm4_simd.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(bfinit.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(primetab.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(gf256.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(sharkbox.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(squaretb.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+cryptlib.lib(donna_sse.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MDd_DynamicDebug' doesn't match value 'MTd_StaticDebug' in adhoc.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::_Lockit::_Lockit(int)" (??0_Lockit@std@@QEAA@H@Z) already defined in libcpmtd.lib(xlock.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::_Lockit::~_Lockit(void)" (??1_Lockit@std@@QEAA@XZ) already defined in libcpmtd.lib(xlock.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: bool __cdecl std::ios_base::good(void)const " (?good@ios_base@std@@QEBA_NXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::ios_base::flags(void)const " (?flags@ios_base@std@@QEBAHXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __int64 __cdecl std::ios_base::width(void)const " (?width@ios_base@std@@QEBA_JXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __int64 __cdecl std::ios_base::width(__int64)" (?width@ios_base@std@@QEAA_J_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::basic_streambuf<char,struct std::char_traits<char> >(void)" (??0?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: virtual __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::~basic_streambuf<char,struct std::char_traits<char> >(void)" (??1?$basic_streambuf@DU?$char_traits@D@std@@@std@@UEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::sputc(char)" (?sputc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEAAHD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __int64 __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::sputn(char const *,__int64)" (?sputn@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEAA_JPEBD_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::eback(void)const " (?eback@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::gptr(void)const " (?gptr@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::pbase(void)const " (?pbase@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::pptr(void)const " (?pptr@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::egptr(void)const " (?egptr@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::gbump(int)" (?gbump@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXH@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::setg(char *,char *,char *)" (?setg@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXPEAD00@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::epptr(void)const " (?epptr@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::setp(char *,char *)" (?setp@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXPEAD0@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::setp(char *,char *,char *)" (?setp@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXPEAD00@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Pninc(void)" (?_Pninc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: virtual __cdecl std::basic_ios<char,struct std::char_traits<char> >::~basic_ios<char,struct std::char_traits<char> >(void)" (??1?$basic_ios@DU?$char_traits@D@std@@@std@@UEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: void __cdecl std::basic_ios<char,struct std::char_traits<char> >::setstate(int,bool)" (?setstate@?$basic_ios@DU?$char_traits@D@std@@@std@@QEAAXH_N@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > * __cdecl std::basic_ios<char,struct std::char_traits<char> >::tie(void)const " (?tie@?$basic_ios@DU?$char_traits@D@std@@@std@@QEBAPEAV?$basic_ostream@DU?$char_traits@D@std@@@2@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_streambuf<char,struct std::char_traits<char> > * __cdecl std::basic_ios<char,struct std::char_traits<char> >::rdbuf(void)const " (?rdbuf@?$basic_ios@DU?$char_traits@D@std@@@std@@QEBAPEAV?$basic_streambuf@DU?$char_traits@D@std@@@2@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: char __cdecl std::basic_ios<char,struct std::char_traits<char> >::fill(void)const " (?fill@?$basic_ios@DU?$char_traits@D@std@@@std@@QEBADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: char __cdecl std::basic_ios<char,struct std::char_traits<char> >::widen(char)const " (?widen@?$basic_ios@DU?$char_traits@D@std@@@std@@QEBADD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: __cdecl std::basic_ios<char,struct std::char_traits<char> >::basic_ios<char,struct std::char_traits<char> >(void)" (??0?$basic_ios@DU?$char_traits@D@std@@@std@@IEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::basic_ostream<char,struct std::char_traits<char> >::basic_ostream<char,struct std::char_traits<char> >(class std::basic_streambuf<char,struct std::char_traits<char> > *,bool)" (??0?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAA@PEAV?$basic_streambuf@DU?$char_traits@D@std@@@1@_N@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: virtual __cdecl std::basic_ostream<char,struct std::char_traits<char> >::~basic_ostream<char,struct std::char_traits<char> >(void)" (??1?$basic_ostream@DU?$char_traits@D@std@@@std@@UEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: void __cdecl std::basic_ostream<char,struct std::char_traits<char> >::_Osfx(void)" (?_Osfx@?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAXXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::operator<<(class std::basic_ostream<char,struct std::char_traits<char> > & (__cdecl*)(class std::basic_ostream<char,struct std::char_traits<char> > &))" (??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@P6AAEAV01@AEAV01@@Z@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::operator<<(int)" (??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@H@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::put(char)" (?put@?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@D@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::flush(void)" (?flush@?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::locale::id::operator unsigned __int64(void)" (??Bid@locale@std@@QEAA_KXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: bool __cdecl std::ctype<char>::is(short,char)const " (?is@?$ctype@D@std@@QEBA_NFD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: static unsigned __int64 __cdecl std::ctype<char>::_Getcat(class std::locale::facet const * *,class std::locale const *)" (?_Getcat@?$ctype@D@std@@SA_KPEAPEBVfacet@locale@2@PEBV42@@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::ios_base::operator bool(void)const " (??Bios_base@std@@QEBA_NXZ) already defined in datatest.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::locale __cdecl std::ios_base::getloc(void)const " (?getloc@ios_base@std@@QEBA?AVlocale@2@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::sgetc(void)" (?sgetc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEAAHXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::snextc(void)" (?snextc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEAAHXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: bool __cdecl std::basic_istream<char,struct std::char_traits<char> >::_Ipfx(bool)" (?_Ipfx@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAA_N_N@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_istream<char,struct std::char_traits<char> > & __cdecl std::basic_istream<char,struct std::char_traits<char> >::read(char *,__int64)" (?read@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@PEAD_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: bool __cdecl std::codecvt_base::always_noconv(void)const " (?always_noconv@codecvt_base@std@@QEBA_NXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::codecvt<char,char,struct _Mbstatet>::in(struct _Mbstatet &,char const *,char const *,char const * &,char *,char *,char * &)const " (?in@?$codecvt@DDU_Mbstatet@@@std@@QEBAHAEAU_Mbstatet@@PEBD1AEAPEBDPEAD3AEAPEAD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::codecvt<char,char,struct _Mbstatet>::out(struct _Mbstatet &,char const *,char const *,char const * &,char *,char *,char * &)const " (?out@?$codecvt@DDU_Mbstatet@@@std@@QEBAHAEAU_Mbstatet@@PEBD1AEAPEBDPEAD3AEAPEAD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::codecvt<char,char,struct _Mbstatet>::unshift(struct _Mbstatet &,char *,char *,char * &)const " (?unshift@?$codecvt@DDU_Mbstatet@@@std@@QEBAHAEAU_Mbstatet@@PEAD1AEAPEAD@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: static unsigned __int64 __cdecl std::codecvt<char,char,struct _Mbstatet>::_Getcat(class std::locale::facet const * *,class std::locale const *)" (?_Getcat@?$codecvt@DDU_Mbstatet@@@std@@SA_KPEAPEBVfacet@locale@2@PEBV42@@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::ios_base::setf(int,int)" (?setf@ios_base@std@@QEAAHHH@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::locale __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::getloc(void)const " (?getloc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEBA?AVlocale@2@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Gndec(void)" (?_Gndec@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: char * __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Gninc(void)" (?_Gninc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAPEADXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: __int64 __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Gnavail(void)const " (?_Gnavail@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBA_JXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::pbump(int)" (?pbump@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXH@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: __int64 __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Pnavail(void)const " (?_Pnavail@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEBA_JXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Init(void)" (?_Init@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXXZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: void __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::_Init(char * *,char * *,int *,char * *,char * *,int *)" (?_Init@?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAAXPEAPEAD0PEAH001@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: virtual __int64 __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::xsgetn(char *,__int64)" (?xsgetn@?$basic_streambuf@DU?$char_traits@D@std@@@std@@MEAA_JPEAD_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "protected: virtual __int64 __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::xsputn(char const *,__int64)" (?xsputn@?$basic_streambuf@DU?$char_traits@D@std@@@std@@MEAA_JPEBD_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: void __cdecl std::basic_ios<char,struct std::char_traits<char> >::clear(int,bool)" (?clear@?$basic_ios@DU?$char_traits@D@std@@@std@@QEAAXH_N@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::operator<<(class std::ios_base & (__cdecl*)(class std::ios_base &))" (??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@P6AAEAVios_base@1@AEAV21@@Z@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: __cdecl std::basic_istream<char,struct std::char_traits<char> >::basic_istream<char,struct std::char_traits<char> >(class std::basic_streambuf<char,struct std::char_traits<char> > *,bool)" (??0?$basic_istream@DU?$char_traits@D@std@@@std@@QEAA@PEAV?$basic_streambuf@DU?$char_traits@D@std@@@1@_N@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: virtual __cdecl std::basic_istream<char,struct std::char_traits<char> >::~basic_istream<char,struct std::char_traits<char> >(void)" (??1?$basic_istream@DU?$char_traits@D@std@@@std@@UEAA@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_istream<char,struct std::char_traits<char> > & __cdecl std::basic_istream<char,struct std::char_traits<char> >::seekg(class std::fpos<struct _Mbstatet>)" (?seekg@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@V?$fpos@U_Mbstatet@@@2@@Z) already defined in validat7.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: struct _Cvtvec __cdecl std::_Locinfo::_Getcvt(void)const " (?_Getcvt@_Locinfo@std@@QEBA?AU_Cvtvec@@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: char const * __cdecl std::_Locinfo::_Getdays(void)const " (?_Getdays@_Locinfo@std@@QEBAPEBDXZ) already defined in libcpmtd.lib(wlocale.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: char const * __cdecl std::_Locinfo::_Getmonths(void)const " (?_Getmonths@_Locinfo@std@@QEBAPEBDXZ) already defined in libcpmtd.lib(wlocale.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: unsigned short const * __cdecl std::_Locinfo::_W_Getdays(void)const " (?_W_Getdays@_Locinfo@std@@QEBAPEBGXZ) already defined in libcpmtd.lib(wlocale.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: unsigned short const * __cdecl std::_Locinfo::_W_Getmonths(void)const " (?_W_Getmonths@_Locinfo@std@@QEBAPEBGXZ) already defined in libcpmtd.lib(wlocale.obj)
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::operator<<(unsigned int)" (??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@I@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::write(char const *,__int64)" (?write@?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@PEBD_J@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: int __cdecl std::basic_istream<char,struct std::char_traits<char> >::peek(void)" (?peek@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAAHXZ) already defined in datatest.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_istream<char,struct std::char_traits<char> > & __cdecl std::basic_istream<char,struct std::char_traits<char> >::seekg(__int64,int)" (?seekg@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@_JH@Z) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::fpos<struct _Mbstatet> __cdecl std::basic_istream<char,struct std::char_traits<char> >::tellg(void)" (?tellg@?$basic_istream@DU?$char_traits@D@std@@@std@@QEAA?AV?$fpos@U_Mbstatet@@@2@XZ) already defined in test.obj
+msvcprtd.lib(MSVCP140D.dll) : error LNK2005: "public: class std::basic_ostream<char,struct std::char_traits<char> > & __cdecl std::basic_ostream<char,struct std::char_traits<char> >::operator<<(unsigned __int64)" (??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@_K@Z) already defined in validat0.obj
+LINK : warning LNK4098: defaultlib 'MSVCRTD' conflicts with use of other libs; use /NODEFAULTLIB:library
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(donna_sse.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lea_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(simon128_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(speck128_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sm4_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh512_avx.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh512_sse.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shacal2_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cham_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xtr.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(keccak_core.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh256_avx.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh256_sse.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rijndael_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sha_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(crc_simd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gf2_32.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(blumshub.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(donna_64.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(tweetnacl.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rabin.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shark.obj)' in function '"public: virtual void __cdecl CryptoPP::SHARK::Base::UncheckedSetKey(unsigned char const *,unsigned int,class CryptoPP::NameValuePairs const &)" (?UncheckedSetKey@Base@SHARK@CryptoPP@@UEAAXPEBEIAEBVNameValuePairs@3@@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(square.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(md4.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(scrypt.obj)' in function '"public: __cdecl CryptoPP::MessageAuthenticationCode::MessageAuthenticationCode(void)" (??0MessageAuthenticationCode@CryptoPP@@QEAA@XZ)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rc2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(3way.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gost.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(safer.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(zlib.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(nbtheory.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(padlkrng.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(base32.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(chachapoly.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(emsa2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(md2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(zinflate.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(idea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rc5.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(skipjack.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(blowfish.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(simeck.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(simon.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(speck.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sm4.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(kalyna.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(threefish.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cham.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(serpent.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cast.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rc6.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(mars.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gcm.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(eax.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xts.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(twofish.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shacal2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(tea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(authenc.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ccm.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(seal.obj)' in function '"public: __cdecl CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >(void)" (??0?$AdditiveCipherTemplate@V?$AbstractPolicyHolder@UAdditiveCipherAbstractPolicy@CryptoPP@@VSymmetricCipher@2@@CryptoPP@@@CryptoPP@@QEAA@XZ)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(aria.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(seed.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(camellia.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hc128.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hc256.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sosemanuk.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(wake.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(poly1305.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(arc4.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(salsa.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rabbit.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cbcmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(vmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ttmac.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(chacha.obj)' in function '"private: __cdecl std::bad_alloc::bad_alloc(char const * const)" (??0bad_alloc@std@@AEAA@QEBD@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh512.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rdrand.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(panama.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shake.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(blake2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sm3.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lsh256.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(adler32.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(md5.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(keccak.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sha3.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(esign.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(pssr.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hrtimer.obj)' in function '"public: struct std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Buffer_view __cdecl std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Get_buffer_view(void)const " (?_Get_buffer_view@?$basic_stringbuf@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@QEBA?AU_Buffer_view@12@XZ)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(des.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(luc.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rw.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xed25519.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xtrcrypt.obj)' in function '"public: struct std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Buffer_view __cdecl std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Get_buffer_view(void)const " (?_Get_buffer_view@?$basic_stringbuf@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@QEBA?AU_Buffer_view@12@XZ)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gfpcrypt.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gf2n.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ecp.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ec2n.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(whrlpool.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(tiger.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(misc.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(crc.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gzip.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ida.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(base64.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(oaep.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rsa.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ripemd.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(zdeflate.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(randpool.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rng.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(osrng.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(pkcspad.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(basecode.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hex.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(mqueue.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(iterhash.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sha.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(asn.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(channels.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(queue.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(fipstest.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(pubkey.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(integer.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(algparam.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(modes.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(dll.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cryptlib.obj)' in function '"class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl std::operator+<char,struct std::char_traits<char>,class std::allocator<char> >(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &&,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &&)" (??$?HDU?$char_traits@D@std@@V?$allocator@D@1@@std@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@0@$$QEAV10@0@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(filters.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(allocate.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rijndael.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(square.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(scrypt.obj)' in function '"public: virtual unsigned __int64 __cdecl CryptoPP::Scrypt::DeriveKey(unsigned char *,unsigned __int64,unsigned char const *,unsigned __int64,class CryptoPP::NameValuePairs const &)const " (?DeriveKey@Scrypt@CryptoPP@@UEBA_KPEAE_KPEBE1AEBVNameValuePairs@2@@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(donna_64.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xtr.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(3way.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gost.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(safer.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shark.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rc5.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(chachapoly.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(zinflate.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(nbtheory.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(simon.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(speck.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(sm4.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(idea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(kalyna.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(threefish.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cham.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(lea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(serpent.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cast.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rc6.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(mars.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gcm.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(eax.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xts.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(twofish.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(camellia.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(shacal2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(tea.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ccm.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hc128.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(wake.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(seal.obj)' in function '"public: __cdecl CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >(class CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> > const &)" (??0?$AdditiveCipherTemplate@V?$AbstractPolicyHolder@UAdditiveCipherAbstractPolicy@CryptoPP@@VSymmetricCipher@2@@CryptoPP@@@CryptoPP@@QEAA@AEBV01@@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(aria.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(poly1305.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(arc4.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(salsa.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rabbit.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cbcmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(vmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ttmac.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(chacha.obj)' in function '"public: __cdecl CryptoPP::Exception::Exception(class CryptoPP::Exception const &)" (??0Exception@CryptoPP@@QEAA@AEBV01@@Z)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(des.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(md5.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(blake2.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ec2n.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(luc.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(xed25519.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(esign.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gfpcrypt.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gf2n.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ecp.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(ida.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(base64.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(whrlpool.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(tiger.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(oaep.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rsa.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(zdeflate.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(gzip.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(basecode.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(randpool.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rng.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(pubkey.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(iterhash.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(asn.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(hmac.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(modes.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(dll.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(queue.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(fipstest.obj)'
+LINK : warning LNK4217: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(cryptlib.obj)' in function 'memcpy_s'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(filters.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(rijndael.obj)'
+LINK : warning LNK4286: symbol '_invalid_parameter_noinfo' defined in 'libucrtd.lib(invalid_parameter.obj)' is imported by 'cryptlib.lib(integer.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(donna_sse.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lea_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(simon128_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(speck128_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sm4_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh512_avx.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh512_sse.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(shacal2_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cham_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(xtr.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(keccak_core.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh256_avx.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh256_sse.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rijndael_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sha_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(crc_simd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gf2_32.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(blumshub.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(donna_64.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(tweetnacl.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rabin.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(shark.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(square.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(md4.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(scrypt.obj)' in function '"public: virtual unsigned __int64 __cdecl CryptoPP::Scrypt::DeriveKey(unsigned char *,unsigned __int64,unsigned char const *,unsigned __int64,class CryptoPP::NameValuePairs const &)const " (?DeriveKey@Scrypt@CryptoPP@@UEBA_KPEAE_KPEBE1AEBVNameValuePairs@2@@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rc2.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(3way.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gost.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(safer.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(zlib.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(nbtheory.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(padlkrng.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(base32.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(chachapoly.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(emsa2.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(md2.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(zinflate.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(idea.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rc5.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(skipjack.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(blowfish.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(simeck.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(simon.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(speck.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sm4.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(kalyna.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(threefish.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cham.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lea.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(serpent.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cast.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rc6.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(mars.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gcm.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(eax.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(xts.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(twofish.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(shacal2.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(tea.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(authenc.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ccm.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(seal.obj)' in function '"int `public: __cdecl CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >(class AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >::dtor$0 const &)'::`1'::dtor$0" (?dtor$0@?0???0?$AdditiveCipherTemplate@V?$AbstractPolicyHolder@UAdditiveCipherAbstractPolicy@CryptoPP@@VSymmetricCipher@2@@CryptoPP@@@CryptoPP@@QEAA@AEBV01@@Z@4HA)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(aria.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(seed.obj)' in function '"private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > & __cdecl std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::_Reallocate_for<class <lambda_66f57f934f28d61049862f64df852ff0>,char const *>(unsigned __int64,class <lambda_66f57f934f28d61049862f64df852ff0>,char const *)" (??$_Reallocate_for@V<lambda_66f57f934f28d61049862f64df852ff0>@@PEBD@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAAAEAV01@_KV<lambda_66f57f934f28d61049862f64df852ff0>@@PEBD@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(camellia.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(hc128.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(hc256.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sosemanuk.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(wake.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(poly1305.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(arc4.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(salsa.obj)' in function '"protected: virtual void __cdecl CryptoPP::Salsa20_Policy::CipherSetKey(class CryptoPP::NameValuePairs const &,unsigned char const *,unsigned __int64)" (?CipherSetKey@Salsa20_Policy@CryptoPP@@MEAAXAEBVNameValuePairs@2@PEBE_K@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rabbit.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cbcmac.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(vmac.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ttmac.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(chacha.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh512.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rdrand.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(panama.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cmac.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(shake.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(blake2.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sm3.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(lsh256.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(adler32.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(md5.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(keccak.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sha3.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(esign.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(pssr.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(hrtimer.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(des.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(luc.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rw.obj)' in function '"void __cdecl std::_Construct_in_place<char *,char * &>(char * &,char * &)" (??$_Construct_in_place@PEADAEAPEAD@std@@YAXAEAPEAD0@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(xed25519.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(xtrcrypt.obj)' in function '"public: struct std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Buffer_view __cdecl std::basic_stringbuf<char,struct std::char_traits<char>,class std::allocator<char> >::_Get_buffer_view(void)const " (?_Get_buffer_view@?$basic_stringbuf@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@QEBA?AU_Buffer_view@12@XZ)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gfpcrypt.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gf2n.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ecp.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ec2n.obj)' in function '"class CryptoPP::AlgorithmParameters __cdecl CryptoPP::MakeParameters<class CryptoPP::ConstByteArrayParameter>(char const *,class CryptoPP::ConstByteArrayParameter const &,bool)" (??$MakeParameters@VConstByteArrayParameter@CryptoPP@@@CryptoPP@@YA?AVAlgorithmParameters@0@PEBDAEBVConstByteArrayParameter@0@_N@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(whrlpool.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(tiger.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(misc.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(crc.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(gzip.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ida.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(base64.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(oaep.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rsa.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(ripemd.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(zdeflate.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(randpool.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rng.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(osrng.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(pkcspad.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(basecode.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(hex.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(mqueue.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(iterhash.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(sha.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(asn.obj)' in function '"void __cdecl CryptoPP::BERDecodeUnsigned<unsigned int>(class CryptoPP::BufferedTransformation &,unsigned int &,unsigned char,unsigned int,unsigned int)" (??$BERDecodeUnsigned@I@CryptoPP@@YAXAEAVBufferedTransformation@0@AEAIEII@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(hmac.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(channels.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(queue.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(fipstest.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(pubkey.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(integer.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(algparam.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(modes.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(dll.obj)'
+LINK : warning LNK4217: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(cryptlib.obj)' in function '"class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl std::operator+<char,struct std::char_traits<char>,class std::allocator<char> >(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &&,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &&)" (??$?HDU?$char_traits@D@std@@V?$allocator@D@1@@std@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@0@$$QEAV10@0@Z)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(filters.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(allocate.obj)'
+LINK : warning LNK4286: symbol '_CrtDbgReport' defined in 'libucrtd.lib(dbgrpt.obj)' is imported by 'cryptlib.lib(rijndael.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(square.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(scrypt.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(donna_64.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(xtr.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(3way.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(gost.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(safer.obj)'
+LINK : warning LNK4217: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(shark.obj)' in function '"public: __cdecl CryptoPP::ClonableImpl<class CryptoPP::BlockCipherFinal<0,class CryptoPP::SHARK::Enc>,class CryptoPP::SHARK::Enc>::ClonableImpl<class CryptoPP::BlockCipherFinal<0,class CryptoPP::SHARK::Enc>,class CryptoPP::SHARK::Enc>(void)" (??0?$ClonableImpl@V?$BlockCipherFinal@$0A@VEnc@SHARK@CryptoPP@@@CryptoPP@@VEnc@SHARK@2@@CryptoPP@@QEAA@XZ)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rc5.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(chachapoly.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(zinflate.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(nbtheory.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(simon.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(speck.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(sm4.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(idea.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(kalyna.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(threefish.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(cham.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(lea.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(serpent.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(cast.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rc6.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(mars.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(gcm.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(eax.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(xts.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(twofish.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(camellia.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(shacal2.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(tea.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(ccm.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(hc128.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(wake.obj)'
+LINK : warning LNK4217: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(seal.obj)' in function '"int `public: __cdecl CryptoPP::ConcretePolicyHolder<class CryptoPP::SEAL_Policy<struct CryptoPP::EnumToType<enum CryptoPP::ByteOrder,1> >,class CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >,struct CryptoPP::AdditiveCipherAbstractPolicy>::ConcretePolicyHolder<class CryptoPP::SEAL_Policy<struct CryptoPP::EnumToType<enum CryptoPP::ByteOrder,1> >,class CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >,struct CryptoPP::AdditiveCipherAbstractPolicy>(class ConcretePolicyHolder<class CryptoPP::SEAL_Policy<struct CryptoPP::EnumToType<enum CryptoPP::ByteOrder,1> >,class CryptoPP::AdditiveCipherTemplate<class CryptoPP::AbstractPolicyHolder<struct CryptoPP::AdditiveCipherAbstractPolicy,class CryptoPP::SymmetricCipher> >,struct CryptoPP::AdditiveCipherAbstractPolicy>::dtor$0 const &)'::`1'::dtor$0" (?dtor$0@?0???0?$ConcretePolicyHolder@V?$SEAL_Policy@U?$EnumToType@W4ByteOrder@CryptoPP@@$00@CryptoPP@@@CryptoPP@@V?$AdditiveCipherTemplate@V?$AbstractPolicyHolder@UAdditiveCipherAbstractPolicy@CryptoPP@@VSymmetricCipher@2@@CryptoPP@@@2@UAdditiveCipherAbstractPolicy@2@@CryptoPP@@QEAA@AEBV01@@Z@4HA)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(aria.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(poly1305.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(arc4.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(salsa.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rabbit.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(cbcmac.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(vmac.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(ttmac.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(chacha.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(des.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(md5.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(blake2.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(cmac.obj)'
+LINK : warning LNK4217: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(ec2n.obj)' in function '"public: virtual void __cdecl CryptoPP::EC2N::EncodePoint(unsigned char *,struct CryptoPP::EC2NPoint const &,bool)const " (?EncodePoint@EC2N@CryptoPP@@UEBAXPEAEAEBUEC2NPoint@2@_N@Z)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(luc.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(xed25519.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(esign.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(gfpcrypt.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(gf2n.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(ecp.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(ida.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(base64.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(whrlpool.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(tiger.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(oaep.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rsa.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(zdeflate.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(gzip.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(basecode.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(randpool.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rng.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(pubkey.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(iterhash.obj)'
+LINK : warning LNK4217: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(asn.obj)' in function '"unsigned __int64 __cdecl CryptoPP::DEREncodeDate(class CryptoPP::BufferedTransformation &,class CryptoPP::SecBlock<unsigned char,class CryptoPP::AllocatorWithCleanup<unsigned char,0> > const &,unsigned char)" (?DEREncodeDate@CryptoPP@@YA_KAEAVBufferedTransformation@1@AEBV?$SecBlock@EV?$AllocatorWithCleanup@E$0A@@CryptoPP@@@1@E@Z)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(hmac.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(modes.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(dll.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(queue.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(fipstest.obj)'
+LINK : warning LNK4217: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(cryptlib.obj)' in function 'memcpy_s'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(filters.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(rijndael.obj)'
+LINK : warning LNK4286: symbol '_errno' defined in 'libucrtd.lib(errno.obj)' is imported by 'cryptlib.lib(integer.obj)'
+LINK : warning LNK4217: symbol 'free' defined in 'libucrtd.lib(free.obj)' is imported by 'cryptlib.lib(allocate.obj)' in function '"void __cdecl CryptoPP::UnalignedDeallocate(void *)" (?UnalignedDeallocate@CryptoPP@@YAXPEAX@Z)'
+LINK : warning LNK4217: symbol 'malloc' defined in 'libucrtd.lib(malloc.obj)' is imported by 'cryptlib.lib(allocate.obj)' in function '"void * __cdecl CryptoPP::UnalignedAllocate(unsigned __int64)" (?UnalignedAllocate@CryptoPP@@YAPEAX_K@Z)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(rabin.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(luc.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(rw.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(xtrcrypt.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(esign.obj)'
+LINK : warning LNK4217: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(dll.obj)' in function '"public: __cdecl CryptoPP::GetValueHelperClass<class CryptoPP::DL_GroupParameters<struct CryptoPP::EC2NPoint>,class CryptoPP::DL_GroupParameters<struct CryptoPP::EC2NPoint> >::GetValueHelperClass<class CryptoPP::DL_GroupParameters<struct CryptoPP::EC2NPoint>,class CryptoPP::DL_GroupParameters<struct CryptoPP::EC2NPoint> >(class CryptoPP::DL_GroupParameters<struct CryptoPP::EC2NPoint> const *,char const *,class type_info const &,void *,class CryptoPP::NameValuePairs const *)" (??0?$GetValueHelperClass@V?$DL_GroupParameters@UEC2NPoint@CryptoPP@@@CryptoPP@@V12@@CryptoPP@@QEAA@PEBV?$DL_GroupParameters@UEC2NPoint@CryptoPP@@@1@PEBDAEBVtype_info@@PEAXPEBVNameValuePairs@1@@Z)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(fipstest.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(rsa.obj)'
+LINK : warning LNK4286: symbol 'strncmp' defined in 'libucrtd.lib(strncmp.obj)' is imported by 'cryptlib.lib(gfpcrypt.obj)'
+LINK : warning LNK4217: symbol '_get_stream_buffer_pointers' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: void __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::_Init(struct _iobuf *,enum std::basic_filebuf<char,struct std::char_traits<char> >::_Initfl)" (?_Init@?$basic_filebuf@DU?$char_traits@D@std@@@std@@IEAAXPEAU_iobuf@@W4_Initfl@12@@Z)'
+LINK : warning LNK4286: symbol '_get_stream_buffer_pointers' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fclose' defined in 'libucrtd.lib(fclose.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"public: class std::basic_filebuf<char,struct std::char_traits<char> > * __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::close(void)" (?close@?$basic_filebuf@DU?$char_traits@D@std@@@std@@QEAAPEAV12@XZ)'
+LINK : warning LNK4286: symbol 'fclose' defined in 'libucrtd.lib(fclose.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fflush' defined in 'libucrtd.lib(fflush.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual int __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::sync(void)" (?sync@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAAHXZ)'
+LINK : warning LNK4286: symbol 'fflush' defined in 'libucrtd.lib(fflush.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fgetc' defined in 'libucrtd.lib(fgetc.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"bool __cdecl std::_Fgetc<char>(char &,struct _iobuf *)" (??$_Fgetc@D@std@@YA_NAEADPEAU_iobuf@@@Z)'
+LINK : warning LNK4286: symbol 'fgetc' defined in 'libucrtd.lib(fgetc.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fgetpos' defined in 'libucrtd.lib(fgetpos.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual class std::fpos<struct _Mbstatet> __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::seekoff(__int64,int,int)" (?seekoff@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAA?AV?$fpos@U_Mbstatet@@@2@_JHH@Z)'
+LINK : warning LNK4286: symbol 'fgetpos' defined in 'libucrtd.lib(fgetpos.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fputc' defined in 'libucrtd.lib(fputc.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"bool __cdecl std::_Fputc<char>(char,struct _iobuf *)" (??$_Fputc@D@std@@YA_NDPEAU_iobuf@@@Z)'
+LINK : warning LNK4286: symbol 'fputc' defined in 'libucrtd.lib(fputc.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fread' defined in 'libucrtd.lib(fread.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual __int64 __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::xsgetn(char *,__int64)" (?xsgetn@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAA_JPEAD_J@Z)'
+LINK : warning LNK4286: symbol 'fread' defined in 'libucrtd.lib(fread.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fsetpos' defined in 'libucrtd.lib(fsetpos.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual class std::fpos<struct _Mbstatet> __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::seekpos(class std::fpos<struct _Mbstatet>,int)" (?seekpos@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAA?AV?$fpos@U_Mbstatet@@@2@V32@H@Z)'
+LINK : warning LNK4286: symbol 'fsetpos' defined in 'libucrtd.lib(fsetpos.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol '_fseeki64' defined in 'libucrtd.lib(fseek.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual class std::fpos<struct _Mbstatet> __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::seekoff(__int64,int,int)" (?seekoff@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAA?AV?$fpos@U_Mbstatet@@@2@_JHH@Z)'
+LINK : warning LNK4286: symbol '_fseeki64' defined in 'libucrtd.lib(fseek.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'fwrite' defined in 'libucrtd.lib(fwrite.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: bool __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::_Endwrite(void)" (?_Endwrite@?$basic_filebuf@DU?$char_traits@D@std@@@std@@IEAA_NXZ)'
+LINK : warning LNK4286: symbol 'fwrite' defined in 'libucrtd.lib(fwrite.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'setvbuf' defined in 'libucrtd.lib(setvbuf.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"protected: virtual class std::basic_streambuf<char,struct std::char_traits<char> > * __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::setbuf(char *,__int64)" (?setbuf@?$basic_filebuf@DU?$char_traits@D@std@@@std@@MEAAPEAV?$basic_streambuf@DU?$char_traits@D@std@@@2@PEAD_J@Z)'
+LINK : warning LNK4286: symbol 'setvbuf' defined in 'libucrtd.lib(setvbuf.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol 'ungetc' defined in 'libucrtd.lib(ungetc.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"bool __cdecl std::_Ungetc<char>(char const &,struct _iobuf *)" (??$_Ungetc@D@std@@YA_NAEBDPEAU_iobuf@@@Z)'
+LINK : warning LNK4286: symbol 'ungetc' defined in 'libucrtd.lib(ungetc.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol '_lock_file' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"public: virtual void __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::_Lock(void)" (?_Lock@?$basic_filebuf@DU?$char_traits@D@std@@@std@@UEAAXXZ)'
+LINK : warning LNK4286: symbol '_lock_file' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol '_unlock_file' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(fipstest.obj)' in function '"public: virtual void __cdecl std::basic_filebuf<char,struct std::char_traits<char> >::_Unlock(void)" (?_Unlock@?$basic_filebuf@DU?$char_traits@D@std@@@std@@UEAAXXZ)'
+LINK : warning LNK4286: symbol '_unlock_file' defined in 'libucrtd.lib(_file.obj)' is imported by 'cryptlib.lib(files.obj)'
+LINK : warning LNK4217: symbol '_calloc_dbg' defined in 'libucrtd.lib(debug_heap.obj)' is imported by 'cryptlib.lib(asn.obj)' in function '"char * __cdecl std::_Maklocstr<char>(char const *,char *,struct _Cvtvec const &)" (??$_Maklocstr@D@std@@YAPEADPEBDPEADAEBU_Cvtvec@@@Z)'
+LINK : warning LNK4217: symbol 'isalpha' defined in 'libucrtd.lib(_ctype.obj)' is imported by 'cryptlib.lib(basecode.obj)' in function '"public: static void __cdecl CryptoPP::BaseN_Decoder::InitializeDecodingLookupArray(int *,unsigned char const *,unsigned int,bool)" (?InitializeDecodingLookupArray@BaseN_Decoder@CryptoPP@@SAXPEAHPEBEI_N@Z)'
+LINK : warning LNK4217: symbol 'toupper' defined in 'libucrtd.lib(tolower_toupper.obj)' is imported by 'cryptlib.lib(basecode.obj)' in function '"public: static void __cdecl CryptoPP::BaseN_Decoder::InitializeDecodingLookupArray(int *,unsigned char const *,unsigned int,bool)" (?InitializeDecodingLookupArray@BaseN_Decoder@CryptoPP@@SAXPEAHPEBEI_N@Z)'
+LINK : warning LNK4217: symbol 'tolower' defined in 'libucrtd.lib(tolower_toupper.obj)' is imported by 'cryptlib.lib(basecode.obj)' in function '"public: static void __cdecl CryptoPP::BaseN_Decoder::InitializeDecodingLookupArray(int *,unsigned char const *,unsigned int,bool)" (?InitializeDecodingLookupArray@BaseN_Decoder@CryptoPP@@SAXPEAHPEBEI_N@Z)'
+LINK : warning LNK4217: symbol '_time64' defined in 'libucrtd.lib(time.obj)' is imported by 'cryptlib.lib(randpool.obj)' in function 'time'
+LINK : warning LNK4286: symbol '_time64' defined in 'libucrtd.lib(time.obj)' is imported by 'cryptlib.lib(rng.obj)'
+LINK : warning LNK4286: symbol '_time64' defined in 'libucrtd.lib(time.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4217: symbol 'clock' defined in 'libucrtd.lib(clock.obj)' is imported by 'cryptlib.lib(rng.obj)' in function '"public: __cdecl CryptoPP::X917RNG::X917RNG(class CryptoPP::BlockTransformation *,unsigned char const *,unsigned char const *)" (??0X917RNG@CryptoPP@@QEAA@PEAVBlockTransformation@1@PEBE1@Z)'
+LINK : warning LNK4286: symbol 'clock' defined in 'libucrtd.lib(clock.obj)' is imported by 'cryptlib.lib(default.obj)'
+LINK : warning LNK4286: symbol 'clock' defined in 'libucrtd.lib(clock.obj)' is imported by 'cryptlib.lib(hrtimer.obj)'
+LINK : warning LNK4217: symbol 'mbstowcs_s' defined in 'libucrtd.lib(mbstowcs.obj)' is imported by 'cryptlib.lib(misc.obj)' in function '"class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > __cdecl CryptoPP::StringWiden(char const *,bool)" (?StringWiden@CryptoPP@@YA?AV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@PEBD_N@Z)'
+LINK : warning LNK4217: symbol 'wcstombs_s' defined in 'libucrtd.lib(wcstombs.obj)' is imported by 'cryptlib.lib(misc.obj)' in function '"class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl CryptoPP::StringNarrow(wchar_t const *,bool)" (?StringNarrow@CryptoPP@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEB_W_N@Z)'
+cryptlib.lib(allocate.obj) : error LNK2019: unresolved external symbol __imp__aligned_free referenced in function "void __cdecl CryptoPP::AlignedDeallocate(void *)" (?AlignedDeallocate@CryptoPP@@YAXPEAX@Z)
+cryptlib.lib(allocate.obj) : error LNK2019: unresolved external symbol __imp__aligned_malloc referenced in function "void * __cdecl CryptoPP::AlignedAllocate(unsigned __int64)" (?AlignedAllocate@CryptoPP@@YAPEAX_K@Z)
+x64\Output\Debug\\cryptest.exe : fatal error LNK1120: 2 unresolved externals

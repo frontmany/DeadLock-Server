@@ -4,6 +4,10 @@
 #include "net_safe_deque.h"
 #include "net_message.h"
 #include "net_file.h"
+#include "queryType.h"
+#include "crypto.h"
+
+#include "secblock.h"
 
 #include <fstream>              
 #include <filesystem>          
@@ -15,9 +19,9 @@
 namespace net {
 	template<typename T>
 	class files_connection : public std::enable_shared_from_this<files_connection<T>> {
-
-		static const uint32_t c_chunkSize = 8192;
-		static const uint32_t c_hundredPercent = 100;
+		
+		static const uint32_t c_chunkSize = 8604;
+		static const uint32_t c_overhead = 412;
 
 	public:
 		files_connection(
@@ -25,6 +29,7 @@ namespace net {
 			asio::io_context& asioContext,
 			asio::ip::tcp::socket socket,
 			safe_deque<owned_file<T>>& safeDequeIncomingFiles,
+			CryptoPP::RSA::PrivateKey* privateKey,
 			std::function<void(std::error_code, net::file<T>)> errorReceiveCallback,
 			std::function<void(std::error_code, net::file<T>)> errorSendCallback,
 			std::function<void(net::file<T>)> onFileSent,
@@ -33,6 +38,7 @@ namespace net {
 			: m_asio_context(asioContext),
 			m_socket(std::move(socket)),
 			m_safe_deque_incoming_files(safeDequeIncomingFiles),
+			m_my_private_key(privateKey),
 			m_on_file_sent(std::move(onFileSent)),
 			m_on_send_error(std::move(errorSendCallback)),
 			m_on_receive_error(std::move(errorReceiveCallback)),
@@ -58,9 +64,8 @@ namespace net {
 				if (isAbleToWrite) {
 					writeFirstFromQueueFileMetadata();
 				}
-			});
+				});
 		}
-
 
 		bool isConnected() const {
 			return m_socket.is_open();
@@ -75,7 +80,7 @@ namespace net {
 			}
 
 			if (isConnected()) {
-				asio::post(m_asio_context, [this]() { m_socket.close(); });
+				m_socket.close();
 			}
 		}
 
@@ -122,10 +127,10 @@ namespace net {
 						return;
 					}
 					else {
-						m_received_file_size += bytes_transferred;
+						m_received_file_size += bytes_transferred - c_overhead;
 						m_curent_number_of_occurrences++;
 
-						if (m_file_tmp.fileSize >= c_chunkSize) {
+						if (std::stoi(m_file_tmp.fileSize) >= c_chunkSize - c_overhead) {
 							if (m_curent_number_of_occurrences > m_number_of_full_occurrences) {
 								m_receive_file_stream.write(m_receive_file_buffer.data(), m_last_packet_size);
 							}
@@ -137,14 +142,7 @@ namespace net {
 							m_receive_file_stream.write(m_receive_file_buffer.data(), m_last_packet_size);
 						}
 
-						if (m_received_file_size < m_file_tmp.fileSize) {
-							if (m_file_tmp.isRequested && m_owner == owner::client) {
-								if (m_on_receive_progress_update.has_value()) {
-									double progress = (static_cast<double>(m_received_file_size) / m_file_tmp.fileSize) * c_hundredPercent;
-									progress = std::clamp(progress, 0.0, static_cast<double>(c_hundredPercent));
-									(*m_on_receive_progress_update)(m_file_tmp, progress);
-								}
-							}
+						if (m_received_file_size < std::stoi(m_file_tmp.fileSize)) {
 							readFileChunk();
 						}
 						else {
@@ -160,7 +158,6 @@ namespace net {
 				bool isOpen = openFirstFromQueueFileForSending();
 				if (!isOpen)
 					return;
-
 			}
 
 			m_send_file_stream.read(m_send_file_buffer.data(), c_chunkSize);
@@ -178,21 +175,7 @@ namespace net {
 							disconnect();
 						}
 						else {
-							m_total_bytes_sent += c_chunkSize;
-							if (m_total_bytes_sent < m_safe_deque_outgoing_files.front().fileSize && m_owner == owner::client) {
-								if (m_on_send_progress_update.has_value()) {
-									const auto& front_file = m_safe_deque_outgoing_files.front();
-
-									uint32_t progress_percent = 0;
-									if (front_file.fileSize > 0) {
-										double progress = (static_cast<double>(m_total_bytes_sent) / front_file.fileSize) * c_hundredPercent;
-										progress = std::clamp(progress, 0.0, static_cast<double>(c_hundredPercent));
-										progress_percent = static_cast<uint32_t>(progress);
-									}
-
-									(*m_on_send_progress_update)(front_file, progress_percent);
-								}
-							}
+							m_total_bytes_sent += c_chunkSize - c_overhead;
 							writeFileChunk();
 						}
 					}
@@ -203,14 +186,6 @@ namespace net {
 				m_send_file_stream.close();
 				m_msg_tmp_for_send_metadata = message<T>();
 
-				if (m_owner == owner::client) {
-					if (m_on_send_progress_update.has_value()) {
-						(*m_on_send_progress_update)(
-							m_safe_deque_outgoing_files.front(),
-							static_cast<uint32_t>(c_hundredPercent)
-							);
-					}
-				}
 				m_on_file_sent(m_safe_deque_outgoing_files.pop_front());
 				if (!m_safe_deque_outgoing_files.empty())
 				{
@@ -223,24 +198,26 @@ namespace net {
 			const auto& file = m_safe_deque_outgoing_files.front();
 
 			std::ostringstream oss;
+			CryptoPP::SecByteBlock key;
+			crypto::generateAESKey(key);
 
-			oss << file.senderLogin << '\n'
-				<< file.receiverLogin << '\n'
-				<< file.fileName << '\n'
+			std::string encryptedKey = crypto::RSAEncrypt(file.friendPublicKey, key);
+
+			oss << encryptedKey << '\n'
 				<< file.id << '\n'
-				<< file.fileSize << '\n'
-				<< file.timestamp << '\n'
-				<< "MESSAGE_BEGIN" << '\n'
-				<< file.caption << '\n'
-				<< "MESSAGE_END" << '\n'
-				<< std::to_string(file.filesInBlobCount) << "\n"
 				<< file.blobUID << "\n"
-				<< (file.isRequested ? "true" : "false");
-
-			std::string packetStr = oss.str();
+				<< file.receiverLoginHash << '\n'
+				<< file.senderLoginHash << '\n'
+				<< file.fileSize << '\n'
+				<< crypto::AESEncrypt(key, file.fileName) << '\n'
+				<< crypto::AESEncrypt(key, file.timestamp) << '\n'
+				<< crypto::AESEncrypt(key, "MESSAGE_BEGIN") << '\n'
+				<< crypto::AESEncrypt(key, file.caption) << '\n'
+				<< crypto::AESEncrypt(key, "MESSAGE_END") << '\n'
+				<< crypto::AESEncrypt(key, file.filesInBlobCount);
 
 			m_msg_tmp_for_send_metadata.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
-			m_msg_tmp_for_send_metadata << packetStr;
+			m_msg_tmp_for_send_metadata << oss.str();
 			m_msg_tmp_for_send_metadata.header.size = m_msg_tmp_for_send_metadata.size();
 
 			asio::async_write(
@@ -269,7 +246,9 @@ namespace net {
 								}
 							}
 						);
+
 					}
+
 				}
 			);
 		}
@@ -322,80 +301,67 @@ namespace net {
 
 			std::istringstream iss(filePreviewString);
 
-			std::string senderLogin;
-			std::getline(iss, senderLogin);
-
-			std::string receiverLogin;
-			std::getline(iss, receiverLogin);
-
-			std::string fileName;
-			std::getline(iss, fileName);
+			std::string encryptedKey;
+			std::getline(iss, encryptedKey);
 
 			std::string fileId;
 			std::getline(iss, fileId);
 
-			std::string fileSize;
-			std::getline(iss, fileSize);
-
-			std::string fileTimestamp;
-			std::getline(iss, fileTimestamp);
-
-			std::string messageBegin;
-			std::getline(iss, messageBegin);
-
-			std::string caption;
-			std::string line;
-			while (std::getline(iss, line)) {
-				if (line == "MESSAGE_END") {
-					break;
-				}
-				else {
-					caption += line;
-					caption += '\n';
-				}
-			}
-			caption.pop_back();
-
-			std::string filesCountInBlobStr;
-			std::getline(iss, filesCountInBlobStr);
-			size_t filesInBlobCount = std::stoi(filesCountInBlobStr);
-
 			std::string blobUID;
 			std::getline(iss, blobUID);
 
-			std::string isRequestedStr;
-			std::getline(iss, isRequestedStr);
-			bool isRequested = isRequestedStr == "true";
+			std::string receiverLoginHash;
+			std::getline(iss, receiverLoginHash);
 
-			m_file_tmp.filePath = createFilePath(fileName, fileId);
-			m_file_tmp.fileName = fileName;
-			m_file_tmp.senderLogin = senderLogin;
-			m_file_tmp.receiverLogin = receiverLogin;
-			m_file_tmp.fileSize = std::stoi(fileSize);
+			std::string senderLoginHash;
+			std::getline(iss, senderLoginHash);
+
+			std::string fileSize;
+			std::getline(iss, fileSize);
+
+			std::string fileNameEncrypted;
+			std::getline(iss, fileNameEncrypted);
+
+			std::string fileTimestampEncrypted;
+			std::getline(iss, fileTimestampEncrypted);
+
+			std::string messageBeginEncrypted;
+			std::getline(iss, messageBeginEncrypted);
+
+			std::string captionEncrypted;
+			std::getline(iss, captionEncrypted);
+
+			std::string messageEndEncrypted;
+			std::getline(iss, messageEndEncrypted);
+
+			std::string filesCountInBlobStrEncrypted;
+			std::getline(iss, filesCountInBlobStrEncrypted);
+
+			m_file_tmp.filePath = createFilePath(fileId);
+			m_file_tmp.fileName = fileNameEncrypted;
+			m_file_tmp.senderLoginHash = senderLoginHash;
+			m_file_tmp.receiverLoginHash = receiverLoginHash;
+			m_file_tmp.fileSize = fileSize;
 			m_file_tmp.id = fileId;
-			m_file_tmp.timestamp = fileTimestamp;
-			m_file_tmp.caption = caption;
+			m_file_tmp.timestamp = fileTimestampEncrypted;
+			m_file_tmp.caption = captionEncrypted;
 			m_file_tmp.blobUID = blobUID;
-			m_file_tmp.filesInBlobCount = filesInBlobCount;
-			m_file_tmp.isRequested = isRequested;
+			m_file_tmp.filesInBlobCount = filesCountInBlobStrEncrypted;
 
-			m_number_of_full_occurrences = m_file_tmp.fileSize / m_receive_file_buffer.size();
-			int lastPacketSize = m_file_tmp.fileSize - (m_number_of_full_occurrences * m_receive_file_buffer.size());
+			m_number_of_full_occurrences = std::stoi(m_file_tmp.fileSize) / (c_chunkSize - c_overhead);
+			int lastPacketSize = std::stoi(m_file_tmp.fileSize) - (m_number_of_full_occurrences * (c_chunkSize - c_overhead));
 			if (lastPacketSize == 0) {
-				m_last_packet_size = m_receive_file_buffer.size();
+				m_last_packet_size = (c_chunkSize - c_overhead);
 			}
 			else {
 				m_last_packet_size = lastPacketSize;
 			}
+
+			m_last_packet_size += c_overhead;
 		}
 
 		void finalizeFileReceiving() {
 			m_receive_file_stream.close();
-			if (m_owner == owner::client) {
-				if (m_on_receive_progress_update.has_value()) {
-					(*m_on_receive_progress_update)(m_file_tmp, c_hundredPercent);
-				}
-			}
 			m_last_packet_size = 0;
 			m_received_file_size = 0;
 			m_curent_number_of_occurrences = 0;
@@ -415,56 +381,45 @@ namespace net {
 			m_file_tmp = file<T>();
 		}
 
-		std::string createFilePath(const std::string& fileName, const std::string& fileId) {
+		std::string createFilePath(const std::string& fileId) {
+			namespace fs = std::filesystem;
+			std::string baseName = fileId; 
+			std::string extension = ".deadlock";
+
 			if (m_owner == owner::server) {
-				std::filesystem::create_directory("ReceivedFiles");
-				const std::string filePath = "ReceivedFiles/" + fileId;
-
-				size_t dotPos = fileName.find_last_of('.');
-				std::string fullPath;
-				if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
-					std::string extension = fileName.substr(dotPos + 1);
-					fullPath = filePath + "." + extension;
-				}
-
-				return fullPath;
-			}
-			else {
-				namespace fs = std::filesystem;
-
-#ifdef _WIN32
-				std::string downloadsPath = std::string(std::getenv("USERPROFILE")) + "\\Downloads\\";
-#else
-				std::string downloadsPath = std::string(std::getenv("HOME")) + "/Downloads/";
-#endif
-
-				std::string deadlockDir = downloadsPath + "Deadlock Messenger";
-				if (!fs::exists(deadlockDir)) {
-					fs::create_directory(deadlockDir);
-				}
-
-				std::string filePath = deadlockDir + "/" + fileName;
-#ifdef _WIN32
-				filePath = deadlockDir + "\\" + fileName;
-#endif
+				fs::create_directory("ReceivedFiles");
+				std::string filePath = "ReceivedFiles/" + baseName + extension;
 
 				int counter = 1;
 				while (fs::exists(filePath)) {
-					size_t dotPos = fileName.find_last_of('.');
-					std::string nameWithoutExt = fileName.substr(0, dotPos);
-					std::string extension = (dotPos != std::string::npos) ? fileName.substr(dotPos) : "";
-
-#ifdef _WIN32
-					filePath = deadlockDir + "\\" + nameWithoutExt + " (" + std::to_string(counter) + ")" + extension;
-#else
-					filePath = deadlockDir + "/" + nameWithoutExt + " (" + std::to_string(counter) + ")" + extension;
-#endif
+					filePath = "ReceivedFiles/" + baseName + "_" + std::to_string(counter) + extension;
 					counter++;
 				}
 
 				return filePath;
 			}
+			else {
+#ifdef _WIN32
+				std::string downloadsPath = std::string(std::getenv("USERPROFILE")) + "\\Downloads\\";
+				std::string deadlockDir = downloadsPath + "Deadlock Messenger";
+				std::string separator = "\\";
+#else
+				std::string downloadsPath = std::string(std::getenv("HOME")) + "/Downloads/";
+				std::string deadlockDir = downloadsPath + "Deadlock Messenger";
+				std::string separator = "/";
+#endif
 
+				fs::create_directory(deadlockDir);
+				std::string filePath = deadlockDir + separator + baseName + extension;
+
+				int counter = 1;
+				while (fs::exists(filePath)) {
+					filePath = deadlockDir + separator + baseName + "_" + std::to_string(counter) + extension;
+					counter++;
+				}
+
+				return filePath;
+			}
 		}
 
 		void removePartiallyDownloadedFile() {
@@ -482,6 +437,7 @@ namespace net {
 			}
 		}
 
+
 	private:
 		uint32_t					  m_total_bytes_sent;
 		uint32_t					  m_received_file_size;
@@ -497,14 +453,16 @@ namespace net {
 
 		owner						  m_owner;
 		asio::ip::tcp::socket		  m_socket;
-		asio::io_context&			  m_asio_context;
+		asio::io_context& m_asio_context;
 
 		message<T>					  m_file_preview_message_tmp;
 		message<T>					  m_msg_tmp_for_send_metadata;
 
 		safe_deque<file<T>>			  m_safe_deque_outgoing_files;
-		safe_deque<owned_file<T>>&	  m_safe_deque_incoming_files;
+		safe_deque<owned_file<T>>& m_safe_deque_incoming_files;
 		file<T>						  m_file_tmp;
+
+		CryptoPP::RSA::PrivateKey* m_my_private_key;
 
 		// callbacks
 		std::function<void(net::file<T>)> m_on_file_sent;

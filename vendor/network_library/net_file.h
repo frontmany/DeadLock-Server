@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <rsa.h>
 
 namespace net
 {
@@ -10,18 +11,17 @@ namespace net
 
     template <typename T>
     struct file {
+        CryptoPP::RSA::PublicKey friendPublicKey;
         std::string blobUID;
-        std::string senderLogin;
-        std::string receiverLogin;
+        std::string senderLoginHash;
+        std::string receiverLoginHash;
         std::string filePath;
         std::string fileName;
         std::string id;
         std::string timestamp;
         std::string caption;
-
-        uint32_t filesInBlobCount;
-        uint32_t fileSize;
-        bool isRequested;
+        std::string filesInBlobCount;
+        std::string fileSize;
     };
 
 

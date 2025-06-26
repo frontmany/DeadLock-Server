@@ -25,26 +25,32 @@ public:
 	Database() = default;
 	void init();
 
-	User* getUser(const std::string& login);
-	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
+	User* getUser(const std::string& loginHash);
+	void addUser(const std::string& loginHash, const std::string& passwordHash, const std::string& encryptionPart, const std::string& lastSeen);
 
-	void collect(const std::string& login, const std::string& packet, QueryType type);
-	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& login);
+    void updateUserLogin(const std::string& loginHash, const std::string& login);
+    void updateUserName(const std::string& loginHash, const std::string& name);
+    void updateUserPassword(const std::string& loginHash, const std::string& passwordHash);
+    void updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPart);
+    void updateUserLastSeen(const std::string& loginHash, const std::string& lastSeen);
+    void updateUserPublicKey(const std::string& loginHash, const std::string& publicKey);
+	void updateUserPhoto(const std::string& loginHash, const Photo& photo, size_t photoSize);
+
+
+
+
+	void collect(const std::string& loginHash, const std::string& packet, QueryType type);
+	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& loginHash);
 	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
-	std::vector<std::string> getAllRegisteredUserLogins();
-	std::vector<User*> findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*>& foundUsers);
+	std::vector<User*> findUsers(const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers);
 
-	void updateUserName(const std::string& login, const std::string& newName);
-	void updateUserPassword(const std::string& login, const std::string& passwordHash);
-	void updateUserPhoto(const std::string& login, const Photo& photo, size_t photoSize);
-	void updateUserLogin(const std::string& oldLogin, const std::string& newLogin);
-	void updateUserStatus(const std::string& login, std::string lastSeen);
 
-	bool checkPassword(const std::string& login, const std::string& passwordHash);
-	bool checkNewLogin(const std::string& newLogin);
+	bool checkPassword(const std::string& loginHash, const std::string& passwordHash);
+	bool checkNewLogin(const std::string& newLoginHash);
 	std::string getCurrentDateTime();
 
 private:
+	void executeUpdate(const char* sql, const std::vector<std::string>& params);
 	void executeAndCheck(sqlite3_stmt* stmt, const std::string& operation);
 	std::string friendsToString(const std::vector<std::string>& friends);
 	std::vector<std::string> stringToFriends(const std::string& friendsString);
