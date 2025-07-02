@@ -14,7 +14,7 @@ std::string PacketsBuilder::get_friendsStatusesSuccessPacket(const CryptoPP::RSA
 
     CryptoPP::SecByteBlock key;
     crypto::generateAESKey(key);
-    std::string encryptedKey = crypto::RSAEncrypt(userPublicKey, key);
+    std::string encryptedKey = crypto::RSAEncryptKey(userPublicKey, key);
 
     oss << encryptedKey << '\n';
     oss << vecBegin << '\n';
@@ -26,12 +26,12 @@ std::string PacketsBuilder::get_friendsStatusesSuccessPacket(const CryptoPP::RSA
     return oss.str();
 }
 
-std::string PacketsBuilder::get_usersPacket(const CryptoPP::RSA::PublicKey& userPublicKey, const std::vector<User*>& usersVec) {
+std::string PacketsBuilder::get_usersPacket(const CryptoPP::RSA::PrivateKey privateKey, const CryptoPP::RSA::PublicKey& userPublicKey, const std::vector<User*>& usersVec) {
     std::ostringstream oss;
 
     CryptoPP::SecByteBlock key;
     crypto::generateAESKey(key);
-    std::string encryptedKey = crypto::RSAEncrypt(userPublicKey, key);
+    std::string encryptedKey = crypto::RSAEncryptKey(userPublicKey, key);
 
     oss << encryptedKey << '\n';
     oss << crypto::AESEncrypt(key, std::to_string(usersVec.size())) << '\n';
@@ -42,30 +42,45 @@ std::string PacketsBuilder::get_usersPacket(const CryptoPP::RSA::PublicKey& user
             << crypto::AESEncrypt(key, user->getLastSeen()) << '\n'
             << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n'
             << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n'
-            << crypto::AESEncrypt(key, user->getPhoto().serialize());
+            << crypto::AESEncrypt(key, user->getPhoto().serialize(privateKey, userPublicKey));
     }
 
     return oss.str();
 }
 
-std::string PacketsBuilder::get_chatCreateSuccessPacket(User* user) {
+std::string PacketsBuilder::get_newLoginSuccessPacket(const std::string& approvedLogin, const CryptoPP::RSA::PublicKey& userPublicKey) {
+    std::ostringstream oss;
+
+    CryptoPP::SecByteBlock key;
+    crypto::generateAESKey(key);
+    std::string encryptedKey = crypto::RSAEncryptKey(userPublicKey, key);
+
+    oss << encryptedKey << '\n'
+        << crypto::AESEncrypt(key, approvedLogin);
+
+    return oss.str();
+}
+
+std::string PacketsBuilder::get_chatCreateSuccessPacket(const CryptoPP::RSA::PrivateKey privateKey, User* user) {
     std::ostringstream oss;
     oss << user->getLogin() << '\n'
         << user->getName() << '\n'
         << (user->getPhoto().getSize() > 0 ? "true" : "false") << '\n'
         << std::to_string(user->getPhoto().getSize()) << '\n'
         << "last seen: N/A" << '\n'
-        << user->getPhoto().serialize();
+        << user->getPhoto().serialize(privateKey, user->getPublicKey());
 
     return oss.str();
 }
 
-std::string PacketsBuilder::get_userInfoPacket(User* user, const std::string newLogin) {
+std::string PacketsBuilder::get_userInfoPacket(const CryptoPP::RSA::PrivateKey privateKey, User* user, const std::string& newLogin) {
     std::ostringstream oss;
-
+    if (!oss.good()) {
+        throw std::runtime_error("String stream is in a bad state!");
+    }
     CryptoPP::SecByteBlock key;
     crypto::generateAESKey(key);
-    std::string encryptedKey = crypto::RSAEncrypt(user->getPublicKey(), key);
+    std::string encryptedKey = crypto::RSAEncryptKey(user->getPublicKey(), key);
 
     oss << encryptedKey << '\n'
         << crypto::AESEncrypt(key, user->getLogin()) << '\n'
@@ -73,8 +88,28 @@ std::string PacketsBuilder::get_userInfoPacket(User* user, const std::string new
         << crypto::AESEncrypt(key, user->getLastSeen()) << '\n'
         << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n'
         << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n'
-        << crypto::AESEncrypt(key, user->getPhoto().serialize()) << '\n'
+        << user->getPhoto().serialize(privateKey, user->getPublicKey()) << '\n'
         << crypto::AESEncrypt(key, newLogin);
+
+    return oss.str();
+}
+
+std::string PacketsBuilder::get_MyInfoPacket(const CryptoPP::RSA::PrivateKey privateKey, User* user) {
+    std::ostringstream oss;
+    if (!oss.good()) {
+        throw std::runtime_error("String stream is in a bad state!");
+    }
+    CryptoPP::SecByteBlock key;
+    crypto::generateAESKey(key);
+    std::string encryptedKey = crypto::RSAEncryptKey(user->getPublicKey(), key);
+
+    oss << encryptedKey << '\n'
+        << crypto::AESEncrypt(key, user->getLogin()) << '\n'
+        << crypto::AESEncrypt(key, user->getName()) << '\n'
+        << crypto::AESEncrypt(key, user->getLastSeen()) << '\n'
+        << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n'
+        << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n'
+        << user->getPhoto().serialize(privateKey, user->getPublicKey());
 
     return oss.str();
 }
@@ -84,7 +119,7 @@ std::string PacketsBuilder::get_statusPacket(const CryptoPP::RSA::PublicKey& use
 
     CryptoPP::SecByteBlock key;
     crypto::generateAESKey(key);
-    std::string encryptedKey = crypto::RSAEncrypt(userPublicKey, key);
+    std::string encryptedKey = crypto::RSAEncryptKey(userPublicKey, key);
 
     oss << encryptedKey << '\n'
         << loginHash << '\n'
@@ -115,7 +150,7 @@ std::string PacketsBuilder::get_registrationSuccessPacket(const std::string& enc
     std::ostringstream oss;
 
     oss << encryptionPart << '\n'
-        << crypto::serializeKey(serverPublicKey);
+        << crypto::serializePublicKey(serverPublicKey);
 
     return oss.str();
 }
@@ -123,7 +158,7 @@ std::string PacketsBuilder::get_authorizationSuccessPacket(const std::string& en
     std::ostringstream oss;
 
     oss << encryptionPart << '\n'
-        << crypto::serializeKey(serverPublicKey);
+        << crypto::serializePublicKey(serverPublicKey);
 
     return oss.str();
 }

@@ -201,7 +201,7 @@ namespace net {
 			CryptoPP::SecByteBlock key;
 			crypto::generateAESKey(key);
 
-			std::string encryptedKey = crypto::RSAEncrypt(file.friendPublicKey, key);
+			std::string encryptedKey = crypto::RSAEncryptKey(file.friendPublicKey, key);
 
 			oss << encryptedKey << '\n'
 				<< file.id << '\n'

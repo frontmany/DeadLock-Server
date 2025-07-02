@@ -12,7 +12,7 @@ void Database::init() {
     std::cout << "Opened database successfully" << std::endl;
 
     const char* sql1 = "CREATE TABLE IF NOT EXISTS USER("
-        "LOGIN_HASH      TEXT PRIMARY KEY  NOT NULL,"
+        "LOGIN_HASH      TEXT              NOT NULL,"
         "LOGIN           TEXT              ,"
         "NAME            TEXT              ,"
         "PASSWORD_HASH   TEXT              NOT NULL,"
@@ -21,7 +21,7 @@ void Database::init() {
         "PUBLIC_KEY      TEXT              ,"
         "IS_HAS_PHOTO    INTEGER           NOT NULL,"
         "PHOTO_PATH      TEXT              NOT NULL,"
-        "PHOTO_SIZE      INTEGER           NOT NULL);";
+        "PHOTO_SIZE      TEXT              NOT NULL);";
 
     char* zErrMsg = 0;
     rc = sqlite3_exec(m_db, sql1, 0, 0, &zErrMsg);
@@ -46,84 +46,141 @@ void Database::init() {
     std::cout << "Table COLLECTED_PACKETS created successfully" << std::endl;
 }
 
-void Database::addUser(const std::string& loginHash,
+bool Database::addUser(const std::string& loginHash,
     const std::string& passwordHash,
-    const std::string& encryptionPart,
-    const std::string& lastSeen) {
+    const std::string& encryptionPartEnc,
+    const std::string& lastSeenEnc)
+{
+    if (!m_db) {
+        std::cerr << "Database not initialized" << std::endl;
+        return false;
+    }
+
     const char* sql = "INSERT INTO USER ("
         "LOGIN_HASH, PASSWORD_HASH, ENCRYPTION_PART, LAST_SEEN, "
         "IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE, "
         "LOGIN, NAME, PUBLIC_KEY) "
-        "VALUES (?, ?, ?, ?, 0, '', 0, '', '', '');";
+        "VALUES (?, ?, ?, ?, 0, '', '', '', '', '');";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
-        return;
+        return false;
     }
 
-    sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, passwordHash.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, encryptionPart.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 4, lastSeen.c_str(), -1, SQLITE_TRANSIENT);
+    // Bind parameters with error checking
+    auto bind_param = [&](int idx, const std::string& value) -> bool {
+        if (sqlite3_bind_text(stmt, idx, value.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            std::cerr << "Failed to bind parameter " << idx << ": " << sqlite3_errmsg(m_db) << std::endl;
+            return false;
+        }
+        return true;
+        };
 
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
+    if (!bind_param(1, loginHash) || !bind_param(2, passwordHash) ||
+        !bind_param(3, encryptionPartEnc) || !bind_param(4, lastSeenEnc)) {
+        sqlite3_finalize(stmt);
+        return false;
+    }
+
+    bool success = false;
+    int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_DONE) {
+        std::cout << "User added successfully" << std::endl;
+        success = true;
     }
     else {
-        std::cout << "User added successfully" << std::endl;
+        std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
+        if (rc == SQLITE_CONSTRAINT) {
+            std::cerr << "Duplicate login_hash detected" << std::endl;
+        }
     }
 
     sqlite3_finalize(stmt);
+    return success;
 }
 
-User* Database::getUser(const std::string& loginHash) {
-    sqlite3_stmt* stmt = nullptr;
-    std::string sql = "SELECT LOGIN_HASH, LOGIN, NAME, PASSWORD_HASH, LAST_SEEN, PUBLIC_KEY, "
-        "IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE FROM USER WHERE LOGIN_HASH = ?";
+User* Database::getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash) {
+    if (!m_db) {
+        std::cerr << "Database not initialized" << std::endl;
+        return nullptr;
+    }
 
+    const std::string sql = "SELECT "
+        "LOGIN_HASH, LOGIN, NAME, PASSWORD_HASH, "
+        "ENCRYPTION_PART, LAST_SEEN, PUBLIC_KEY, "
+        "IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE "
+        "FROM USER WHERE LOGIN_HASH = ?";
+
+    sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
         return nullptr;
     }
 
-    rc = sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_STATIC);
+    rc = sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to bind parameter: " << sqlite3_errmsg(m_db) << std::endl;
         sqlite3_finalize(stmt);
         return nullptr;
     }
 
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        std::string loginHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-        std::string login = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-        std::string name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-        std::string passwordHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-        std::string lastSeen = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
-        std::string publicKey = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+    User* user = nullptr;
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        try {
+            std::string dbLoginHash = safeColumnText(stmt, 0);
+            std::string encryptedLogin = safeColumnText(stmt, 1);
+            std::string encryptedName = safeColumnText(stmt, 2);
+            std::string passwordHash = safeColumnText(stmt, 3);
+            std::string encryptedEncryptionPart = safeColumnText(stmt, 4);
+            std::string encryptedLastSeen = safeColumnText(stmt, 5);
+            std::string publicKeyStr = safeColumnText(stmt, 6);
 
-        bool isHasPhoto = sqlite3_column_int(stmt, 6) == 1;
-        std::string photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
-        int photoSize = sqlite3_column_int(stmt, 8);
+            bool isHasPhoto = sqlite3_column_int(stmt, 7) == 1;
+            std::string encryptedPhotoPath = safeColumnText(stmt, 8);
+            std::string encryptedPhotoSize = safeColumnText(stmt, 9);
 
-        Photo photo(photoPath, photoSize);
-        User* user = new User(login, loginHash, passwordHash, name, isHasPhoto, photo, crypto::deserializePublicKey(publicKey));
-        user->setLastSeen(lastSeen);
+            std::string login = crypto::RSADecrypt(privateKey, encryptedLogin);
+            std::string name = crypto::RSADecrypt(privateKey, encryptedName);
+            std::string encryptionPart = crypto::RSADecrypt(privateKey, encryptedEncryptionPart);
+            std::string lastSeen = crypto::RSADecrypt(privateKey, encryptedLastSeen);
+            std::string photoPath = encryptedPhotoPath.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoPath);
+            std::string photoSize = photoSize.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoSize);
 
-        sqlite3_finalize(stmt);
-        return user;
+            user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, Photo(privateKey, photoPath));
+            user->setEncryptionPart(encryptionPart);
+            user->setLastSeen(lastSeen);
+
+            if (!publicKeyStr.empty()) {
+                user->setPublicKey(crypto::deserializePublicKey(publicKeyStr));
+            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error processing user data: " << e.what() << std::endl;
+            delete user;
+            user = nullptr;
+        }
+    }
+    else if (rc == SQLITE_DONE) {
+        std::cout << "No user found with login hash: " << loginHash << std::endl;
     }
     else {
-        std::cout << "No user found with login hash: " << loginHash << std::endl;
-        sqlite3_finalize(stmt);
-        return nullptr;
+        std::cerr << "SQL error: " << sqlite3_errmsg(m_db) << std::endl;
     }
+
+    sqlite3_finalize(stmt);
+    return user;
 }
 
-std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
+
+std::string Database::safeColumnText(sqlite3_stmt* stmt, int column) {
+    const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, column));
+    return text ? text : "";
+}
+
+std::vector<std::string> Database::getUsersStatusesVec(CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
     std::vector<std::string> statuses;
     for (const auto& login : loginsVec) {
 
@@ -133,7 +190,7 @@ std::vector<std::string> Database::getUsersStatusesVec(const std::vector<std::st
             continue;
         }
 
-        std::string statusFromDb = getUser(login)->getLastSeen(); 
+        std::string statusFromDb = getUser(privateKey, login)->getLastSeen(); 
         if (!statusFromDb.empty()) {
             statuses.push_back(statusFromDb);
         }
@@ -151,48 +208,44 @@ bool Database::checkPassword(const std::string& loginHash, const std::string& pa
         return false;
     }
 
-    char* zErrMsg = nullptr;
-    int rc;
-    std::string sql = "SELECT PASSWORD_HASH FROM USER WHERE LOGIN_HASH = ?;";
-    std::string storedHashedPassword;
+    const char* sql = "SELECT PASSWORD_HASH FROM USER WHERE LOGIN_HASH = ?;";
+    sqlite3_stmt* stmt = nullptr;
 
-    auto passwordCallback = [](void* data, int argc, char** argv, char** azColName) -> int {
-        if (argc > 0 && argv[0]) {
-            *reinterpret_cast<std::string*>(data) = argv[0];
-        }
-        return 0;
-        };
-
-
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
         return false;
     }
 
-    sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_STATIC);
-
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        const char* passwordText = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-        if (passwordText) {
-            storedHashedPassword = passwordText;
-        }
-    }
-    else if (rc != SQLITE_DONE) {
-        std::cerr << "SQL error: " << sqlite3_errmsg(m_db) << std::endl;
+    rc = sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Bind failed: " << sqlite3_errmsg(m_db) << std::endl;
         sqlite3_finalize(stmt);
         return false;
     }
 
-    sqlite3_finalize(stmt);
-
-    if (storedHashedPassword.empty()) {
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        const unsigned char* passwordText = sqlite3_column_text(stmt, 0);
+        if (!passwordText) {
+            sqlite3_finalize(stmt);
+            return false;
+        }
+        std::string storedHashedPassword(reinterpret_cast<const char*>(passwordText));
+        sqlite3_finalize(stmt);
+        return (passwordHash == storedHashedPassword);
+    }
+    else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
         return false;
     }
-
-    return passwordHash == storedHashedPassword;
+    else {
+        std::cerr << "SQL error during step: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(stmt);
+        return false;
+    }
 }
+
 
 void Database::collect(const std::string& loginHash, const std::string& packet, QueryType type) {
     const char* sql = "INSERT INTO COLLECTED_PACKETS (LOGIN_HASH, PACKET, PACKET_TYPE) "
@@ -289,7 +342,7 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
     return packets;
 }
 
-std::vector<User*> Database::findUsers(const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers) {
+std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers) {
     const char* sql =
         "SELECT LOGIN, NAME, PHOTO_PATH FROM USER "
         "WHERE (LOGIN LIKE ? OR NAME LIKE ?) "
@@ -319,7 +372,7 @@ std::vector<User*> Database::findUsers(const std::string& currentUserLoginHash, 
         const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
 
             
-        Photo* photo = new Photo(photoPath);
+        Photo* photo = new Photo(privateKey, photoPath);
         user->setPhoto(*photo);
         if (photo->getPhotoPath() != "") {
             user->setIsHasPhoto(true);
@@ -339,16 +392,87 @@ std::vector<User*> Database::findUsers(const std::string& currentUserLoginHash, 
 
 
 
-void Database::updateUserLogin(const std::string& loginHash, const std::string& newLogin) {
-    const std::string newLoginHash = crypto::calculateHash(newLogin);
+bool Database::updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin) {
+    sqlite3_stmt* stmt = nullptr;
+    char* errMsg = nullptr;
+    bool result = false;
 
-    const char* sql = "UPDATE USER SET LOGIN = ?, LOGIN_HASH = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { newLogin, newLoginHash, loginHash });
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    try {
+        const char* checkSql = "SELECT 1 FROM USER WHERE LOGIN_HASH = ? LIMIT 1";
+        if (sqlite3_prepare_v2(m_db, checkSql, -1, &stmt, nullptr) != SQLITE_OK) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+
+        sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+        bool exists = (sqlite3_step(stmt) == SQLITE_ROW);
+        sqlite3_finalize(stmt);
+        stmt = nullptr;
+
+        if (!exists) {
+            throw std::runtime_error("User with loginHash " + loginHash + " not found");
+        }
+
+        const std::string newLoginHash = crypto::calculateHash(newLogin);
+        const std::string encryptedLogin = crypto::RSAEncrypt(publicKey, newLogin);
+
+        const char* updateSql = "UPDATE USER SET LOGIN = ?, LOGIN_HASH = ? WHERE LOGIN_HASH = ?";
+
+        if (sqlite3_prepare_v2(m_db, updateSql, -1, &stmt, nullptr) != SQLITE_OK) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+
+        sqlite3_bind_text(stmt, 1, encryptedLogin.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, newLoginHash.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 3, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+        sqlite3_finalize(stmt);
+        stmt = nullptr;
+
+        if (sqlite3_exec(m_db, "COMMIT", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            throw std::runtime_error(errMsg);
+        }
+        sqlite3_free(errMsg);
+        errMsg = nullptr;
+
+        result = true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error updating user login: " << e.what() << std::endl;
+        if (sqlite3_exec(m_db, "ROLLBACK", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            std::cerr << "Failed to rollback transaction: " << errMsg << std::endl;
+        }
+        if (errMsg) {
+            sqlite3_free(errMsg);
+            errMsg = nullptr;
+        }
+        if (stmt) {
+            sqlite3_finalize(stmt);
+            stmt = nullptr;
+        }
+        result = false;
+    }
+
+    return result;
 }
 
-void Database::updateUserName(const std::string& loginHash, const std::string& name) {
+
+void Database::updateUserLoginOnly(const std::string& loginHash, const std::string& newLoginEnc) {
+    const char* sql = "UPDATE USER SET LOGIN = ? WHERE LOGIN_HASH = ?";
+    executeUpdate(sql, { newLoginEnc, loginHash });
+}
+
+void Database::updateUserName(const std::string& loginHash, const std::string& nameEnc) {
     const char* sql = "UPDATE USER SET NAME = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { name, loginHash });
+    executeUpdate(sql, { nameEnc, loginHash });
 }
 
 void Database::updateUserPassword(const std::string& loginHash, const std::string& passwordHash) {
@@ -356,37 +480,31 @@ void Database::updateUserPassword(const std::string& loginHash, const std::strin
     executeUpdate(sql, { passwordHash, loginHash });
 }
 
-void Database::updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPart) {
+void Database::updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPartEnc) {
     const char* sql = "UPDATE USER SET ENCRYPTION_PART = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { encryptionPart, loginHash });
+    executeUpdate(sql, { encryptionPartEnc, loginHash });
 }
 
-void Database::updateUserLastSeen(const std::string& loginHash, const std::string& lastSeen) {
+void Database::updateUserLastSeen(const std::string& loginHash, const std::string& lastSeenEnc) {
     const char* sql = "UPDATE USER SET LAST_SEEN = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { lastSeen, loginHash });
+    executeUpdate(sql, { lastSeenEnc, loginHash });
 }
 
-void Database::updateUserPublicKey(const std::string& loginHash, const std::string& publicKey) {
+void Database::updateUserPublicKey(const std::string& loginHash, const std::string& publicKeyEnc) {
     const char* sql = "UPDATE USER SET PUBLIC_KEY = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { publicKey, loginHash });
+    executeUpdate(sql, { publicKeyEnc, loginHash });
 }
 
-void Database::updateUserPhoto(const std::string& loginHash, const Photo& photo, size_t photoSize) {
-    const char* sql = "UPDATE USER SET IS_HAS_PHOTO = ?, PHOTO_PATH = ? , PHOTO_SIZE = ? WHERE LOGIN_HASH = ?;";
+void Database::updateUserPhoto(CryptoPP::RSA::PublicKey publicKey, const std::string& loginHash, const Photo& photo, size_t photoSize) {
+    const char* sql = "UPDATE USER SET IS_HAS_PHOTO = ?, PHOTO_PATH = ?, PHOTO_SIZE = ? WHERE LOGIN_HASH = ?";
 
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
-        return;
-    }
+    std::vector<std::string> params;
+    params.push_back("1"); 
+    params.push_back(crypto::RSAEncrypt(publicKey, photo.getPhotoPath()));
+    params.push_back(crypto::RSAEncrypt(publicKey, std::to_string(photoSize)));
+    params.push_back(loginHash);
 
-    sqlite3_bind_int(stmt, 1, true);
-    sqlite3_bind_text(stmt, 2, photo.getPhotoPath().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 3, photoSize);
-    sqlite3_bind_text(stmt, 4, loginHash.c_str(), -1, SQLITE_STATIC);
-
-    executeAndCheck(stmt, "photo");
-    sqlite3_finalize(stmt);
+    executeUpdate(sql, params);
 }
 
 void Database::executeUpdate(const char* sql, const std::vector<std::string>& params) {
@@ -409,18 +527,6 @@ void Database::executeUpdate(const char* sql, const std::vector<std::string>& pa
     sqlite3_finalize(stmt);
 }
 
-void Database::executeAndCheck(sqlite3_stmt* stmt, const std::string& operation) {
-    int rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "Failed to update " << operation << ": " << sqlite3_errmsg(m_db) << std::endl;
-    }
-    else if (sqlite3_changes(m_db) == 0) {
-        std::cerr << "User not found or data not changed" << std::endl;
-    }
-    else {
-        std::cout << "Successfully updated " << operation << std::endl;
-    }
-}
 
 
 

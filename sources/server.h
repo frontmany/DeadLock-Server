@@ -70,6 +70,7 @@ private:
     void updateUserLogin(connectionT connection, const std::string& stringPacket);
 
     void returnUserInfo(connectionT connection, const std::string& stringPacket);
+    void returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket);
     void findFriendsStatuses(connectionT connection, const std::string& stringPacket);
 
     void broadcastUserStatus(connectionT connection, const std::string& stringPacket);

@@ -32,9 +32,9 @@ public:
     User() = default;
 
     // from db
-    User(const std::string& login, const std::string& loginHash, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo, CryptoPP::RSA::PublicKey publicKey)
+    User(const std::string& login, const std::string& loginHash, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo)
         : m_login(login), m_login_hash(loginHash), m_password_hash(passwordHash),
-        m_name(name), m_is_has_photo(isHasPhoto), m_public_key(publicKey), m_photo(photo) {}
+        m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo) {}
 
 
     // on registration
