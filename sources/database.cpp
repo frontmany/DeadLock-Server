@@ -342,9 +342,13 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
     return packets;
 }
 
-std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers) {
+std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateKey,
+    const std::string& currentUserLoginHash,
+    const std::string& searchText,
+    std::vector<User*>& foundUsers) {
     const char* sql =
-        "SELECT LOGIN, NAME, PHOTO_PATH FROM USER "
+        "SELECT LOGIN_HASH, LOGIN, NAME, PASSWORD_HASH, ENCRYPTION_PART, "
+        "LAST_SEEN, PUBLIC_KEY, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE FROM USER "
         "WHERE (LOGIN LIKE ? OR NAME LIKE ?) "
         "AND LOGIN_HASH != ? "
         "LIMIT 20;";
@@ -366,12 +370,18 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         User* user = new User();
 
-        user->setLogin(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-        user->setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        user->setLoginHash(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        user->setLogin(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        user->setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        user->setPasswordHash(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+        user->setEncryptionPart(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+        user->setLastSeen(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
+        user->setPublicKey(crypto::deserializePublicKey(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6))));
+        user->setIsHasPhoto(sqlite3_column_int(stmt, 7) != 0);
 
-        const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+        const char* photoSize = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
 
-            
         Photo* photo = new Photo(privateKey, photoPath);
         user->setPhoto(*photo);
         if (photo->getPhotoPath() != "") {
@@ -490,9 +500,9 @@ void Database::updateUserLastSeen(const std::string& loginHash, const std::strin
     executeUpdate(sql, { lastSeenEnc, loginHash });
 }
 
-void Database::updateUserPublicKey(const std::string& loginHash, const std::string& publicKeyEnc) {
+void Database::updateUserPublicKey(const std::string& loginHash, const std::string& publicKey) {
     const char* sql = "UPDATE USER SET PUBLIC_KEY = ? WHERE LOGIN_HASH = ?";
-    executeUpdate(sql, { publicKeyEnc, loginHash });
+    executeUpdate(sql, { publicKey, loginHash });
 }
 
 void Database::updateUserPhoto(CryptoPP::RSA::PublicKey publicKey, const std::string& loginHash, const Photo& photo, size_t photoSize) {

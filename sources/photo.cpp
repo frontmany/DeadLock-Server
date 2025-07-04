@@ -38,10 +38,9 @@ void Photo::updateSize() {
 }
 
 
- 
+ //here
 std::string Photo::serialize(const CryptoPP::RSA::PrivateKey& privateKey, const CryptoPP::RSA::PublicKey& userPublicKey) const {
     if (m_photoPath.empty()) {
-        std::cout << "error in (encryptForServerBase64) function filePath is empty\n";
         return "";
     }
 

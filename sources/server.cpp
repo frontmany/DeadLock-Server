@@ -433,17 +433,24 @@ void Server::returnUserInfo(connectionT connection, const std::string& stringPac
     std::string loginHash;
     std::getline(iss, loginHash);
 
-    std::string response;
-    auto it = m_map_online_users.find(loginHash);
+    std::string loginHashToSearch;
+    std::getline(iss, loginHashToSearch);
 
-    if (it == m_map_online_users.end()) {
-        User* user = m_db.getUser(m_private_key, loginHash);
-        response = m_packets_builder.get_userInfoPacket(m_private_key, user);
-        delete user;
+    auto itUser = m_map_online_users.find(loginHash);
+    User* user = m_db.getUser(m_private_key, loginHashToSearch);
+
+    std::string response;
+    auto itSearch = m_map_online_users.find(loginHashToSearch);
+
+    if (itSearch == m_map_online_users.end()) {
+        User* userSearch = m_db.getUser(m_private_key, loginHashToSearch);
+
+        response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+        delete userSearch;
     }
     else {
-        User* user = it->second;
-        response = m_packets_builder.get_userInfoPacket(m_private_key, user);
+        User* userSearch = itSearch->second;
+        response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
     }
 
     net::message<QueryType> msgResponse;
@@ -715,30 +722,33 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
 void Server::createChat(connectionT connection, const std::string& stringPacket) {
     std::istringstream iss(stringPacket);
 
-    std::string myLoginHash;
-    std::getline(iss, myLoginHash);
+    std::string loginHash;
+    std::getline(iss, loginHash);
 
-    std::string friendLoginHash;
-    std::getline(iss, friendLoginHash);
+    std::string loginHashToCreateChat;
+    std::getline(iss, loginHashToCreateChat);
+
+    auto it = m_map_online_users.find(loginHash);
+    User* user = it->second;
 
     QueryType responseType;
     std::string response;
-    if (myLoginHash == friendLoginHash) {
+    if (loginHash == loginHashToCreateChat) {
         responseType = QueryType::CHAT_CREATE_FAIL;
     }
     else {
         setlocale(LC_ALL, "ru");
 
-        User* user = m_db.getUser(m_private_key, friendLoginHash);
-        if (user == nullptr) {
+        User* userToCreateChat = m_db.getUser(m_private_key, loginHashToCreateChat);
+        if (userToCreateChat == nullptr) {
             responseType = QueryType::CHAT_CREATE_FAIL;
         }
         else {
             responseType = QueryType::CHAT_CREATE_SUCCESS;
-            response = m_packets_builder.get_chatCreateSuccessPacket(m_private_key, user);
+            response = m_packets_builder.get_chatCreateSuccessPacket(m_private_key, userToCreateChat, user->getPublicKey());
         }
 
-        delete user;
+        delete userToCreateChat;
     }
 
     net::message<QueryType> msgResponse;
@@ -788,14 +798,14 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
         if (it != m_map_online_users.end()) {
             User* userTo = it->second;
 
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::USER_INFO;
             msgResponse << packetU;
             sendResponse(userTo->getConnection(), msgResponse);
         }
         else {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
             m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
         }
     }
@@ -825,7 +835,7 @@ void Server::updateUserPassword(connectionT connection, const std::string& strin
     auto it = m_map_online_users.find(loginHash);
     if (it != m_map_online_users.end()) {
         User* user = it->second;
-        user->setPassword(newPasswordHash);
+        user->setPasswordHash(newPasswordHash);
     }
 
     m_db.updateUserPassword(loginHash, newPasswordHash);
@@ -882,14 +892,14 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
             if (it != m_map_online_users.end()) {
                 User* userTo = it->second;
 
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user);
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
                 net::message<QueryType> msgResponse;
                 msgResponse.header.type = QueryType::USER_INFO;
                 msgResponse << packetU;
                 sendResponse(userTo->getConnection(), msgResponse);
             }
             else {
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user);
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
                 m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
             }
         }
@@ -949,14 +959,14 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 
     for (auto& friendLoginHash : logins) {
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, newLogin);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::USER_INFO;
             msgResponse << packetU;
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, newLogin);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
             m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
         }
     }

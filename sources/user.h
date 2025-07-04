@@ -58,8 +58,8 @@ public:
     const std::string& getLoginHash() const { return m_login_hash; }
     void setLoginHash(const std::string& loginHash) { m_login_hash = loginHash; }
 
-    const std::string& getPassword() const { return m_password_hash; }
-    void setPassword(const std::string& passwordHash) { m_password_hash = passwordHash; }
+    const std::string& getPasswordHash() const { return m_password_hash; }
+    void setPasswordHash(const std::string& passwordHash) { m_password_hash = passwordHash; }
 
     const std::string& getName() const { return m_name; }
     void setName(const std::string& name) { m_name = name; }

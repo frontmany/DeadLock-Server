@@ -34,7 +34,7 @@ public:
     void updateUserPassword(const std::string& loginHash, const std::string& passwordHash);
     void updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPartEnc);
     void updateUserLastSeen(const std::string& loginHash, const std::string& lastSeenEnc);
-    void updateUserPublicKey(const std::string& loginHash, const std::string& publicKeyEnc);
+    void updateUserPublicKey(const std::string& loginHash, const std::string& publicKey);
 	void updateUserPhoto(CryptoPP::RSA::PublicKey privateKey, const std::string& loginHash, const Photo& photo, size_t photoSize);
 	void updateUserLoginOnly(const std::string& loginHash, const std::string& newLoginEnc);
 
