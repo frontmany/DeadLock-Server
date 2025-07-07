@@ -22,7 +22,7 @@ namespace net {
 	public:
 		uint32_t m_current_bytes_sent = 0;
 
-		connection(owner owner, asio::io_context& asioContext,
+		connection(asio::io_context& asioContext,
 			asio::ip::tcp::socket socket,
 			safe_deque<owned_message<T>>& safeDequeIncomingMessages,
 			std::function<void(std::error_code, net::message<T>)> onSendError,
@@ -33,7 +33,6 @@ namespace net {
 			m_on_send_message_error(std::move(onSendError)),
 			m_on_receive_message_error(std::move(onReceiveError))
 		{
-			m_owner = owner;
 			readHeader();
 		}
 
@@ -146,16 +145,11 @@ namespace net {
 		}
 
 		void addToIncomingMessagesQueue() {
-			if (m_owner == owner::server)
-				m_safe_deque_incoming_messages.push_back({ this->shared_from_this(), m_message_tmp });
-			else
-				m_safe_deque_incoming_messages.push_back({ nullptr, m_message_tmp });
-
+			m_safe_deque_incoming_messages.push_back({ this->shared_from_this(), m_message_tmp });
 			readHeader();
 		}
 
 	private:
-		owner						  m_owner;
 		asio::ip::tcp::socket		  m_socket;
 		asio::io_context&			  m_asio_context;
 

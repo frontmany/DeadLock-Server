@@ -437,26 +437,36 @@ void Server::returnUserInfo(connectionT connection, const std::string& stringPac
     std::getline(iss, loginHashToSearch);
 
     auto itUser = m_map_online_users.find(loginHash);
-    User* user = m_db.getUser(m_private_key, loginHashToSearch);
+    User* user = m_db.getUser(m_private_key, loginHash);
 
-    std::string response;
+    
     auto itSearch = m_map_online_users.find(loginHashToSearch);
 
     if (itSearch == m_map_online_users.end()) {
         User* userSearch = m_db.getUser(m_private_key, loginHashToSearch);
-
-        response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+        if (userSearch != nullptr) {
+            std::string response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+            
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
+            msgResponse << response;
+            sendResponse(connection, msgResponse);
+        }
+        else {
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::USER_INFO_FAIL;
+            sendResponse(connection, msgResponse);
+        }
         delete userSearch;
     }
     else {
         User* userSearch = itSearch->second;
-        response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+        std::string response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+        net::message<QueryType> msgResponse;
+        msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
+        msgResponse << response;
+        sendResponse(connection, msgResponse);
     }
-
-    net::message<QueryType> msgResponse;
-    msgResponse.header.type = QueryType::USER_INFO;
-    msgResponse << response;
-    sendResponse(connection, msgResponse);
 }
 
 void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket) {
@@ -798,15 +808,16 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
         if (it != m_map_online_users.end()) {
             User* userTo = it->second;
 
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
             net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::USER_INFO;
+            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packetU;
             sendResponse(userTo->getConnection(), msgResponse);
         }
         else {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
-            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
+            User* userTo = m_db.getUser(m_private_key, friendLoginHash);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
+            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
         }
     }
 }
@@ -892,15 +903,16 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
             if (it != m_map_online_users.end()) {
                 User* userTo = it->second;
 
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
                 net::message<QueryType> msgResponse;
-                msgResponse.header.type = QueryType::USER_INFO;
+                msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
                 msgResponse << packetU;
                 sendResponse(userTo->getConnection(), msgResponse);
             }
             else {
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey());
-                m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
+                User* userTo = m_db.getUser(m_private_key, friendLoginHash);
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
+                m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
             }
         }
     }
@@ -948,30 +960,28 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
     User* user = mapIt->second;
 
     m_db.updateUserLogin(m_public_key, oldLoginHash, newLogin);
- 
-    
-    auto node = m_map_online_users.extract(mapIt);
-    node.key() = newLoginHash;
-    node.mapped()->setLogin(newLogin);
-    node.mapped()->setLoginHash(newLoginHash);
-    m_map_online_users.insert(std::move(node));
     
 
     for (auto& friendLoginHash : logins) {
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
             std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
             net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::USER_INFO;
+            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packetU;
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
-            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO);
+            User* userTo = m_db.getUser(m_private_key, friendLoginHash);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
+            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
         }
     }
 
-    user->setLogin(newLogin);
+    auto node = m_map_online_users.extract(mapIt);
+    node.key() = newLoginHash;
+    node.mapped()->setLogin(newLogin);
+    node.mapped()->setLoginHash(newLoginHash);
+    m_map_online_users.insert(std::move(node));
 }
 
 

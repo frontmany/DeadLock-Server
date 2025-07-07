@@ -22,6 +22,7 @@ namespace net
         std::string caption;
         std::string filesInBlobCount;
         std::string fileSize;
+        std::string encryptedKey;
     };
 
 

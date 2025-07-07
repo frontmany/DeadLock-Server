@@ -346,12 +346,11 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
     const std::string& currentUserLoginHash,
     const std::string& searchText,
     std::vector<User*>& foundUsers) {
+
     const char* sql =
         "SELECT LOGIN_HASH, LOGIN, NAME, PASSWORD_HASH, ENCRYPTION_PART, "
         "LAST_SEEN, PUBLIC_KEY, IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE FROM USER "
-        "WHERE (LOGIN LIKE ? OR NAME LIKE ?) "
-        "AND LOGIN_HASH != ? "
-        "LIMIT 20;";
+        "WHERE LOGIN_HASH != ?;"; // Убираем фильтр по LOGIN/NAME, т.к. они зашифрованы
 
     sqlite3_stmt* stmt = nullptr;
 
@@ -361,18 +360,33 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
         return foundUsers;
     }
 
-    std::string searchPattern = "%" + searchText + "%";
+    sqlite3_bind_text(stmt, 1, currentUserLoginHash.c_str(), -1, SQLITE_TRANSIENT);
 
-    sqlite3_bind_text(stmt, 1, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, currentUserLoginHash.c_str(), -1, SQLITE_TRANSIENT);
+    std::string searchTextLower = searchText;
+    std::transform(searchTextLower.begin(), searchTextLower.end(), searchTextLower.begin(), ::tolower);
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const unsigned char* encLogin = sqlite3_column_text(stmt, 1);
+        const unsigned char* encName = sqlite3_column_text(stmt, 2);
+
+        std::string decryptedLogin = crypto::RSADecrypt(privateKey, reinterpret_cast<const char*>(encLogin));
+        std::string decryptedName = crypto::RSADecrypt(privateKey, reinterpret_cast<const char*>(encName));
+
+        std::string decryptedLoginLower = decryptedLogin;
+        std::transform(decryptedLoginLower.begin(), decryptedLoginLower.end(), decryptedLoginLower.begin(), ::tolower);
+        std::string decryptedNameLower = decryptedName;
+        std::transform(decryptedNameLower.begin(), decryptedNameLower.end(), decryptedNameLower.begin(), ::tolower);
+
+        if (decryptedLoginLower.find(searchTextLower) == std::string::npos &&
+            decryptedNameLower.find(searchTextLower) == std::string::npos) {
+            continue;
+        }
+
         User* user = new User();
 
         user->setLoginHash(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-        user->setLogin(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-        user->setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        user->setLogin(decryptedLogin);
+        user->setName(decryptedName);
         user->setPasswordHash(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
         user->setEncryptionPart(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
         user->setLastSeen(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
@@ -380,8 +394,6 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
         user->setIsHasPhoto(sqlite3_column_int(stmt, 7) != 0);
 
         const char* photoPath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
-        const char* photoSize = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
-
         Photo* photo = new Photo(privateKey, photoPath);
         user->setPhoto(*photo);
         if (photo->getPhotoPath() != "") {
@@ -389,15 +401,20 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
         }
 
         foundUsers.push_back(user);
+
+        if (foundUsers.size() >= 20) {
+            break;
+        }
     }
 
-    if (rc != SQLITE_DONE) {
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
         std::cerr << "Search failed: " << sqlite3_errmsg(m_db) << std::endl;
     }
 
     sqlite3_finalize(stmt);
     return foundUsers;
 }
+
 
 
 
