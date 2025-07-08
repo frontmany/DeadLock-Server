@@ -1,4 +1,5 @@
 #include "user.h"
+#include "crypto.h"
 
 void User::setLastSeenToNow() {
     auto now = std::chrono::system_clock::now();
@@ -13,4 +14,20 @@ void User::setLastSeenToNow() {
 
 void User::setLastSeenToOnline() {
     m_last_seen = "online";
+}
+
+const CryptoPP::RSA::PublicKey& User::getPublicKey() const {
+    if (!crypto::validatePublicKey(m_public_key)) {
+        assert("Public key is not initialized or invalid");
+    }
+
+    return m_public_key;
+}
+
+void User::setPublicKey(const CryptoPP::RSA::PublicKey& key) {
+    if (!crypto::validatePublicKey(key)) {
+        assert("Invalid public key provided");
+    }
+
+    m_public_key = key;
 }

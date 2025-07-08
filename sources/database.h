@@ -14,6 +14,7 @@
 
 #include "asio.hpp"
 #include "photo.h"  
+#include "rsa.h"  
 #include "sqlite/sqlite3.h" 
 
 class User;
@@ -25,27 +26,33 @@ public:
 	Database() = default;
 	void init();
 
-	User* getUser(const std::string& login);
-	void addUser(const std::string& login, const std::string& lastSeen, const std::string& name, const std::string& passwordHash);
+	User* getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash);
+	bool addUser(const std::string& loginHash, const std::string& passwordHash, const std::string& encryptionPartEnc, const std::string& lastSeenEnc);
 
-	void collect(const std::string& login, const std::string& packet, QueryType type);
-	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& login);
-	std::vector<std::string> getUsersStatusesVec(const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
-	std::vector<std::string> getAllRegisteredUserLogins();
-	std::vector<User*> findUsers(const std::string& currentUserLogin, const std::string& searchText, std::vector<User*>& foundUsers);
+    bool updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin);
+    void updateUserName(const std::string& loginHash, const std::string& nameEnc);
+    void updateUserPassword(const std::string& loginHash, const std::string& passwordHash);
+    void updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPartEnc);
+    void updateUserLastSeen(const std::string& loginHash, const std::string& lastSeenEnc);
+    void updateUserPublicKey(const std::string& loginHash, const std::string& publicKey);
+	void updateUserPhoto(CryptoPP::RSA::PublicKey privateKey, const std::string& loginHash, const Photo& photo, size_t photoSize);
+	void updateUserLoginOnly(const std::string& loginHash, const std::string& newLoginEnc);
 
-	void updateUserName(const std::string& login, const std::string& newName);
-	void updateUserPassword(const std::string& login, const std::string& passwordHash);
-	void updateUserPhoto(const std::string& login, const Photo& photo, size_t photoSize);
-	void updateUserLogin(const std::string& oldLogin, const std::string& newLogin);
-	void updateUserStatus(const std::string& login, std::string lastSeen);
 
-	bool checkPassword(const std::string& login, const std::string& passwordHash);
-	bool checkNewLogin(const std::string& newLogin);
+
+	void collect(const std::string& loginHash, const std::string& packet, QueryType type);
+	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& loginHash);
+	std::vector<std::string> getUsersStatusesVec(CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
+	std::vector<User*> findUsers(const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers);
+
+
+	bool checkPassword(const std::string& loginHash, const std::string& passwordHash);
+	bool checkNewLogin(const std::string& newLoginHash);
 	std::string getCurrentDateTime();
 
 private:
-	void executeAndCheck(sqlite3_stmt* stmt, const std::string& operation);
+	std::string safeColumnText(sqlite3_stmt* stmt, int column);
+	void executeUpdate(const char* sql, const std::vector<std::string>& params);
 	std::string friendsToString(const std::vector<std::string>& friends);
 	std::vector<std::string> stringToFriends(const std::string& friendsString);
 

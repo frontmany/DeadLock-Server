@@ -7,15 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB_RECURSE SOURCES 
     "sources/*.cpp" 
     "sources/*.h" 
-    "vendor/base_64/base64.h" 
+    "vendor/base_64/base64_my.h" 
 	"vendor/sqlite/sqlite3.h"
 	"vendor/sqlite/sqlite3.c"	
-    "vendor/base_64/base64.cpp"
+    "vendor/base_64/base64_my.cpp"
 )
 
 file(GLOB_RECURSE NET_LIB "vendor/network_library/*.h")
 source_group("Source Files\\Net Library Files" FILES ${NET_LIB})
 
-include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite" "vendor/network_library") 
+include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite" "vendor/network_library" "vendor/cryptopp") 
+link_directories("vendor/cryptopp/x64/Output/Debug")
 add_executable(${PROJECT_NAME} ${SOURCES} ${NET_LIB})
-target_link_libraries(${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} "cryptlib.lib")

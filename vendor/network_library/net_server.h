@@ -176,15 +176,12 @@ namespace net {
         void createConnection(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login) {
             if (type == connection_type::files) {
                 std::shared_ptr<files_connection<T>> newFilesConnection = std::make_shared<files_connection<T>>(
-                    owner::server,
                     m_asio_context,
                     std::move(socket),
                     m_safe_deque_of_incoming_files,
                     [this](std::error_code ec, net::file<T> unreceivedFile) { onReceiveFileError(ec, unreceivedFile); },
                     [this](std::error_code ec, net::file<T> unsentFile) { onSendFileError(ec, unsentFile); },
-                    [this](net::file<T> file) { onFileSent(file); },
-                    std::nullopt,
-                    std::nullopt
+                    [this](net::file<T> file) { onFileSent(file); }
                 );
 
                 connection_variant variant = newFilesConnection;
@@ -205,7 +202,6 @@ namespace net {
             }
             else {
                 std::shared_ptr<connection<T>> newMessagesConnection = std::make_shared<connection<T>>(
-                    owner::server,
                     m_asio_context,
                     std::move(socket),
                     m_safe_deque_incoming_messages,
@@ -247,6 +243,9 @@ namespace net {
         virtual void onConnectError(std::error_code ec) = 0;
 
     protected:
+        CryptoPP::RSA::PrivateKey m_private_key;
+        CryptoPP::RSA::PublicKey m_public_key;
+
         safe_deque<owned_message<T>> m_safe_deque_incoming_messages;
         safe_deque<owned_file<T>> m_safe_deque_of_incoming_files;
         std::deque<std::shared_ptr<connection_variant>> m_set_connections;

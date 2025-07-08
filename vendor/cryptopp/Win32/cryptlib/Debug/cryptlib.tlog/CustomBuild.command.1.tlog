@@ -1,0 +1,7 @@
+^C:\PRJ\CRYPTOPP\ADHOC.CPP.PROTO
+if not exist adhoc.cpp copy "C:\prj\cryptopp\adhoc.cpp.proto" adhoc.cpp
+        echo: >> adhoc.cpp.copied
+^C:\PRJ\CRYPTOPP\RDRAND.ASM
+ml.exe /c /nologo /D_M_X86 /W3 /Cx /Zi /safeseh /Fo"Win32\cryptlib\Debug\rdrand-x86.obj" "C:\prj\cryptopp\rdrand.asm"
+^C:\PRJ\CRYPTOPP\RDSEED.ASM
+ml.exe /c /nologo /D_M_X86 /W3 /Cx /Zi /safeseh /Fo"Win32\cryptlib\Debug\rdseed-x86.obj" "C:\prj\cryptopp\rdseed.asm"
