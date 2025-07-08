@@ -133,7 +133,7 @@ namespace net
 		asio::io_context& m_asioContext;
 		safe_deque<file<T>>	m_outgoingFilesQueue;
 
-		std::array<char, c_readChunkSize> m_readBuffer{};
+		std::array<char, c_encryptedOutputChunkSize> m_readBuffer{};
 		std::ifstream m_fileStream;
 		uint64_t m_totalBytesSent;
 		message<T>	m_metadataMessage;

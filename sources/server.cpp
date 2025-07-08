@@ -207,10 +207,9 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
 
-    std::string myLoginHash;
-    std::getline(iss, myLoginHash);
+    std::string loginHash;
+    std::getline(iss, loginHash);
 
     std::string fileId;
     std::getline(iss, fileId);
@@ -223,40 +222,26 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
 
     std::string fileName;
     std::getline(iss, fileName);
-    fileName = crypto::AESDecrypt(key, fileName);
 
     std::string fileSize;
     std::getline(iss, fileSize);
-    fileSize = crypto::AESDecrypt(key, fileSize);
 
     std::string fileTimestamp;
     std::getline(iss, fileTimestamp);
-    fileTimestamp = crypto::AESDecrypt(key, fileTimestamp);
-
-    std::string messageBegin;
-    std::getline(iss, messageBegin);
-    messageBegin = crypto::AESDecrypt(key, messageBegin);
 
     std::string caption;
     std::getline(iss, caption);
-    caption = crypto::AESDecrypt(key, caption);
 
-    std::string messageEnd;
-    std::getline(iss, messageEnd);
-    messageEnd = crypto::AESDecrypt(key, messageEnd);
-
-    std::string filesCountInBlobStr;
-    std::getline(iss, filesCountInBlobStr);
-    filesCountInBlobStr = crypto::AESDecrypt(key, filesCountInBlobStr);
-    size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+    std::string filesCountInBlob;
+    std::getline(iss, filesCountInBlob);
 
     const std::string filePath = "ReceivedFiles/" + fileId + ".deadlock";
     std::ifstream fileStream(filePath);
     bool isPresent = fileStream.good();
 
     if (isPresent) {
-        User* receiverUser = nullptr;
-        receiverUser = m_db.getUser(m_private_key, myLoginHash); 
+        auto it = m_map_online_users.find(loginHash);
+        auto& [userLoginHash, user] = *it;
         
         if (isPresent) {
             net::file<QueryType> file;
@@ -265,13 +250,14 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
             file.filePath = filePath;
             file.fileName = fileName;
             file.filesInBlobCount = filesCountInBlob;
-            file.fileSize = std::stoi(fileSize);
+            file.fileSize = fileSize;
             file.id = fileId;
-            file.receiverLoginHash = myLoginHash;
+            file.receiverLoginHash = loginHash;
             file.senderLoginHash = friendLoginHash;
             file.timestamp = fileTimestamp;
+            file.encryptedKey = encryptedKey;
 
-            sendFile(receiverUser->getFilesConnection(), file);
+            sendFile(user->getFilesConnection(), file);
         }
     }
     else {
@@ -286,12 +272,12 @@ void Server::onFile(net::file<QueryType> file) {
     auto it = m_map_online_users.find(file.receiverLoginHash);
 
     if (it == m_map_online_users.end()) {
-        std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, std::stoi(file.filesInBlobCount));
+        std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
         m_db.collect(file.receiverLoginHash, filePreviewStr, QueryType::FILE_PREVIEW);
     }
     else {
         if (std::stoi(file.fileSize) > 100000000) { // 100mb
-            std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, std::stoi(file.filesInBlobCount));
+            std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
             User* user = it->second;
             net::message<QueryType> msgResponse;
             msgResponse.header.type = QueryType::FILE_PREVIEW;
@@ -555,6 +541,9 @@ void Server::sendPendingMessages(connectionT connection) {
             if (type == QueryType::FILE_PREVIEW) {
                 std::istringstream iss(packet);
 
+                std::string encryptedKey;
+                std::getline(iss, encryptedKey);
+
                 std::string fileId;
                 std::getline(iss, fileId);
 
@@ -576,53 +565,33 @@ void Server::sendPendingMessages(connectionT connection) {
                 std::string fileTimestamp;
                 std::getline(iss, fileTimestamp);
 
-                std::string messageBegin;
-                std::getline(iss, messageBegin);
-
                 std::string caption;
-                std::string line;
-                while (std::getline(iss, line)) {
-                    if (line == "MESSAGE_END") {
-                        break;
-                    }
-                    else {
-                        caption += line;
-                        caption += '\n';
-                    }
-                }
-                caption.pop_back();
+                std::getline(iss, caption);
 
-                std::string filesCountInBlobStr;
-                std::getline(iss, filesCountInBlobStr);
-                size_t filesCountInBlob = std::stoi(filesCountInBlobStr);
+                std::string filesCountInBlob;
+                std::getline(iss, filesCountInBlob);
 
-                const std::string filePath = "ReceivedFiles/" + fileId;
-                size_t dotPos = fileName.find_last_of('.');
+                const std::string filePath = "ReceivedFiles/" + fileId + ".deadlock";
 
-                std::string fullPath;
-                if (dotPos != std::string::npos && dotPos + 1 < fileName.length()) {
-                    std::string extension = fileName.substr(dotPos + 1);
-                    fullPath = filePath + "." + extension;
-                }
-
-                std::ifstream fileStream(fullPath);
+                std::ifstream fileStream(filePath);
                 bool isPresent = fileStream.good();
 
                 if (isPresent) {
                     net::file<QueryType> file;
+                    file.encryptedKey = encryptedKey;
                     file.blobUID = blobUID;
                     file.caption = caption;
-                    file.filePath = fullPath;
+                    file.filePath = filePath;
                     file.fileName = fileName;
                     file.filesInBlobCount = filesCountInBlob;
-                    file.fileSize = std::stoi(fileSize);
+                    file.fileSize = fileSize;
                     file.id = fileId;
                     file.receiverLoginHash = receiverLoginHash;
                     file.senderLoginHash = senderLoginHash;
                     file.timestamp = fileTimestamp;
                         
                     if (std::stoi(file.fileSize) > 100000000) {
-                        std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, std::stoi(file.filesInBlobCount));
+                        std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
                         net::message<QueryType> msgResponse;
                         msgResponse.header.type = QueryType::FILE_PREVIEW;
                         msgResponse << filePreviewStr;
@@ -1060,7 +1029,7 @@ void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unse
 }
 
 void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) {
-    std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(unsentFile.senderLoginHash, unsentFile.receiverLoginHash, unsentFile.fileName, unsentFile.id, unsentFile.fileSize, unsentFile.timestamp, unsentFile.caption, unsentFile.blobUID, std::stoi(unsentFile.filesInBlobCount));
+    std::string filePreviewStr = m_packets_builder.get_filePreviewPacket(unsentFile.encryptedKey, unsentFile.senderLoginHash, unsentFile.receiverLoginHash, unsentFile.fileName, unsentFile.id, unsentFile.fileSize, unsentFile.timestamp, unsentFile.caption, unsentFile.blobUID, unsentFile.filesInBlobCount);
     m_db.collect(unsentFile.receiverLoginHash, filePreviewStr, QueryType::FILE_PREVIEW);
 
     handleError(ec);

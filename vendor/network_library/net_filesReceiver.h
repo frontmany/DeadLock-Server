@@ -14,10 +14,8 @@ namespace net
 		filesReceiver(asio::ip::tcp::socket& socket, std::function<void(net::file<T>)> queueReceivedFile, std::function<void(std::error_code, net::file<T>)> onReceiveError, std::function<void()> disconnect)
 			: m_socket(socket), m_onReceiveError(onReceiveError), m_queueReceivedFile(queueReceivedFile), m_disconnect(disconnect)
 		{
-			m_lastChunkSize = 0;
 			m_currentChunksCount = 0;
 			m_expectedChunksCount = 0;
-			m_totalReceivedBytes = 0;
 		}
 
 		void startReceiving() {
@@ -65,36 +63,23 @@ namespace net
 						return;
 					}
 					else {
-						m_totalReceivedBytes += bytesTransferred - c_overhead;
 						m_currentChunksCount++;
-
-						if (std::stoi(m_file.fileSize) >= c_decryptedChunkSize) {
-							if (m_currentChunksCount > m_expectedChunksCount) {
-								m_fileStream.write(m_receiveBuffer.data(), m_lastChunkSize);
-							}
-							else {
-								m_fileStream.write(m_receiveBuffer.data(), c_receivedChunkSize);
-							}
+						
+						m_fileStream.write(m_receiveBuffer.data(), c_receivedChunkSize);
+						if (m_expectedChunksCount > m_currentChunksCount) {
+							readChunk();
 						}
 						else {
-							m_fileStream.write(m_receiveBuffer.data(), m_lastChunkSize);
+							finalizeReceiving();
 						}
-
-						m_totalReceivedBytes < std::stoull(m_file.fileSize)
-							? readChunk() 
-							: finalizeReceiving();
 					}
-
 				});
 		}
 
 		void finalizeReceiving() {
 			m_fileStream.close();
-
-			m_lastChunkSize = 0;
 			m_currentChunksCount = 0;
 			m_expectedChunksCount = 0;
-			m_totalReceivedBytes = 0;
 
 			m_queueReceivedFile(m_file);
 			m_file = file<QueryType>();
@@ -149,15 +134,7 @@ namespace net
 			m_file.filesInBlobCount = filesCountInBlob;
 			m_file.encryptedKey = encryptedKey;
 
-			m_expectedChunksCount = std::stoi(m_file.fileSize) / c_decryptedChunkSize;
-			int lastChunksSize = std::stoi(m_file.fileSize) - (m_expectedChunksCount * c_decryptedChunkSize);
-			if (lastChunksSize == 0) {
-				m_lastChunkSize = c_receivedChunkSize;
-			}
-			else {
-				m_lastChunkSize = lastChunksSize;
-				m_lastChunkSize += c_overhead;
-			}
+			m_expectedChunksCount = static_cast<int>(std::ceil(static_cast<double>(std::stoi(m_file.fileSize)) / c_decryptedChunkSize));
 		}
 
 		void openFile() {
@@ -211,10 +188,8 @@ namespace net
 		static constexpr uint32_t c_receivedChunkSize = 8220;
 		static constexpr uint32_t c_overhead = 28;
 
-		uint32_t m_lastChunkSize;
 		uint32_t m_currentChunksCount;
 		uint32_t m_expectedChunksCount;
-		uint64_t m_totalReceivedBytes;
 
 		asio::ip::tcp::socket& m_socket;
 		std::array<char, c_receivedChunkSize> m_receiveBuffer{};
