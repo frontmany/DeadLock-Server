@@ -32,6 +32,8 @@ public:
     void stopServer();
     void loadKeys();
 
+    static net::file<QueryType> constructFileFromPacket(const std::string& packet);
+
 private:
     void processIncomingMessagesQueue();
 
@@ -82,6 +84,8 @@ private:
 
     std::string generateEncryptionPart(const std::string& salt);
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
+    void removeSentBlob(const Blob& blob);
+    void sendBlob(const Blob& blob, const std::string& loginHash);
 
     bool hasInternetConnection();
     void handleError(std::error_code ec);

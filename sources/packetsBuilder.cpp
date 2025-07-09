@@ -161,7 +161,7 @@ std::string PacketsBuilder::get_statusPacket(const CryptoPP::RSA::PublicKey& use
     return oss.str();
 }
 
-std::string PacketsBuilder::get_filePreviewPacket(const std::string& encryptedKey, const std::string& senderLoginHash, const std::string& receiverLoginHash, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, const std::string& filesInBlobCount) {
+std::string PacketsBuilder::get_fileCollectPacket(const std::string& encryptedKey, const std::string& senderLoginHash, const std::string& receiverLoginHash, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, const std::string& filesInBlobCount, bool isSent) {
     std::ostringstream oss;
 
     oss << encryptedKey << '\n'
@@ -173,7 +173,8 @@ std::string PacketsBuilder::get_filePreviewPacket(const std::string& encryptedKe
         << fileSize << '\n'
         << timestamp << '\n'
         << caption << '\n'
-        << filesInBlobCount;
+        << filesInBlobCount << '\n'
+        << isSent ? "true" : "false";
 
     return oss.str();
 }

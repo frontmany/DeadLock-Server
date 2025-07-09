@@ -1,6 +1,9 @@
 #include "database.h" 
 #include "crypto.h" 
 #include "user.h"  
+#include "server.h"  
+#include "packetsBuilder.h"  
+
 
 
 void Database::init() {
@@ -11,40 +14,333 @@ void Database::init() {
     }
     std::cout << "Opened database successfully" << std::endl;
 
-    const char* sql1 = "CREATE TABLE IF NOT EXISTS USER("
-        "LOGIN_HASH      TEXT              NOT NULL,"
-        "LOGIN           TEXT              ,"
-        "NAME            TEXT              ,"
-        "PASSWORD_HASH   TEXT              NOT NULL,"
-        "ENCRYPTION_PART TEXT              NOT NULL,"
-        "LAST_SEEN       TEXT              NOT NULL,"
-        "PUBLIC_KEY      TEXT              ,"
-        "IS_HAS_PHOTO    INTEGER           NOT NULL,"
-        "PHOTO_PATH      TEXT              NOT NULL,"
-        "PHOTO_SIZE      TEXT              NOT NULL);";
-
-    char* zErrMsg = 0;
-    rc = sqlite3_exec(m_db, sql1, 0, 0, &zErrMsg);
+    rc = sqlite3_exec(m_db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "SQL error: " << zErrMsg << std::endl;
-        sqlite3_free(zErrMsg);
-        return;
+        std::cerr << "Failed to enable foreign keys: " << sqlite3_errmsg(m_db) << std::endl;
     }
-    std::cout << "Table USER created successfully" << std::endl;
 
-    const char* sql2 = "CREATE TABLE IF NOT EXISTS COLLECTED_PACKETS("
-        "LOGIN_HASH     TEXT              NOT NULL,"
-        "PACKET         TEXT              NOT NULL,"
-        "PACKET_TYPE    INTEGER           NOT NULL);";
+    const char* userTableSQL = "CREATE TABLE IF NOT EXISTS USER("
+        "LOGIN_HASH      TEXT    NOT NULL PRIMARY KEY,"
+        "LOGIN           TEXT    UNIQUE,"
+        "NAME            TEXT,"
+        "PASSWORD_HASH   TEXT    NOT NULL,"
+        "ENCRYPTION_PART TEXT    NOT NULL,"
+        "LAST_SEEN       TEXT    NOT NULL,"
+        "PUBLIC_KEY      TEXT,"
+        "IS_HAS_PHOTO    INTEGER NOT NULL DEFAULT 0,"
+        "PHOTO_PATH      TEXT    NOT NULL DEFAULT '',"
+        "PHOTO_SIZE      INTEGER NOT NULL DEFAULT 0);";
 
-    rc = sqlite3_exec(m_db, sql2, 0, 0, &zErrMsg);
-    if (rc != SQLITE_OK) {
-        std::cerr << "SQL error: " << zErrMsg << std::endl;
-        sqlite3_free(zErrMsg);
-        return;
-    }
-    std::cout << "Table COLLECTED_PACKETS created successfully" << std::endl;
+    executeSQL(userTableSQL, "USER");
+
+    const char* packetsTableSQL = "CREATE TABLE IF NOT EXISTS COLLECTED_PACKETS("
+        "LOGIN_HASH     TEXT    NOT NULL,"
+        "PACKET_ID      TEXT    NOT NULL,"
+        "PACKET_TYPE    INTEGER NOT NULL,"
+        "TIMESTAMP      TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+        "PRIMARY KEY (LOGIN_HASH, PACKET_ID),"
+        "FOREIGN KEY (LOGIN_HASH) REFERENCES USER(LOGIN_HASH) ON DELETE CASCADE);";
+
+    executeSQL(packetsTableSQL, "COLLECTED_PACKETS");
+
+    const char* blobsTableSQL = "CREATE TABLE IF NOT EXISTS BLOBS("
+        "BLOB_UID             TEXT    NOT NULL PRIMARY KEY,"
+        "LOGIN_HASH           TEXT    NOT NULL,"
+        "FILES_COUNT_IN_BLOB  INTEGER NOT NULL CHECK(FILES_COUNT_IN_BLOB > 0),"
+        "FILES_RECEIVED       INTEGER NOT NULL DEFAULT 0,"
+        "FILES_SENT           INTEGER NOT NULL DEFAULT 0,"
+        "CHECK (FILES_RECEIVED <= FILES_COUNT_IN_BLOB));";
+
+    executeSQL(blobsTableSQL, "BLOBS");
+
+    const char* blobFilesTableSQL = "CREATE TABLE IF NOT EXISTS BLOB_FILES("
+        "BLOB_UID      TEXT    NOT NULL,"
+        "FILE_PACKET   TEXT    NOT NULL,"
+        "PRIMARY KEY (BLOB_UID, FILE_INDEX),"
+        "FOREIGN KEY (BLOB_UID) REFERENCES BLOBS(BLOB_UID) ON DELETE CASCADE);";
+
+    executeSQL(blobFilesTableSQL, "BLOB_FILES");
+
+    const char* createIndexSQL = "CREATE INDEX IF NOT EXISTS IDX_BLOB_FILES_UID "
+        "ON BLOB_FILES(BLOB_UID);";
+    executeSQL(createIndexSQL, "IDX_BLOB_FILES_UID");
 }
+
+
+bool Database::addBlob(const std::string& blobUid, const std::string& loginHash, int filesCountInBlob) {
+    const char* sql = "INSERT INTO BLOBS(BLOB_UID, LOGIN_HASH, FILES_COUNT_IN_BLOB) VALUES(?, ?, ?);";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "SQL error: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 3, filesCountInBlob);
+
+    bool result = sqlite3_step(stmt) == SQLITE_DONE;
+
+    if (!result) {
+        std::cerr << "Failed to add blob: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool Database::removeBlob(const std::string& blobUid) {
+    const char* sql = "DELETE FROM BLOBS WHERE BLOB_UID = ?;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool Database::addFileToBlob(const std::string& blobUid, const std::string& filePacket) {
+    const char* sql = "INSERT INTO BLOB_FILES(BLOB_UID, FILE_PACKET) VALUES(?, ?);";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, filePacket.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+
+    return result;
+}
+
+bool Database::incrementFilesReceivedCounter(const std::string& blobUid) {
+    const char* sql = "UPDATE BLOBS SET FILES_RECEIVED = FILES_RECEIVED + 1 WHERE BLOB_UID = ?;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool Database::incrementFilesSentCounter(const std::string& blobUid) {
+    const char* sql = "UPDATE BLOBS SET FILES_SENT = FILES_SENT + 1 WHERE BLOB_UID = ?;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool Database::isBlobExists(const std::string& blobUid) {
+    const char* sql = "SELECT 1 FROM BLOBS WHERE BLOB_UID = ? LIMIT 1;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool exists = (sqlite3_step(stmt) == SQLITE_ROW);
+
+    sqlite3_finalize(stmt);
+    return exists;
+}
+
+Blob Database::getBlob(const std::string& blobUid) {
+    Blob blob;
+
+    const char* sql = "SELECT BLOB_UID, LOGIN_HASH, FILES_COUNT_IN_BLOB, "
+        "FILES_RECEIVED, FILES_SENT FROM BLOBS WHERE BLOB_UID = ?;";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement (main blob info): "
+            << sqlite3_errmsg(m_db) << std::endl;
+        return blob;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        blob.blobUID = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        blob.receiverLoginHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        blob.filesCountInBlob = sqlite3_column_int(stmt, 2);
+        blob.filesReceived = sqlite3_column_int(stmt, 3);
+        blob.filesSent = sqlite3_column_int(stmt, 4);
+    }
+    sqlite3_finalize(stmt);
+
+    const char* packetsSql = "SELECT FILE_PACKET FROM BLOB_FILES WHERE BLOB_UID = ?;";
+    if (sqlite3_prepare_v2(m_db, packetsSql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement (file packets): "
+            << sqlite3_errmsg(m_db) << std::endl;
+        return blob;
+    }
+
+    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* filePacket = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (filePacket != nullptr) {
+            blob.filePacketsVec.emplace_back(filePacket);
+        }
+    }
+    sqlite3_finalize(stmt);
+
+    return blob;
+}
+
+std::vector<Blob> Database::getBlobs(const std::string& loginHash) {
+    std::vector<Blob> blobs;
+
+    const char* mainSql = "SELECT BLOB_UID, FILES_COUNT_IN_BLOB, "
+        "FILES_RECEIVED, FILES_SENT FROM BLOBS "
+        "WHERE LOGIN_HASH = ?;";
+
+    sqlite3_stmt* mainStmt;
+    if (sqlite3_prepare_v2(m_db, mainSql, -1, &mainStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare main query: " << sqlite3_errmsg(m_db) << std::endl;
+        return blobs;
+    }
+
+    sqlite3_bind_text(mainStmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+
+    const char* filesSql = "SELECT FILE_PACKET FROM BLOB_FILES WHERE BLOB_UID = ?;";
+    sqlite3_stmt* filesStmt;
+    if (sqlite3_prepare_v2(m_db, filesSql, -1, &filesStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare files query: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(mainStmt);
+        return blobs;
+    }
+
+    while (sqlite3_step(mainStmt) == SQLITE_ROW) {
+        Blob blob;
+        blob.receiverLoginHash = loginHash;
+        blob.blobUID = reinterpret_cast<const char*>(sqlite3_column_text(mainStmt, 0));
+        blob.filesCountInBlob = sqlite3_column_int(mainStmt, 1);
+        blob.filesReceived = sqlite3_column_int(mainStmt, 2);
+        blob.filesSent = sqlite3_column_int(mainStmt, 3);
+
+        sqlite3_bind_text(filesStmt, 1, blob.blobUID.c_str(), -1, SQLITE_TRANSIENT);
+
+        while (sqlite3_step(filesStmt) == SQLITE_ROW) {
+            blob.filePacketsVec.push_back(
+                reinterpret_cast<const char*>(sqlite3_column_text(filesStmt, 0))
+            );
+        }
+
+        sqlite3_reset(filesStmt);
+        sqlite3_clear_bindings(filesStmt);
+
+        blobs.push_back(blob);
+    }
+
+    sqlite3_finalize(mainStmt);
+    sqlite3_finalize(filesStmt);
+
+    return blobs;
+}
+
+void Database::markFileAsSent(const std::string& blobUID, const std::string& fileId) {
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return;
+    }
+
+    try {
+        const char* updateSql = "UPDATE BLOB_FILES SET FILE_PACKET = ? "
+            "WHERE BLOB_UID = ? AND FILE_PACKET LIKE ?;";
+
+        sqlite3_stmt* stmt;
+        if (sqlite3_prepare_v2(m_db, updateSql, -1, &stmt, nullptr) != SQLITE_OK) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+
+        std::string searchPattern = "%\"id\":\"" + fileId + "\"%";
+
+        PacketsBuilder packetsBuilder;
+        net::file<QueryType> file;
+        bool fileFound = false;
+
+        const char* selectSql = "SELECT FILE_PACKET FROM BLOB_FILES "
+            "WHERE BLOB_UID = ? AND FILE_PACKET LIKE ?;";
+        sqlite3_stmt* selectStmt;
+
+        if (sqlite3_prepare_v2(m_db, selectSql, -1, &selectStmt, nullptr) != SQLITE_OK) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+
+        sqlite3_bind_text(selectStmt, 1, blobUID.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(selectStmt, 2, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
+
+        if (sqlite3_step(selectStmt) == SQLITE_ROW) {
+            const char* packet = reinterpret_cast<const char*>(sqlite3_column_text(selectStmt, 0));
+            file = Server::constructFileFromPacket(packet);
+            fileFound = true;
+        }
+        sqlite3_finalize(selectStmt);
+
+        if (fileFound) {
+            std::string updatedPacket = packetsBuilder.get_fileCollectPacket(
+                file.encryptedKey, file.senderLoginHash, file.receiverLoginHash,
+                file.fileName, file.id, file.fileSize, file.timestamp,
+                file.caption, file.blobUID, file.filesInBlobCount, true);
+
+            sqlite3_bind_text(stmt, 1, updatedPacket.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 2, blobUID.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 3, searchPattern.c_str(), -1, SQLITE_TRANSIENT);
+
+            if (sqlite3_step(stmt) != SQLITE_DONE) {
+                throw std::runtime_error(sqlite3_errmsg(m_db));
+            }
+        }
+
+        sqlite3_finalize(stmt);
+
+        if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+            throw std::runtime_error(sqlite3_errmsg(m_db));
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error in markFileAsSent: " << e.what() << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool Database::addUser(const std::string& loginHash,
     const std::string& passwordHash,
@@ -554,7 +850,17 @@ void Database::executeUpdate(const char* sql, const std::vector<std::string>& pa
     sqlite3_finalize(stmt);
 }
 
-
+void Database::executeSQL(const char* sql, const char* tableName) {
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(m_db, sql, nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "SQL error in " << tableName << ": " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+    }
+    else {
+        std::cout << "Table " << tableName << " created/updated successfully" << std::endl;
+    }
+}
 
 
 std::string Database::friendsToString(const std::vector<std::string>& friends) {

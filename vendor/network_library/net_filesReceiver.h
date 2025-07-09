@@ -175,6 +175,10 @@ namespace net
 				return;
 			}
 
+			m_fileStream.close();
+			m_currentChunksCount = 0;
+			m_expectedChunksCount = 0;
+
 			std::error_code ec;
 			bool removed = std::filesystem::remove(path, ec);
 
