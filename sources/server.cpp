@@ -275,7 +275,7 @@ void Server::onFile(net::file<QueryType> file) {
     if (!isExist) {
         m_db.addBlob(file.blobUID, file.receiverLoginHash, std::stoi(file.filesInBlobCount));
     }
-    m_db.addFileToBlob(file.blobUID, filePacket);
+    m_db.addFileToBlob(file.blobUID, file.id, filePacket);
     m_db.incrementFilesReceivedCounter(file.blobUID);
 
     Blob blob = m_db.getBlob(file.blobUID);
@@ -898,7 +898,7 @@ void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
         for (auto& filePacket : blob.filePacketsVec) {
             auto file = constructFileFromPacket(filePacket);
 
-            if (!file.isSent) {
+            if (std::filesystem::exists(file.filePath)) {
                 if (std::stoi(file.fileSize) > 100000000) { // 100mb
                     net::message<QueryType> msgResponse;
                     msgResponse.header.type = QueryType::FILE_PREVIEW;
@@ -906,10 +906,10 @@ void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
                     sendResponse(user->getConnection(), msgResponse);
 
                     m_db.incrementFilesSentCounter(file.blobUID);
-                    int filesSent = blob.filesSent;
-                    filesSent++;
-                    if (filesSent == blob.filesCountInBlob) {
-                        removeSentBlob(blob);
+                    if (m_db.isBlobExists(file.blobUID)) {
+                        if (Blob blob = m_db.getBlob(file.blobUID); blob.filesSent == blob.filesCountInBlob) {
+                            m_db.removeBlob(file.blobUID);
+                        }
                     }
                 }
                 else {
@@ -919,17 +919,6 @@ void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
             }
         }
     }
-}
-
-void Server::removeSentBlob(const Blob& blob) {
-    for (auto& packet : blob.filePacketsVec) {
-        auto file = constructFileFromPacket(packet);
-        if (file.isSent) {
-            std::filesystem::remove(file.filePath);
-        }
-    }
-
-    m_db.removeBlob(blob.blobUID);
 }
 
 std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
@@ -1033,7 +1022,6 @@ net::file<QueryType> Server::constructFileFromPacket(const std::string& packet) 
         file.receiverLoginHash = receiverLoginHash;
         file.senderLoginHash = senderLoginHash;
         file.timestamp = fileTimestamp;
-        file.isSent = isSent;
     }
 
     return file;
@@ -1115,10 +1103,23 @@ void Server::onConnectError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::file<QueryType> sentFile) {
-    m_db.incrementFilesSentCounter(sentFile.blobUID);
-    m_db.markFileAsSent(sentFile.blobUID, sentFile.id);
-    if (Blob blob = m_db.getBlob(sentFile.blobUID); blob.filesSent == blob.filesCountInBlob) {
-        removeSentBlob(blob);
+    if (std::filesystem::exists(sentFile.filePath)) {
+        std::error_code ec; 
+        setlocale(LC_ALL, "ru");
+        if (!std::filesystem::remove(sentFile.filePath, ec)) {
+            std::cerr << "Ошибка удаления: " << ec.message() << std::endl;
+        }
+    }
+    else {
+        std::cerr << "Файл не существует!" << std::endl;
+    }
+
+    if (m_db.isBlobExists(sentFile.blobUID)) {
+        m_db.incrementFilesSentCounter(sentFile.blobUID);
+
+        if (Blob blob = m_db.getBlob(sentFile.blobUID); blob.filesSent >= blob.filesCountInBlob) {
+            m_db.removeBlob(sentFile.blobUID);
+        }
     }
 }
 

@@ -11,8 +11,8 @@ namespace net
 	template <typename T>
 	class filesReceiver {
 	public:
-		filesReceiver(asio::ip::tcp::socket& socket, std::function<void(net::file<T>)> queueReceivedFile, std::function<void(std::error_code, net::file<T>)> onReceiveError, std::function<void()> disconnect)
-			: m_socket(socket), m_onReceiveError(onReceiveError), m_queueReceivedFile(queueReceivedFile), m_disconnect(disconnect)
+		filesReceiver(asio::ip::tcp::socket& socket, std::function<void(net::file<T>)> queueReceivedFile, std::function<void(std::error_code, net::file<T>)> onReceiveError)
+			: m_socket(socket), m_onReceiveError(onReceiveError), m_queueReceivedFile(queueReceivedFile)
 		{
 			m_currentChunksCount = 0;
 			m_expectedChunksCount = 0;
@@ -28,7 +28,7 @@ namespace net
 				[this](std::error_code ec, std::size_t length) {
 					if (ec) {
 						m_onReceiveError(ec, net::file<T>{});
-						m_disconnect();
+						
 					}
 					else {
 						m_metadataMessage.body.resize(m_metadataMessage.header.size - sizeof(message_header<T>));
@@ -42,7 +42,7 @@ namespace net
 				[this](std::error_code ec, std::size_t length) {
 					if (ec) {
 						m_onReceiveError(ec, net::file<T>{});
-						m_disconnect();
+						
 					}
 					else {
 						parseMetadata();
@@ -59,7 +59,7 @@ namespace net
 					if (ec) {
 						removePartiallyDownloadedFile();
 						m_onReceiveError(ec, m_file);
-						m_disconnect();
+						
 						return;
 					}
 					else {
@@ -201,7 +201,6 @@ namespace net
 		std::ofstream m_fileStream;
 		file<T>	m_file;
 
-		std::function<void()> m_disconnect;
 		std::function<void(std::error_code, net::file<T>)> m_onReceiveError;
 		std::function<void(net::file<T>)> m_queueReceivedFile;
 	};

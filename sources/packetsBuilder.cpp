@@ -173,8 +173,7 @@ std::string PacketsBuilder::get_fileCollectPacket(const std::string& encryptedKe
         << fileSize << '\n'
         << timestamp << '\n'
         << caption << '\n'
-        << filesInBlobCount << '\n'
-        << isSent ? "true" : "false";
+        << filesInBlobCount;
 
     return oss.str();
 }

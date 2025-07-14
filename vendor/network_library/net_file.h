@@ -23,7 +23,6 @@ namespace net
         std::string filesInBlobCount;
         std::string fileSize;
         std::string encryptedKey;
-        bool isSent;
     };
 
 

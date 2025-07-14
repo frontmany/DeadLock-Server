@@ -30,10 +30,9 @@ public:
 	bool addBlob(const std::string& blobUid, const std::string& loginHash, int filesCountInBlob);
 	bool removeBlob(const std::string& blobUid);
 	bool isBlobExists(const std::string& blobUid);
-	bool addFileToBlob(const std::string& blobUid, const std::string& filePacket);
+	bool addFileToBlob(const std::string& blobUid, const std::string& fileId, const std::string& filePacket);
 	bool incrementFilesReceivedCounter(const std::string& blobUid);
 	bool incrementFilesSentCounter(const std::string& blobUid);
-	void markFileAsSent(const std::string& blobUID, const std::string& fileId);
 	Blob getBlob(const std::string& blobUid);
 	std::vector<Blob> getBlobs(const std::string& loginHash);
 

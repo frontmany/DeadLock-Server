@@ -11,8 +11,8 @@ namespace net
 	template <typename T>
 	class filesSender {
 	public:
-		filesSender(asio::io_context& asioContext, asio::ip::tcp::socket& socket, std::function<void(net::file<T>)> onFileSent, std::function<void(std::error_code, net::file<T>)> onSendError, std::function<void()> disconnect)
-			: m_socket(socket), m_onFileSent(onFileSent), m_onSendError(onSendError), m_disconnect(disconnect), m_asioContext(asioContext)
+		filesSender(asio::io_context& asioContext, asio::ip::tcp::socket& socket, std::function<void(net::file<T>)> onFileSent, std::function<void(std::error_code, net::file<T>)> onSendError)
+			: m_socket(socket), m_onFileSent(onFileSent), m_onSendError(onSendError), m_asioContext(asioContext)
 		{
 			m_totalBytesSent = 0;
 		}
@@ -53,7 +53,7 @@ namespace net
 					if (ec)
 					{
 						m_onSendError(ec, m_outgoingFilesQueue.pop_front());
-						m_disconnect();
+						
 					}
 					else
 					{
@@ -89,8 +89,10 @@ namespace net
 					asio::buffer(m_readBuffer.data(), c_encryptedOutputChunkSize),
 					[this](std::error_code ec, std::size_t length) {
 						if (ec) {
+							m_fileStream.close();
+							m_totalBytesSent = 0;
 							m_onSendError(ec, m_file);
-							m_disconnect();
+							
 						}
 						else {
 							m_totalBytesSent += c_readChunkSize;
@@ -142,6 +144,5 @@ namespace net
 
 		std::function<void(const net::file<T>&)> m_onFileSent;
 		std::function<void(std::error_code, net::file<T>)> m_onSendError;
-		std::function<void()> m_disconnect;
 	};
 }

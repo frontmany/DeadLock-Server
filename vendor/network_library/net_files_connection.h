@@ -31,8 +31,8 @@ namespace net {
 			: m_asioContext(asioContext),
 			m_socket(std::move(socket)),
 			m_incomingFilesQueue(incomingFilesQueue),
-			m_filesSender(asioContext, m_socket, onFileSent, onSendFileError, [this]() { disconnect(); }),
-			m_filesReceiver(m_socket, [this](file<T> file) {queueReceivedFile(file); }, onReceiveFileError, [this]() { disconnect(); })
+			m_filesSender(asioContext, m_socket, onFileSent, onSendFileError),
+			m_filesReceiver(m_socket, [this](file<T> file) {queueReceivedFile(file); }, onReceiveFileError)
 		{
 			m_filesReceiver.startReceiving();
 		}
