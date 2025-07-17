@@ -39,8 +39,8 @@ namespace net
 				<< m_file.fileSize << '\n'
 				<< m_file.fileName << '\n'
 				<< m_file.timestamp << '\n'
-				<< m_file.caption << '\n'
-				<< m_file.filesInBlobCount;
+				<< m_file.filesInBlobCount << '\n'
+				<< m_file.caption;
 
 			m_metadataMessage.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
 			m_metadataMessage << oss.str();

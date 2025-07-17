@@ -85,6 +85,8 @@ private:
     std::string generateEncryptionPart(const std::string& salt);
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
     void sendBlob(const Blob& blob, const std::string& loginHash);
+    void static replaceLineInPacket(PacketData& packetData, size_t lineNumber, const std::string& newLineContent);
+
 
     bool hasInternetConnection();
     void handleError(std::error_code ec);

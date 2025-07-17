@@ -73,7 +73,7 @@ std::string PacketsBuilder::get_userInfoPacket(const CryptoPP::RSA::PrivateKey p
         << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n';
 
         if (user->getIsHasPhoto()) {
-            oss << crypto::AESEncrypt(key, user->getPhoto().serialize(privateKey, userPublicKeyTo)) << '\n';
+            oss << user->getPhoto().serialize(privateKey, userPublicKeyTo) << '\n';
         }
 
     oss << crypto::serializePublicKey(user->getPublicKey()) << '\n';

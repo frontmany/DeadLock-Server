@@ -14,6 +14,7 @@
 
 #include "asio.hpp"
 #include "photo.h"  
+#include "packetData.h"  
 #include "blob.h"  
 #include "rsa.h"  
 #include "sqlite/sqlite3.h" 
@@ -27,15 +28,16 @@ public:
 	Database() = default;
 	void init();
 
-	bool addBlob(const std::string& blobUid, const std::string& loginHash, int filesCountInBlob);
+	bool addBlob(const std::string& blobUid, const std::string& loginHashTo, const std::string& loginHashFrom, int filesCountInBlob);
 	bool removeBlob(const std::string& blobUid);
 	bool isBlobExists(const std::string& blobUid);
 	bool addFileToBlob(const std::string& blobUid, const std::string& fileId, const std::string& filePacket);
 	bool incrementFilesReceivedCounter(const std::string& blobUid);
 	bool incrementFilesSentCounter(const std::string& blobUid);
 	Blob getBlob(const std::string& blobUid);
-	std::vector<Blob> getBlobs(const std::string& loginHash);
-
+	std::vector<Blob> getBlobsByLoginHashTo(const std::string& loginHashTo);
+	std::vector<Blob> getBlobsByLoginHashFrom(const std::string& loginHashFrom);
+	bool replaceAllBlobs(const std::string& loginHashFrom, const std::vector<Blob>& newBlobs);
 
 	User* getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash);
 	bool addUser(const std::string& loginHash, const std::string& passwordHash, const std::string& encryptionPartEnc, const std::string& lastSeenEnc);
@@ -51,9 +53,11 @@ public:
 	std::vector<User*> findUsers(const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers);
 
 
-	void collect(const std::string& loginHash, const std::string& packet, QueryType type);
+	void collect(const std::string& loginHashTo, const std::string& loginHashFrom, const std::string& packet, QueryType type);
 	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& loginHash);
-	
+	std::vector<PacketData> getPacketsBySender(const std::string& loginHashFrom);
+	bool replaceAllPackets(const std::string& loginHashFrom, const std::vector<PacketData>& newPackets);
+
 
 	bool checkPassword(const std::string& loginHash, const std::string& passwordHash);
 	bool checkNewLogin(const std::string& newLoginHash);

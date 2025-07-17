@@ -1,6 +1,7 @@
 #include "server.h"
 #include "crypto.h"
 #include "base64_my.h"
+#include "packetData.h"  
 
 #include <iostream>
 #include <algorithm>
@@ -168,14 +169,17 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
     std::string friendLoginHash;
     std::getline(iss, friendLoginHash);
 
+    std::string senderLoginHash;
+    std::getline(iss, senderLoginHash);
+
     auto it = m_map_online_users.find(friendLoginHash);
 
     if (it == m_map_online_users.end()) {
         if (type == QueryType::MESSAGE) {
-            m_db.collect(friendLoginHash, iss.str(), QueryType::MESSAGE);
+            m_db.collect(friendLoginHash, senderLoginHash, iss.str(), QueryType::MESSAGE);
         }
         else if (type == QueryType::MESSAGES_READ_CONFIRMATION) {
-            m_db.collect(friendLoginHash, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
+            m_db.collect(friendLoginHash, senderLoginHash, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
         }
     }
     else {
@@ -273,7 +277,7 @@ void Server::onFile(net::file<QueryType> file) {
     
     bool isExist = m_db.isBlobExists(file.blobUID);
     if (!isExist) {
-        m_db.addBlob(file.blobUID, file.receiverLoginHash, std::stoi(file.filesInBlobCount));
+        m_db.addBlob(file.blobUID, file.receiverLoginHash, file.senderLoginHash, std::stoi(file.filesInBlobCount));
     }
     m_db.addFileToBlob(file.blobUID, file.id, filePacket);
     m_db.incrementFilesReceivedCounter(file.blobUID);
@@ -529,15 +533,33 @@ void Server::sendPendingMessages(connectionT connection) {
         User* user = it->second;
 
         auto packets = m_db.getCollected(user->getLoginHash());
-        std::unordered_map<std::string, std::vector<net::file<QueryType>>> filesMap;
-        for (auto& [packet, type] : packets) {
+        std::vector<std::pair<std::string, QueryType>> updateLoginPackets;
+        std::vector<std::pair<std::string, QueryType>> otherPackets;
+
+        for (auto& packet : packets) {
+            if (packet.second == QueryType::UPDATE_LOGIN_COLLECTED) {
+                updateLoginPackets.push_back(packet);
+            }
+            else {
+                otherPackets.push_back(packet);
+            }
+        }
+
+        for (auto& [packet, type] : updateLoginPackets) {
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
+            msgResponse << packet;
+            sendResponse(user->getConnection(), msgResponse);
+        }
+
+        for (auto& [packet, type] : otherPackets) {
             net::message<QueryType> msgResponse;
             msgResponse.header.type = type;
             msgResponse << packet;
             sendResponse(user->getConnection(), msgResponse);
         }
 
-        auto blobsVec = m_db.getBlobs(user->getLoginHash());
+        auto blobsVec = m_db.getBlobsByLoginHashTo(user->getLoginHash());
         for (auto& blob : blobsVec) {
             if (blob.filesReceived == blob.filesCountInBlob) {
                 sendBlob(blob, user->getLoginHash());
@@ -720,7 +742,7 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
         else {
             User* userTo = m_db.getUser(m_private_key, friendLoginHash);
             std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
-            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
+            m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
         }
     }
 }
@@ -800,6 +822,7 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
         auto it = m_map_online_users.find(loginHash);
         User* user = it->second;
         user->setPhoto(photo);
+        user->setIsHasPhoto(true);
 
         for (auto& friendLoginHash : loginHashes) {
             auto it = m_map_online_users.find(friendLoginHash);
@@ -815,7 +838,7 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
             else {
                 User* userTo = m_db.getUser(m_private_key, friendLoginHash);
                 std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
-                m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
+                m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
             }
         }
     }
@@ -855,28 +878,76 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
         }
     }
 
+    m_db.updateUserLogin(m_public_key, oldLoginHash, newLogin);
+    
+    
+    auto packetDataVec = m_db.getPacketsBySender(oldLoginHash);
+    for (auto& packetData : packetDataVec) {
+        packetData.loginHashFrom = newLoginHash;
+
+        if (packetData.type == QueryType::MESSAGE) {
+            replaceLineInPacket(packetData, 1, newLoginHash);
+        }
+        else if (packetData.type == QueryType::MESSAGES_READ_CONFIRMATION) {
+            replaceLineInPacket(packetData, 1, newLoginHash);
+        }
+    }
+    m_db.replaceAllPackets(oldLoginHash, packetDataVec);
+
+    auto blobsVec = m_db.getBlobsByLoginHashFrom(oldLoginHash);
+    for (auto& blob : blobsVec) {
+        for (auto& filePacket : blob.filePacketsVec) {
+            std::vector<std::string> lines;
+            size_t start = 0;
+            size_t pos = 0;
+
+            while ((pos = filePacket.find('\n', start)) != std::string::npos) {
+                lines.push_back(filePacket.substr(start, pos - start));
+                start = pos + 1;
+            }
+            lines.push_back(filePacket.substr(start));
+
+            if (lines.size() > 4) {
+                lines[4] = newLoginHash;  
+            }
+            else {
+                lines.resize(5);
+                lines[4] = newLoginHash;
+            }
+
+            std::string newFilePacket;
+            for (size_t i = 0; i < lines.size(); ++i) {
+                newFilePacket += lines[i];
+                if (i + 1 < lines.size()) {
+                    newFilePacket += '\n';
+                }
+            }
+            
+            filePacket = newFilePacket;
+        }
+
+        blob.senderLoginHash = newLoginHash;
+    }
+    m_db.replaceAllBlobs(oldLoginHash, blobsVec);
+
     auto mapIt = m_map_online_users.find(oldLoginHash);
     if (mapIt == m_map_online_users.end()) {
         return;
     }
-
     User* user = mapIt->second;
-
-    m_db.updateUserLogin(m_public_key, oldLoginHash, newLogin);
-    
 
     for (auto& friendLoginHash : logins) {
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
             std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
             net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
+            msgResponse.header.type = QueryType::UPDATE_LOGIN_COLLECTED;
             msgResponse << packetU;
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
             User* userTo = m_db.getUser(m_private_key, friendLoginHash);
             std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
-            m_db.collect(friendLoginHash, packetU, QueryType::USER_INFO_SUCCESS);
+            m_db.collect(friendLoginHash, newLoginHash, packetU, QueryType::UPDATE_LOGIN_COLLECTED);
         }
     }
 
@@ -890,6 +961,34 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 
 
 // essentials
+void Server::replaceLineInPacket(PacketData& packetData, size_t lineNumber, const std::string& newLineContent) {
+    std::vector<std::string> lines;
+    size_t start = 0;
+    size_t end = packetData.packet.find('\n');
+
+    while (end != std::string::npos) {
+        lines.push_back(packetData.packet.substr(start, end - start));
+        start = end + 1;
+        end = packetData.packet.find('\n', start);
+    }
+    lines.push_back(packetData.packet.substr(start));
+
+    if (lineNumber < lines.size()) {
+        lines[lineNumber] = newLineContent;
+
+        packetData.packet.clear();
+        for (size_t i = 0; i < lines.size(); ++i) {
+            if (i != 0) packetData.packet += "\n";
+            packetData.packet += lines[i];
+        }
+    }
+    else {
+        throw std::out_of_range("Line number " + std::to_string(lineNumber) +
+            " is out of range (packet has " +
+            std::to_string(lines.size()) + " lines)");
+    }
+}
+
 void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
     auto it = m_map_online_users.find(loginHash);
     if (it != m_map_online_users.end()) {
@@ -1000,10 +1099,6 @@ net::file<QueryType> Server::constructFileFromPacket(const std::string& packet) 
     std::string filesCountInBlob;
     std::getline(iss, filesCountInBlob);
 
-    std::string isSentStr;
-    std::getline(iss, isSentStr);
-    bool isSent = isSentStr == "true";
-
     const std::string filePath = "ReceivedFiles/" + fileId + ".deadlock";
 
     std::ifstream fileStream(filePath);
@@ -1040,13 +1135,19 @@ void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unse
         std::string friendLoginHash;
         std::getline(iss, friendLoginHash);
 
-        m_db.collect(friendLoginHash, iss.str(), QueryType::MESSAGE);
+        std::string senderLoginHash;
+        std::getline(iss, senderLoginHash);
+
+        m_db.collect(friendLoginHash, senderLoginHash, iss.str(), QueryType::MESSAGE);
     }
     else if (type == QueryType::MESSAGES_READ_CONFIRMATION) {
         std::string friendLoginHash;
         std::getline(iss, friendLoginHash);
 
-        m_db.collect(friendLoginHash, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
+        std::string senderLoginHash;
+        std::getline(iss, senderLoginHash);
+
+        m_db.collect(friendLoginHash, senderLoginHash, iss.str(), QueryType::MESSAGES_READ_CONFIRMATION);
     }
 
     handleError(ec);

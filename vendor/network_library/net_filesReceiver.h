@@ -116,11 +116,11 @@ namespace net
 			std::string timestamp;
 			std::getline(iss, timestamp);
 
-			std::string caption;
-			std::getline(iss, caption);
-
 			std::string filesCountInBlob;
 			std::getline(iss, filesCountInBlob);
+
+			std::string caption;
+			std::getline(iss, caption);
 
 			m_file.filePath = createFilePath(fileId);
 			m_file.fileName = fileName;

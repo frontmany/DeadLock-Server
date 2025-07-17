@@ -34,19 +34,21 @@ void Database::init() {
     executeSQL(userTableSQL, "USER");
 
     const char* packetsTableSQL = "CREATE TABLE IF NOT EXISTS COLLECTED_PACKETS("
-        "LOGIN_HASH     TEXT    NOT NULL,"
-        "PACKET         TEXT    NOT NULL,"
-        "PACKET_TYPE    INTEGER NOT NULL,"
-        "FOREIGN KEY (LOGIN_HASH) REFERENCES USER(LOGIN_HASH) ON DELETE CASCADE);";
+        "id                INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "LOGIN_HASH_TO     TEXT    NOT NULL,"
+        "LOGIN_HASH_FROM   TEXT    NOT NULL,"
+        "PACKET            TEXT    NOT NULL,"
+        "PACKET_TYPE       INTEGER NOT NULL);";
 
     executeSQL(packetsTableSQL, "COLLECTED_PACKETS");
 
     const char* blobsTableSQL = "CREATE TABLE IF NOT EXISTS BLOBS("
-        "BLOB_UID             TEXT    NOT NULL PRIMARY KEY,"
-        "LOGIN_HASH           TEXT    NOT NULL,"
-        "FILES_COUNT_IN_BLOB  INTEGER NOT NULL CHECK(FILES_COUNT_IN_BLOB > 0),"
-        "FILES_RECEIVED       INTEGER NOT NULL DEFAULT 0,"
-        "FILES_SENT           INTEGER NOT NULL DEFAULT 0,"
+        "BLOB_UID              TEXT    NOT NULL PRIMARY KEY,"
+        "LOGIN_HASH_TO         TEXT    NOT NULL,"
+        "LOGIN_HASH_FROM       TEXT    NOT NULL,"
+        "FILES_COUNT_IN_BLOB   INTEGER NOT NULL CHECK(FILES_COUNT_IN_BLOB > 0),"
+        "FILES_RECEIVED        INTEGER NOT NULL DEFAULT 0,"
+        "FILES_SENT            INTEGER NOT NULL DEFAULT 0,"
         "CHECK (FILES_RECEIVED <= FILES_COUNT_IN_BLOB));";
 
     executeSQL(blobsTableSQL, "BLOBS");
@@ -54,15 +56,19 @@ void Database::init() {
     const char* blobFilesTableSQL = "CREATE TABLE IF NOT EXISTS BLOB_FILES("
         "BLOB_UID      TEXT    NOT NULL,"
         "FILE_PACKET   TEXT    NOT NULL,"
-        "FILE_ID       TEXT    NOT NULL,"
-        "FOREIGN KEY (BLOB_UID) REFERENCES BLOBS(BLOB_UID) ON DELETE CASCADE);";
+        "FILE_ID       TEXT    NOT NULL);";
 
     executeSQL(blobFilesTableSQL, "BLOB_FILES");
 }
 
 
-bool Database::addBlob(const std::string& blobUid, const std::string& loginHash, int filesCountInBlob) {
-    const char* sql = "INSERT INTO BLOBS(BLOB_UID, LOGIN_HASH, FILES_COUNT_IN_BLOB) VALUES(?, ?, ?);";
+bool Database::addBlob(const std::string& blobUid,
+    const std::string& loginHashTo,
+    const std::string& loginHashFrom,
+    int filesCountInBlob) 
+{
+    const char* sql = "INSERT INTO BLOBS(BLOB_UID, LOGIN_HASH_TO, LOGIN_HASH_FROM, FILES_COUNT_IN_BLOB) "
+        "VALUES(?, ?, ?, ?);";
     sqlite3_stmt* stmt;
 
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -71,8 +77,9 @@ bool Database::addBlob(const std::string& blobUid, const std::string& loginHash,
     }
 
     sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, loginHash.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 3, filesCountInBlob);
+    sqlite3_bind_text(stmt, 2, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, loginHashFrom.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 4, filesCountInBlob);
 
     bool result = sqlite3_step(stmt) == SQLITE_DONE;
 
@@ -85,39 +92,100 @@ bool Database::addBlob(const std::string& blobUid, const std::string& loginHash,
 }
 
 bool Database::removeBlob(const std::string& blobUid) {
-    const char* sql = "DELETE FROM BLOBS WHERE BLOB_UID = ?;";
-    sqlite3_stmt* stmt = nullptr;
-
-    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare DELETE statement for blob UID: " << blobUid
-            << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+    char* errMsg = nullptr;
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << (errMsg ? errMsg : "") << std::endl;
+        if (errMsg) sqlite3_free(errMsg);
         return false;
     }
 
-    sqlite3_bind_text(stmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT);
+    {
+        const char* deleteFilesSql = "DELETE FROM BLOB_FILES WHERE BLOB_UID = ?;";
+        sqlite3_stmt* deleteFilesStmt = nullptr;
+        if (sqlite3_prepare_v2(m_db, deleteFilesSql, -1, &deleteFilesStmt, nullptr) != SQLITE_OK) {
+            std::cerr << "Failed to prepare DELETE statement for blob files with UID: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
 
-    int rc = sqlite3_step(stmt);
-    bool result = (rc == SQLITE_DONE);
+        if (sqlite3_bind_text(deleteFilesStmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            std::cerr << "Failed to bind blob UID to delete files statement: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteFilesStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
 
-    if (!result) {
-        std::cerr << "Failed to delete blob with UID: " << blobUid
-            << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+        int rc = sqlite3_step(deleteFilesStmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "Failed to delete blob files with UID: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteFilesStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+
+        sqlite3_finalize(deleteFilesStmt);
     }
-    else {
-        int changes = sqlite3_changes(m_db);
-        if (changes == 0) {
-            std::cout << "No blob found with UID: " << blobUid << ", nothing deleted." << std::endl;
-            result = false; 
+
+    {
+        const char* deleteBlobSql = "DELETE FROM BLOBS WHERE BLOB_UID = ?;";
+        sqlite3_stmt* deleteBlobStmt = nullptr;
+        if (sqlite3_prepare_v2(m_db, deleteBlobSql, -1, &deleteBlobStmt, nullptr) != SQLITE_OK) {
+            std::cerr << "Failed to prepare DELETE statement for blob UID: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+
+        if (sqlite3_bind_text(deleteBlobStmt, 1, blobUid.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+            std::cerr << "Failed to bind blob UID to delete blob statement: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteBlobStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+
+        int rc = sqlite3_step(deleteBlobStmt);
+        bool result = (rc == SQLITE_DONE);
+
+        if (!result) {
+            std::cerr << "Failed to delete blob with UID: " << blobUid
+                << ". Error: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(deleteBlobStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
         }
         else {
-            std::cout << "Successfully deleted blob with UID: " << blobUid << std::endl;
+            int changes = sqlite3_changes(m_db);
+            if (changes == 0) {
+                std::cout << "No blob found with UID: " << blobUid << ", nothing deleted." << std::endl;
+                result = false;
+            }
+            else {
+                std::cout << "Successfully deleted blob with UID: " << blobUid << std::endl;
+            }
+        }
+
+        sqlite3_finalize(deleteBlobStmt);
+
+        if (!result) {
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
         }
     }
 
-    // Освобождаем ресурсы
-    sqlite3_finalize(stmt);
-    return result;
+    if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << (errMsg ? errMsg : "") << std::endl;
+        if (errMsg) sqlite3_free(errMsg);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    return true;
 }
+
 
 bool Database::addFileToBlob(const std::string& blobUid, const std::string& fileId, const std::string& filePacket) {
     const char* sql = "INSERT INTO BLOB_FILES(BLOB_UID, FILE_ID, FILE_PACKET) VALUES(?, ?, ?);";
@@ -192,7 +260,7 @@ bool Database::isBlobExists(const std::string& blobUid) {
 Blob Database::getBlob(const std::string& blobUid) {
     Blob blob;
 
-    const char* sql = "SELECT BLOB_UID, LOGIN_HASH, FILES_COUNT_IN_BLOB, "
+    const char* sql = "SELECT BLOB_UID, LOGIN_HASH_TO, LOGIN_HASH_FROM, FILES_COUNT_IN_BLOB, "
         "FILES_RECEIVED, FILES_SENT FROM BLOBS WHERE BLOB_UID = ?;";
     sqlite3_stmt* stmt;
 
@@ -207,9 +275,10 @@ Blob Database::getBlob(const std::string& blobUid) {
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         blob.blobUID = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
         blob.receiverLoginHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-        blob.filesCountInBlob = sqlite3_column_int(stmt, 2);
-        blob.filesReceived = sqlite3_column_int(stmt, 3);
-        blob.filesSent = sqlite3_column_int(stmt, 4);
+        blob.senderLoginHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        blob.filesCountInBlob = sqlite3_column_int(stmt, 3);
+        blob.filesReceived = sqlite3_column_int(stmt, 4);
+        blob.filesSent = sqlite3_column_int(stmt, 5);
     }
     sqlite3_finalize(stmt);
 
@@ -233,12 +302,12 @@ Blob Database::getBlob(const std::string& blobUid) {
     return blob;
 }
 
-std::vector<Blob> Database::getBlobs(const std::string& loginHash) {
+std::vector<Blob> Database::getBlobsByLoginHashTo(const std::string& loginHashTo) {
     std::vector<Blob> blobs;
 
-    const char* mainSql = "SELECT BLOB_UID, FILES_COUNT_IN_BLOB, "
+    const char* mainSql = "SELECT BLOB_UID, LOGIN_HASH_FROM, FILES_COUNT_IN_BLOB, "
         "FILES_RECEIVED, FILES_SENT FROM BLOBS "
-        "WHERE LOGIN_HASH = ?;";
+        "WHERE LOGIN_HASH_TO = ?;";
     sqlite3_stmt* mainStmt;
 
     if (sqlite3_prepare_v2(m_db, mainSql, -1, &mainStmt, nullptr) != SQLITE_OK) {
@@ -246,7 +315,7 @@ std::vector<Blob> Database::getBlobs(const std::string& loginHash) {
         return blobs;
     }
 
-    sqlite3_bind_text(mainStmt, 1, loginHash.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(mainStmt, 1, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
 
     const char* filesSql = "SELECT FILE_PACKET FROM BLOB_FILES WHERE BLOB_UID = ?;";
     sqlite3_stmt* filesStmt;
@@ -259,11 +328,12 @@ std::vector<Blob> Database::getBlobs(const std::string& loginHash) {
 
     while (sqlite3_step(mainStmt) == SQLITE_ROW) {
         Blob blob;
-        blob.receiverLoginHash = loginHash;
+        blob.receiverLoginHash = loginHashTo;
         blob.blobUID = reinterpret_cast<const char*>(sqlite3_column_text(mainStmt, 0));
-        blob.filesCountInBlob = sqlite3_column_int(mainStmt, 1);
-        blob.filesReceived = sqlite3_column_int(mainStmt, 2);
-        blob.filesSent = sqlite3_column_int(mainStmt, 3);
+        blob.senderLoginHash = reinterpret_cast<const char*>(sqlite3_column_text(mainStmt, 1));
+        blob.filesCountInBlob = sqlite3_column_int(mainStmt, 2);
+        blob.filesReceived = sqlite3_column_int(mainStmt, 3);
+        blob.filesSent = sqlite3_column_int(mainStmt, 4);
 
         sqlite3_bind_text(filesStmt, 1, blob.blobUID.c_str(), -1, SQLITE_TRANSIENT);
 
@@ -285,8 +355,210 @@ std::vector<Blob> Database::getBlobs(const std::string& loginHash) {
     return blobs;
 }
 
+std::vector<Blob> Database::getBlobsByLoginHashFrom(const std::string& loginHashFrom) {
+    std::vector<Blob> blobs;
 
+    const char* mainSql = "SELECT BLOB_UID, LOGIN_HASH_TO, FILES_COUNT_IN_BLOB, "
+        "FILES_RECEIVED, FILES_SENT FROM BLOBS "
+        "WHERE LOGIN_HASH_FROM = ?;";
+    sqlite3_stmt* mainStmt;
 
+    if (sqlite3_prepare_v2(m_db, mainSql, -1, &mainStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare main query: " << sqlite3_errmsg(m_db) << std::endl;
+        return blobs;
+    }
+
+    sqlite3_bind_text(mainStmt, 1, loginHashFrom.c_str(), -1, SQLITE_TRANSIENT);
+
+    const char* filesSql = "SELECT FILE_PACKET FROM BLOB_FILES WHERE BLOB_UID = ?;";
+    sqlite3_stmt* filesStmt;
+
+    if (sqlite3_prepare_v2(m_db, filesSql, -1, &filesStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare files query: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(mainStmt);
+        return blobs;
+    }
+
+    while (sqlite3_step(mainStmt) == SQLITE_ROW) {
+        Blob blob;
+        blob.senderLoginHash = loginHashFrom;
+        blob.blobUID = reinterpret_cast<const char*>(sqlite3_column_text(mainStmt, 0));
+        blob.receiverLoginHash = reinterpret_cast<const char*>(sqlite3_column_text(mainStmt, 1));
+        blob.filesCountInBlob = sqlite3_column_int(mainStmt, 2);
+        blob.filesReceived = sqlite3_column_int(mainStmt, 3);
+        blob.filesSent = sqlite3_column_int(mainStmt, 4);
+
+        sqlite3_bind_text(filesStmt, 1, blob.blobUID.c_str(), -1, SQLITE_TRANSIENT);
+
+        while (sqlite3_step(filesStmt) == SQLITE_ROW) {
+            blob.filePacketsVec.push_back(
+                reinterpret_cast<const char*>(sqlite3_column_text(filesStmt, 0))
+            );
+        }
+
+        sqlite3_reset(filesStmt);
+        sqlite3_clear_bindings(filesStmt);
+
+        blobs.push_back(blob);
+    }
+
+    sqlite3_finalize(mainStmt);
+    sqlite3_finalize(filesStmt);
+
+    return blobs;
+}
+
+bool Database::replaceAllBlobs(const std::string& loginHashFrom, const std::vector<Blob>& newBlobs) {
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    const char* selectBlobUIDsSql = "SELECT BLOB_UID FROM BLOBS WHERE LOGIN_HASH_FROM = ?;";
+    sqlite3_stmt* selectStmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, selectBlobUIDsSql, -1, &selectStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare select statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    if (sqlite3_bind_text(selectStmt, 1, loginHashFrom.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+        std::cerr << "Failed to bind loginHashFrom: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(selectStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    const char* deleteFileSql = "DELETE FROM BLOB_FILES WHERE BLOB_UID = ?;";
+    sqlite3_stmt* deleteFileStmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, deleteFileSql, -1, &deleteFileStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare delete file statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(selectStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    while (sqlite3_step(selectStmt) == SQLITE_ROW) {
+        const unsigned char* blobUID = sqlite3_column_text(selectStmt, 0);
+        if (blobUID) {
+            if (sqlite3_bind_text(deleteFileStmt, 1, reinterpret_cast<const char*>(blobUID), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+                std::cerr << "Failed to bind blobUID for file deletion: " << sqlite3_errmsg(m_db) << std::endl;
+                sqlite3_finalize(selectStmt);
+                sqlite3_finalize(deleteFileStmt);
+                sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                return false;
+            }
+
+            if (sqlite3_step(deleteFileStmt) != SQLITE_DONE) {
+                std::cerr << "Failed to delete blob files: " << sqlite3_errmsg(m_db) << std::endl;
+                sqlite3_finalize(selectStmt);
+                sqlite3_finalize(deleteFileStmt);
+                sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                return false;
+            }
+
+            sqlite3_reset(deleteFileStmt);
+        }
+    }
+    sqlite3_finalize(selectStmt);
+    sqlite3_finalize(deleteFileStmt);
+
+    const char* deleteBlobsSql = "DELETE FROM BLOBS WHERE LOGIN_HASH_FROM = ?;";
+    sqlite3_stmt* deleteBlobsStmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, deleteBlobsSql, -1, &deleteBlobsStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare delete blobs statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    if (sqlite3_bind_text(deleteBlobsStmt, 1, loginHashFrom.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+        std::cerr << "Failed to bind loginHashFrom for delete blobs: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(deleteBlobsStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    if (sqlite3_step(deleteBlobsStmt) != SQLITE_DONE) {
+        std::cerr << "Failed to delete blobs: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(deleteBlobsStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_finalize(deleteBlobsStmt);
+
+    
+    const char* insertBlobSql = "INSERT INTO BLOBS(BLOB_UID, LOGIN_HASH_TO, LOGIN_HASH_FROM, "
+        "FILES_COUNT_IN_BLOB, FILES_RECEIVED, FILES_SENT) "
+        "VALUES(?, ?, ?, ?, ?, ?);";
+
+    const char* insertFileSql = "INSERT INTO BLOB_FILES(BLOB_UID, FILE_PACKET, FILE_ID) VALUES(?, ?, ?);";
+
+    sqlite3_stmt* blobStmt = nullptr;
+    sqlite3_stmt* fileStmt = nullptr;
+
+    if (sqlite3_prepare_v2(m_db, insertBlobSql, -1, &blobStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare blob insert statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    if (sqlite3_prepare_v2(m_db, insertFileSql, -1, &fileStmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare file insert statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(blobStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    for (const auto& blob : newBlobs) {
+        sqlite3_bind_text(blobStmt, 1, blob.blobUID.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(blobStmt, 2, blob.receiverLoginHash.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(blobStmt, 3, blob.senderLoginHash.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(blobStmt, 4, blob.filesCountInBlob);
+        sqlite3_bind_int(blobStmt, 5, blob.filesReceived);
+        sqlite3_bind_int(blobStmt, 6, blob.filesSent);
+
+        if (sqlite3_step(blobStmt) != SQLITE_DONE) {
+            std::cerr << "Failed to insert blob: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(blobStmt);
+            sqlite3_finalize(fileStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+        sqlite3_reset(blobStmt);
+
+        for (const auto& filePacket : blob.filePacketsVec) {
+            std::string fileId;
+
+            size_t firstNewLine = filePacket.find('\n');
+            size_t secondNewLine = filePacket.find('\n', firstNewLine + 1);
+            fileId = filePacket.substr(firstNewLine + 1, secondNewLine - (firstNewLine + 1));
+
+            sqlite3_bind_text(fileStmt, 1, blob.blobUID.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(fileStmt, 2, filePacket.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(fileStmt, 3, fileId.c_str(), -1, SQLITE_TRANSIENT);
+
+            if (sqlite3_step(fileStmt) != SQLITE_DONE) {
+                std::cerr << "Failed to insert blob file: " << sqlite3_errmsg(m_db) << std::endl;
+                sqlite3_finalize(blobStmt);
+                sqlite3_finalize(fileStmt);
+                sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+                return false;
+            }
+            sqlite3_reset(fileStmt);
+        }
+    }
+
+    sqlite3_finalize(blobStmt);
+    sqlite3_finalize(fileStmt);
+
+    if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    return true;
+}
 
 
 
@@ -498,9 +770,10 @@ bool Database::checkPassword(const std::string& loginHash, const std::string& pa
 }
 
 
-void Database::collect(const std::string& loginHash, const std::string& packet, QueryType type) {
-    const char* sql = "INSERT INTO COLLECTED_PACKETS (LOGIN_HASH, PACKET, PACKET_TYPE) "
-        "VALUES (?, ?, ?);";
+void Database::collect(const std::string& loginHashTo, const std::string& loginHashFrom,
+    const std::string& packet, QueryType type) {
+    const char* sql = "INSERT INTO COLLECTED_PACKETS (LOGIN_HASH_TO, LOGIN_HASH_FROM, PACKET, PACKET_TYPE) "
+        "VALUES (?, ?, ?, ?);";
 
     sqlite3_stmt* stmt = nullptr;
     int rc;
@@ -511,9 +784,10 @@ void Database::collect(const std::string& loginHash, const std::string& packet, 
         return;
     }
 
-    sqlite3_bind_text(stmt, 1, loginHash.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, packet.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 3, static_cast<int>(type)); 
+    sqlite3_bind_text(stmt, 1, loginHashTo.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, loginHashFrom.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, packet.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 4, static_cast<int>(type));
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
@@ -527,16 +801,27 @@ void Database::collect(const std::string& loginHash, const std::string& packet, 
 }
 
 std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std::string& loginHash) {
-    const char* selectSql = "SELECT PACKET, PACKET_TYPE FROM COLLECTED_PACKETS WHERE LOGIN_HASH = ?;";
-    const char* deleteSql = "DELETE FROM COLLECTED_PACKETS WHERE LOGIN_HASH = ? AND PACKET = ?;";
+    const char* selectSql = "SELECT PACKET, PACKET_TYPE FROM COLLECTED_PACKETS "
+        "WHERE LOGIN_HASH_TO = ? "
+        "ORDER BY id ASC;";  
+
+    const char* deleteSql = "DELETE FROM COLLECTED_PACKETS WHERE LOGIN_HASH_TO = ? AND PACKET = ?;";
+
     sqlite3_stmt* selectStmt = nullptr;
     sqlite3_stmt* deleteStmt = nullptr;
     int rc;
     std::vector<std::pair<std::string, QueryType>> packets;
 
+    rc = sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return packets;
+    }
+
     rc = sqlite3_prepare_v2(m_db, selectSql, -1, &selectStmt, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to prepare SELECT statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
         return packets;
     }
 
@@ -544,6 +829,7 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
     if (rc != SQLITE_OK) {
         std::cerr << "Failed to bind login in SELECT statement: " << sqlite3_errmsg(m_db) << std::endl;
         sqlite3_finalize(selectStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
         return packets;
     }
 
@@ -551,11 +837,20 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
         const char* packet = reinterpret_cast<const char*>(sqlite3_column_text(selectStmt, 0));
         if (!packet) continue;
 
-        
         QueryType type = static_cast<QueryType>(sqlite3_column_int(selectStmt, 1));
-
         packets.emplace_back(packet, type);
+    }
 
+    if (rc != SQLITE_DONE) {
+        std::cerr << "SELECT execution failed: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(selectStmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return packets;
+    }
+
+    sqlite3_finalize(selectStmt);
+
+    for (const auto& [packet, type] : packets) {
         rc = sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr);
         if (rc != SQLITE_OK) {
             std::cerr << "Failed to prepare DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
@@ -563,15 +858,10 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
         }
 
         rc = sqlite3_bind_text(deleteStmt, 1, loginHash.c_str(), -1, SQLITE_STATIC);
-        if (rc != SQLITE_OK) {
-            std::cerr << "Failed to bind login in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
-            sqlite3_finalize(deleteStmt);
-            continue;
-        }
+        rc |= sqlite3_bind_text(deleteStmt, 2, packet.c_str(), -1, SQLITE_STATIC);
 
-        rc = sqlite3_bind_text(deleteStmt, 2, packet, -1, SQLITE_STATIC);
         if (rc != SQLITE_OK) {
-            std::cerr << "Failed to bind packet in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
+            std::cerr << "Failed to bind parameters in DELETE statement: " << sqlite3_errmsg(m_db) << std::endl;
             sqlite3_finalize(deleteStmt);
             continue;
         }
@@ -584,14 +874,120 @@ std::vector<std::pair<std::string, QueryType>> Database::getCollected(const std:
         sqlite3_finalize(deleteStmt);
     }
 
-    if (rc != SQLITE_DONE) {
-        std::cerr << "Execution failed: " << sqlite3_errmsg(m_db) << std::endl;
+    rc = sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
     }
-
-    sqlite3_finalize(selectStmt);
 
     return packets;
 }
+
+std::vector<PacketData> Database::getPacketsBySender(const std::string& loginHashFrom) {
+    std::vector<PacketData> packets;
+    const char* sql = "SELECT LOGIN_HASH_TO, LOGIN_HASH_FROM, PACKET, PACKET_TYPE "
+        "FROM COLLECTED_PACKETS "
+        "WHERE LOGIN_HASH_FROM = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return packets;
+    }
+
+    sqlite3_bind_text(stmt, 1, loginHashFrom.c_str(), -1, SQLITE_STATIC);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        PacketData data;
+        data.loginHashTo = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        data.loginHashFrom = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        data.packet = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        data.type = static_cast<QueryType>(sqlite3_column_int(stmt, 3));
+
+        packets.push_back(data);
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "Error during retrieval: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return packets;
+}
+
+bool Database::replaceAllPackets(const std::string& loginHashFrom, const std::vector<PacketData>& newPackets) {
+    const char* beginTransaction = "BEGIN TRANSACTION;";
+    int rc = sqlite3_exec(m_db, beginTransaction, nullptr, nullptr, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    const char* deleteSql = "DELETE FROM COLLECTED_PACKETS WHERE LOGIN_HASH_FROM = ?;";
+    sqlite3_stmt* deleteStmt = nullptr;
+
+    rc = sqlite3_prepare_v2(m_db, deleteSql, -1, &deleteStmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare delete statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    sqlite3_bind_text(deleteStmt, 1, loginHashFrom.c_str(), -1, SQLITE_STATIC);
+    rc = sqlite3_step(deleteStmt);
+    sqlite3_finalize(deleteStmt);
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "Failed to delete packets: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    const char* insertSql = "INSERT INTO COLLECTED_PACKETS "
+        "(LOGIN_HASH_TO, LOGIN_HASH_FROM, PACKET, PACKET_TYPE) "
+        "VALUES (?, ?, ?, ?);";
+
+    sqlite3_stmt* insertStmt = nullptr;
+    rc = sqlite3_prepare_v2(m_db, insertSql, -1, &insertStmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare insert statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    for (const auto& packet : newPackets) {
+        sqlite3_bind_text(insertStmt, 1, packet.loginHashTo.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(insertStmt, 2, packet.loginHashFrom.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(insertStmt, 3, packet.packet.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(insertStmt, 4, static_cast<int>(packet.type));
+
+        rc = sqlite3_step(insertStmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "Failed to insert packet: " << sqlite3_errmsg(m_db) << std::endl;
+            sqlite3_finalize(insertStmt);
+            sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+
+        sqlite3_reset(insertStmt);
+    }
+
+    sqlite3_finalize(insertStmt);
+
+    const char* commitTransaction = "COMMIT;";
+    rc = sqlite3_exec(m_db, commitTransaction, nullptr, nullptr, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    return true;
+}
+
+
 
 std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateKey,
     const std::string& currentUserLoginHash,
@@ -668,7 +1064,7 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
 
 
 
-
+// here
 
 bool Database::updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin) {
     sqlite3_stmt* stmt = nullptr;
