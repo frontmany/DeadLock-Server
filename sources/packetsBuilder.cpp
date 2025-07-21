@@ -26,7 +26,17 @@ std::string PacketsBuilder::get_friendsStatusesSuccessPacket(const CryptoPP::RSA
     return oss.str();
 }
 
+std::string PacketsBuilder::get_updateOfferPacket(const CryptoPP::RSA::PublicKey& userPublicKey, const std::string& versionNumber) {
+    std::ostringstream oss;
 
+    CryptoPP::SecByteBlock key;
+    crypto::generateAESKey(key);
+    std::string encryptedKey = crypto::RSAEncryptKey(userPublicKey, key);
+    oss << encryptedKey << '\n';
+    oss << crypto::AESEncrypt(key, versionNumber);
+
+    return oss.str();
+}
 
 
 

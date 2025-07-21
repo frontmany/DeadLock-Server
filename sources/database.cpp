@@ -697,6 +697,72 @@ User* Database::getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string&
     return user;
 }
 
+std::vector<User*> Database::getUsers(CryptoPP::RSA::PrivateKey privateKey) {
+    std::vector<User*> users;
+
+    if (!m_db) {
+        std::cerr << "Database not initialized" << std::endl;
+        return users;
+    }
+
+    const std::string sql = "SELECT "
+        "LOGIN_HASH, LOGIN, NAME, PASSWORD_HASH, "
+        "ENCRYPTION_PART, LAST_SEEN, PUBLIC_KEY, "
+        "IS_HAS_PHOTO, PHOTO_PATH, PHOTO_SIZE "
+        "FROM USER";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return users;
+    }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        try {
+            std::string dbLoginHash = safeColumnText(stmt, 0);
+            std::string encryptedLogin = safeColumnText(stmt, 1);
+            std::string encryptedName = safeColumnText(stmt, 2);
+            std::string passwordHash = safeColumnText(stmt, 3);
+            std::string encryptedEncryptionPart = safeColumnText(stmt, 4);
+            std::string encryptedLastSeen = safeColumnText(stmt, 5);
+            std::string publicKeyStr = safeColumnText(stmt, 6);
+
+            bool isHasPhoto = sqlite3_column_int(stmt, 7) == 1;
+            std::string encryptedPhotoPath = safeColumnText(stmt, 8);
+            std::string encryptedPhotoSize = safeColumnText(stmt, 9);
+
+            std::string login = crypto::RSADecrypt(privateKey, encryptedLogin);
+            std::string name = crypto::RSADecrypt(privateKey, encryptedName);
+            std::string encryptionPart = crypto::RSADecrypt(privateKey, encryptedEncryptionPart);
+            std::string lastSeen = crypto::RSADecrypt(privateKey, encryptedLastSeen);
+
+            std::string photoPath = encryptedPhotoPath.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoPath);
+            std::string photoSize = encryptedPhotoSize.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoSize);
+
+            User* user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, Photo(privateKey, photoPath));
+            user->setEncryptionPart(encryptionPart);
+            user->setLastSeen(lastSeen);
+
+            if (!publicKeyStr.empty()) {
+                user->setPublicKey(crypto::deserializePublicKey(publicKeyStr));
+            }
+
+            users.push_back(user);
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error processing user data: " << e.what() << std::endl;
+        }
+    }
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "SQL error while iterating: " << sqlite3_errmsg(m_db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return users;
+}
+
 
 std::string Database::safeColumnText(sqlite3_stmt* stmt, int column) {
     const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, column));

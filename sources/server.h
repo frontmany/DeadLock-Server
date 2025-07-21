@@ -35,12 +35,14 @@ public:
     static net::file<QueryType> constructFileFromPacket(const std::string& packet);
 
 private:
+    void runUpdateChecker();
     void processIncomingMessagesQueue();
 
     void onFileSent(net::file<QueryType> sentFile) override;
     void onMessage(connectionT connection, MessageT msg) override;
     void onFile(net::file<QueryType> file) override;
     void onSendMeFile(connectionT connection, const std::string& stringPacket);
+    void onUpdateRequested(connectionT connection, const std::string& stringPacket);
 
     void onClientDisconnect(connectionT connection) override;
     bool isConnectionAllowed(connection_variant& connVariant) override;
@@ -55,6 +57,7 @@ private:
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(connectionT connection);
+    void sendUpdateOfferPacket();
 
     void onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket);
     void onPublicKey(connectionT connection, const std::string& stringPacket);
@@ -82,6 +85,7 @@ private:
     void handleRpl(connectionT connection, const std::string& stringPacket, QueryType type);
 
 
+    std::string getLatestVersionNumber();
     std::string generateEncryptionPart(const std::string& salt);
     std::string rebuildRemainingStringFromIss(std::istringstream& iss);
     void sendBlob(const Blob& blob, const std::string& loginHash);
@@ -92,10 +96,13 @@ private:
     void handleError(std::error_code ec);
 
 private:
-    std::thread m_worker_thread;
+    std::mutex m_map_mutex;
+    std::thread m_update_checker_thread;
     PacketsBuilder m_packets_builder;
     Database m_db;
 
+    const char* m_versionsListPath = "./versions/versionsList.txt";
+    const char* m_folder_name = "versions";
     std::string m_ipAddress;
     int m_port;
 

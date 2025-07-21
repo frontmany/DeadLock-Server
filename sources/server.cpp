@@ -8,6 +8,85 @@
 #include <codecvt>
 #include <locale>
 
+std::string Server::getLatestVersionNumber() {
+    std::ifstream file(m_versionsListPath);
+    if (!file.is_open()) {
+        return "";
+    }
+
+    std::string line;
+    std::string lastLine;
+    while (std::getline(file, line)) {
+        lastLine = line;
+    }
+
+    return lastLine;
+}
+
+void Server::sendUpdateOfferPacket() {
+    std::string versionNumber = getLatestVersionNumber();
+
+    auto usersVec = m_db.getUsers(m_private_key);
+    for (auto user : usersVec) {
+        auto it = m_map_online_users.find(user->getLoginHash());
+
+        std::string updatePacket = m_packets_builder.get_updateOfferPacket(user->getPublicKey(), versionNumber);
+
+        if (it == m_map_online_users.end()) {
+            m_db.collect(user->getLoginHash(), "server", updatePacket, QueryType::UPDATE_OFFER);
+        }
+        else {
+            User* userOnline = it->second;
+            net::message<QueryType> msgResponse;
+            msgResponse.header.type = QueryType::UPDATE_OFFER;
+            msgResponse << updatePacket;
+            sendResponse(userOnline->getConnection(), msgResponse);
+        }
+    }
+}
+
+void Server::runUpdateChecker() {
+    try {
+        if (std::filesystem::create_directory(m_folder_name)) {
+            std::cout << "versions folder created\n"; 
+        }
+        if (!std::filesystem::exists(m_versionsListPath)) {
+            std::ofstream file(m_versionsListPath);
+            if (!file) {
+                std::cerr << "Error when creating the versionsList.txt\n";
+                return;
+            }
+
+            file << "Deadlock 1.1.0\n";
+            file.close();
+        }
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "error: " << e.what() << '\n';
+    }
+
+    auto last_check = std::filesystem::file_time_type::clock::now();
+
+    while (true) {
+        try {
+            auto now = std::filesystem::file_time_type::clock::now();
+            auto last_write = std::filesystem::last_write_time(m_versionsListPath);
+
+            if (last_write > last_check) {
+                std::lock_guard<std::mutex> lock(m_map_mutex);
+                sendUpdateOfferPacket();
+            }
+
+            last_check = now;
+        }
+        catch (const std::filesystem::filesystem_error&) {
+            std::cout << "update checker error\n";
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
+}
+
 void Server::processIncomingMessagesQueue() {
     while (true) {
         update();
@@ -21,6 +100,8 @@ Server::Server(int port) : net::server_interface<QueryType>(port), m_db(Database
 void Server::startServer() {
     m_db.init();
     start();
+    m_update_checker_thread = std::thread([this]() {runUpdateChecker(); });
+    m_update_checker_thread.detach();
     processIncomingMessagesQueue();
 }
 
@@ -29,6 +110,8 @@ void Server::stopServer() {
 }
 
 void Server::onClientDisconnect(connectionT connection) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
         [connection](const auto& pair) { return pair.second->getConnection() == connection; });
 
@@ -72,6 +155,8 @@ void Server::handleBroadcast(connectionT connection, const std::string& stringPa
 }
 
 void Server::broadcastUserStatus(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -161,9 +246,14 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     else if (type == QueryType::PUBLIC_KEY) {
         onPublicKey(connection, stringPacket);
     }
+    else if (type == QueryType::UPDATE_REQUEST) {
+        onUpdateRequested(connection, stringPacket);
+    }
 }
 
 void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string friendLoginHash;
@@ -206,7 +296,61 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
     }
 }
 
+void Server::onUpdateRequested(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+
+    std::istringstream iss(stringPacket);
+
+    std::string encryptedKey;
+    std::getline(iss, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+
+    std::string loginHash;
+    std::getline(iss, loginHash);
+
+    std::string versionNumber;
+    std::getline(iss, versionNumber);
+    versionNumber = crypto::AESDecrypt(key, versionNumber);
+
+    std::string filePath = std::string(m_folder_name) + "/" + versionNumber + ".exe";
+    
+    uintmax_t fileSize;
+    try {
+        fileSize = std::filesystem::file_size(filePath);
+        std::cout << "File Size: " << filePath << " = " << fileSize << " bytes\n";
+    }
+    catch (std::filesystem::filesystem_error& e) {
+        std::cerr << "Error when getting the file size: " << e.what() << '\n';
+    }
+
+    auto it = m_map_online_users.find(loginHash);
+    if (it != m_map_online_users.end()) {
+        auto& [loginHashFromMap, user] = *it;
+
+        CryptoPP::SecByteBlock keyToSend;
+        crypto::generateAESKey(keyToSend);
+        std::string encryptedKeyToSend = crypto::RSAEncryptKey(user->getPublicKey(), key);
+
+        net::file<QueryType> file;
+        file.blobUID = "_";
+        file.caption = "";
+        file.filePath = filePath;
+        file.fileName = versionNumber;
+        file.filesInBlobCount = "1";
+        file.fileSize = std::to_string(fileSize);
+        file.id = "-";
+        file.receiverLoginHash = loginHash;
+        file.senderLoginHash = "server";
+        file.timestamp = "_";
+        file.encryptedKey = encryptedKeyToSend;
+
+        sendFile(user->getFilesConnection(), file);
+    }
+}
+
 void Server::onSendMeFile(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -273,6 +417,8 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
 }
 
 void Server::onFile(net::file<QueryType> file) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+
     std::string filePacket = m_packets_builder.get_fileCollectPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
     
     bool isExist = m_db.isBlobExists(file.blobUID);
@@ -289,6 +435,8 @@ void Server::onFile(net::file<QueryType> file) {
 }
 
 void Server::findUser(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -318,6 +466,8 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
 }
 
 void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -349,6 +499,8 @@ void Server::checkNewLogin(connectionT connection, const std::string& stringPack
 }
 
 void Server::onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -374,6 +526,8 @@ void Server::onAfterRegistrationInfo(connectionT connection, const std::string& 
 }
 
 void Server::onPublicKey(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -411,6 +565,8 @@ void Server::verifyPassword(connectionT connection, const std::string& stringPac
 }
 
 void Server::returnUserInfo(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -453,6 +609,8 @@ void Server::returnUserInfo(connectionT connection, const std::string& stringPac
 }
 
 void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -476,6 +634,8 @@ void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::strin
 }
 
 void Server::findFriendsStatuses(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -573,6 +733,8 @@ void Server::sendPendingMessages(connectionT connection) {
 }
 
 void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -620,6 +782,8 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
 }
 
 void Server::registerUser(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -655,6 +819,8 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
 }
 
 void Server::createChat(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -695,6 +861,8 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
 }
 
 void Server::updateUserName(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -748,6 +916,8 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
 }
 
 void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string loginHash) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [&loginHash, this](const auto& pair) {
         return pair.first == loginHash;
     });
@@ -760,6 +930,8 @@ void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::s
 }
 
 void Server::updateUserPassword(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -778,6 +950,8 @@ void Server::updateUserPassword(connectionT connection, const std::string& strin
 }
 
 void Server::updateUserPhoto(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -848,6 +1022,8 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
 }
 
 void Server::updateUserLogin(connectionT connection, const std::string& stringPacket) {
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
@@ -1026,7 +1202,11 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     while (std::getline(iss, line)) {
         remainingStr += line + '\n';
     }
-    remainingStr.pop_back();
+    
+    if (!remainingStr.empty()) {
+        remainingStr.pop_back();
+    }
+
     return remainingStr;
 }
 
@@ -1204,6 +1384,10 @@ void Server::onConnectError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::file<QueryType> sentFile) {
+    if (sentFile.senderLoginHash == "server") {
+        return;
+    }
+
     if (std::filesystem::exists(sentFile.filePath)) {
         std::error_code ec; 
         setlocale(LC_ALL, "ru");

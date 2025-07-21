@@ -16,6 +16,7 @@ public:
     std::string get_MyInfoPacket(const CryptoPP::RSA::PrivateKey privateKey, User* user);
     std::string get_chatCreateSuccessPacket(const CryptoPP::RSA::PrivateKey privateKey, User* user, const CryptoPP::RSA::PublicKey& userPublicKeyTo);
     std::string get_statusPacket(const CryptoPP::RSA::PublicKey& userPublicKey, const std::string& login, const std::string& status);
+    std::string get_updateOfferPacket(const CryptoPP::RSA::PublicKey& userPublicKey, const std::string& versionNumber);
 
     std::string get_fileCollectPacket(const std::string& encryptedKey, const std::string& senderLoginHash, const std::string& receiverLoginHash, const std::string& fileName, const std::string& fileId, const std::string& fileSize, const std::string& timestamp, const std::string& caption, const std::string& blobUID, const std::string& filesInBlobCount, bool isSent = false);
 

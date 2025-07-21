@@ -40,6 +40,7 @@ public:
 	bool replaceAllBlobs(const std::string& loginHashFrom, const std::vector<Blob>& newBlobs);
 
 	User* getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash);
+	std::vector<User*> getUsers(CryptoPP::RSA::PrivateKey privateKey);
 	bool addUser(const std::string& loginHash, const std::string& passwordHash, const std::string& encryptionPartEnc, const std::string& lastSeenEnc);
     bool updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin);
     void updateUserName(const std::string& loginHash, const std::string& nameEnc);
