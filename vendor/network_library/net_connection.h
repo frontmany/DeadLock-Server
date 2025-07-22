@@ -58,6 +58,14 @@ namespace net {
 			});
 		}
 
+		void setOwnerLoginHash(const std::string& ownerLoginHash) {
+			m_owner_login_hash = ownerLoginHash;
+		}
+
+		const std::string& getOwnerLoginHash() {
+			return m_owner_login_hash;
+		}
+
 	private:
 		void writeHeader() {
 			asio::async_write(
@@ -152,6 +160,7 @@ namespace net {
 	private:
 		asio::ip::tcp::socket		  m_socket;
 		asio::io_context&			  m_asio_context;
+		std::string					  m_owner_login_hash;
 
 		safe_deque<message<T>>		  m_safe_deque_outgoing_messages;
 		safe_deque<owned_message<T>>& m_safe_deque_incoming_messages;

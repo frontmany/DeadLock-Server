@@ -96,7 +96,7 @@ private:
     void handleError(std::error_code ec);
 
 private:
-    std::mutex m_map_mutex;
+    std::recursive_mutex m_map_mutex;
     std::thread m_update_checker_thread;
     PacketsBuilder m_packets_builder;
     Database m_db;

@@ -1130,8 +1130,6 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
 
 
 
-// here
-
 bool Database::updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin) {
     sqlite3_stmt* stmt = nullptr;
     char* errMsg = nullptr;

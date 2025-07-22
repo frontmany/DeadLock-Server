@@ -73,7 +73,7 @@ void Server::runUpdateChecker() {
             auto last_write = std::filesystem::last_write_time(m_versionsListPath);
 
             if (last_write > last_check) {
-                std::lock_guard<std::mutex> lock(m_map_mutex);
+                std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
                 sendUpdateOfferPacket();
             }
 
@@ -110,18 +110,20 @@ void Server::stopServer() {
 }
 
 void Server::onClientDisconnect(connectionT connection) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
-    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(),
-        [connection](const auto& pair) { return pair.second->getConnection() == connection; });
+    std::string loginHash = connection->getOwnerLoginHash();
+    m_db.updateUserLastSeen(loginHash, crypto::RSAEncrypt(m_public_key, m_db.getCurrentDateTime()));
 
+    auto it = m_map_online_users.find(loginHash);
     if (it != m_map_online_users.end()) {
         User* user = it->second;
-        m_db.updateUserLastSeen(user->getLoginHash(), crypto::RSAEncrypt(m_public_key, m_db.getCurrentDateTime()));
-        m_map_online_users.erase(user->getLoginHash());
+        m_map_online_users.erase(it);
         delete user;
     }
-    std::cout << "client disconnected\n";
+    else {
+        std::cout << "client not found on disconnect\n";
+    }
 }
 
 bool Server::isConnectionAllowed(connection_variant& connection) {
@@ -155,7 +157,7 @@ void Server::handleBroadcast(connectionT connection, const std::string& stringPa
 }
 
 void Server::broadcastUserStatus(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -252,7 +254,7 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
 }
 
 void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -297,7 +299,7 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
 }
 
 void Server::onUpdateRequested(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
     std::istringstream iss(stringPacket);
 
@@ -349,7 +351,7 @@ void Server::onUpdateRequested(connectionT connection, const std::string& string
 }
 
 void Server::onSendMeFile(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -417,7 +419,7 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
 }
 
 void Server::onFile(net::file<QueryType> file) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
     std::string filePacket = m_packets_builder.get_fileCollectPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
     
@@ -435,7 +437,7 @@ void Server::onFile(net::file<QueryType> file) {
 }
 
 void Server::findUser(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -466,7 +468,7 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
 }
 
 void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -499,7 +501,7 @@ void Server::checkNewLogin(connectionT connection, const std::string& stringPack
 }
 
 void Server::onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -526,7 +528,7 @@ void Server::onAfterRegistrationInfo(connectionT connection, const std::string& 
 }
 
 void Server::onPublicKey(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -565,7 +567,7 @@ void Server::verifyPassword(connectionT connection, const std::string& stringPac
 }
 
 void Server::returnUserInfo(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -609,7 +611,7 @@ void Server::returnUserInfo(connectionT connection, const std::string& stringPac
 }
 
 void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -634,7 +636,7 @@ void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::strin
 }
 
 void Server::findFriendsStatuses(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -733,7 +735,7 @@ void Server::sendPendingMessages(connectionT connection) {
 }
 
 void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -765,6 +767,7 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
             user->setConnection(connection);
             user->setLastSeenToOnline();
             m_map_online_users[loginHash] = user;
+            connection->setOwnerLoginHash(loginHash);
 
             net::message<QueryType> msgResponse;
             msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_public_key);
@@ -782,7 +785,7 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
 }
 
 void Server::registerUser(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -819,7 +822,7 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
 }
 
 void Server::createChat(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -861,7 +864,7 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
 }
 
 void Server::updateUserName(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -916,7 +919,7 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
 }
 
 void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string loginHash) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [&loginHash, this](const auto& pair) {
         return pair.first == loginHash;
@@ -930,7 +933,7 @@ void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::s
 }
 
 void Server::updateUserPassword(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -950,7 +953,7 @@ void Server::updateUserPassword(connectionT connection, const std::string& strin
 }
 
 void Server::updateUserPhoto(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
@@ -1022,7 +1025,7 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
 }
 
 void Server::updateUserLogin(connectionT connection, const std::string& stringPacket) {
-    std::lock_guard<std::mutex> lock(m_map_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
