@@ -56,7 +56,7 @@ private:
     void bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) override;
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
-    void sendPendingMessages(connectionT connection);
+    void sendPendingMessages(const std::string& loginHash);
     void sendUpdateOfferPacket();
 
     void onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket);

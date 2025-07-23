@@ -686,15 +686,12 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
     sendResponse(connection, msgResponse);
 }
 
-void Server::sendPendingMessages(connectionT connection) {
-    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [connection](const auto& pair) {
-        return pair.second->getConnection() == connection;
-    });
-
+void Server::sendPendingMessages(const std::string& loginHash) {
+    auto it = m_map_online_users.find(loginHash);
     if (it != m_map_online_users.end()) {
         User* user = it->second;
 
-        auto packets = m_db.getCollected(user->getLoginHash());
+        auto packets = m_db.getCollected(loginHash);
         std::vector<std::pair<std::string, QueryType>> updateLoginPackets;
         std::vector<std::pair<std::string, QueryType>> otherPackets;
 
@@ -721,10 +718,10 @@ void Server::sendPendingMessages(connectionT connection) {
             sendResponse(user->getConnection(), msgResponse);
         }
 
-        auto blobsVec = m_db.getBlobsByLoginHashTo(user->getLoginHash());
+        auto blobsVec = m_db.getBlobsByLoginHashTo(loginHash);
         for (auto& blob : blobsVec) {
             if (blob.filesReceived == blob.filesCountInBlob) {
-                sendBlob(blob, user->getLoginHash());
+                sendBlob(blob, loginHash);
             }
         }
 
@@ -807,12 +804,12 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
         if (!isAdded){
             std::cout << "error user was not added in db\n";
         }
+        connection->setOwnerLoginHash(loginHash);
 
         net::message<QueryType> msgResponse;
         msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_public_key);
         msgResponse.header.type = QueryType::REGISTRATION_SUCCESS;
         sendResponse(connection, msgResponse);
-
     }
     else {
         net::message<QueryType> msgResponse;
@@ -921,14 +918,11 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
 void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string loginHash) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
-    auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [&loginHash, this](const auto& pair) {
-        return pair.first == loginHash;
-    });
-
+    auto it = m_map_online_users.find(loginHash);
     if (it != m_map_online_users.end()) {
         auto& [login, user] = *it;
         user->setFilesConnection(filesConnection);
-        sendPendingMessages(user->getConnection());
+        sendPendingMessages(loginHash);
     }
 }
 
@@ -1058,7 +1052,7 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
     }
 
     m_db.updateUserLogin(m_public_key, oldLoginHash, newLogin);
-    
+    connection->setOwnerLoginHash(newLoginHash);
     
     auto packetDataVec = m_db.getPacketsBySender(oldLoginHash);
     for (auto& packetData : packetDataVec) {
@@ -1107,7 +1101,11 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
 
         blob.senderLoginHash = newLoginHash;
     }
-    m_db.replaceAllBlobs(oldLoginHash, blobsVec);
+
+    // commented because it causes an error when user changes login
+    // (file arrived to friend at the first place and if remove comment it would contain a login hash user don't know yet because it was changed)
+    // should fix that error later and synchronize files and messages sending order 
+    //m_db.replaceAllBlobs(oldLoginHash, blobsVec);
 
     auto mapIt = m_map_online_users.find(oldLoginHash);
     if (mapIt == m_map_online_users.end()) {
@@ -1116,15 +1114,15 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
     User* user = mapIt->second;
 
     for (auto& friendLoginHash : logins) {
+        User* userTo = m_db.getUser(m_private_key, friendLoginHash);
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, user->getPublicKey(), newLogin);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
             net::message<QueryType> msgResponse;
-            msgResponse.header.type = QueryType::UPDATE_LOGIN_COLLECTED;
+            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packetU;
             sendResponse(it->second->getConnection(), msgResponse);
         }
         else {
-            User* userTo = m_db.getUser(m_private_key, friendLoginHash);
             std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
             m_db.collect(friendLoginHash, newLoginHash, packetU, QueryType::UPDATE_LOGIN_COLLECTED);
         }
