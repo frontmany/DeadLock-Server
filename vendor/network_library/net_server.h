@@ -94,12 +94,13 @@ namespace net {
                 if (isConnected) {
                     bool is_connection_to_ignore = std::visit(
                         [&connectionToIgnore](auto&& conn) {
-                            using T = std::decay_t<decltype(conn)>;
-                            if constexpr (std::is_same_v<T, std::shared_ptr<connection<T>>>) {
+                            using ConnType = std::decay_t<decltype(conn)>;
+                            if constexpr (std::is_same_v<ConnType, std::shared_ptr<connection<T>>>) {
                                 return conn == connectionToIgnore;
                             }
                             return false;
                         }, connVariant);
+
 
                     if (!is_connection_to_ignore) {
                         std::visit([&msg](auto&& conn) {
@@ -129,7 +130,7 @@ namespace net {
             while (true) {
                 if (!m_safe_deque_of_incoming_files.empty()) {
                     net::owned_file<T> file = m_safe_deque_of_incoming_files.pop_front();
-                    onFile(std::move(file.file));
+                    onFile(std::move(file.m_file));
                 }
 
                 if (!m_safe_deque_incoming_messages.empty() && processedMessages < maxMessagesCount) {

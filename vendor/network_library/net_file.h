@@ -29,6 +29,6 @@ namespace net
     template <typename T>
     struct owned_file {
         std::shared_ptr<files_connection<T>> remote = nullptr;
-        file<T> file;
+        file<T> m_file;
     };
 }

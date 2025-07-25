@@ -103,7 +103,6 @@ private:
 
     const char* m_versionsListPath = "./versions/versionsList.txt";
     const char* m_folder_name = "versions";
-    std::string m_ipAddress;
     int m_port;
 
     std::unordered_map<std::string, User*> m_map_online_users;
