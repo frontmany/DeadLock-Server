@@ -1175,7 +1175,7 @@ void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
             auto file = constructFileFromPacket(filePacket);
 
             if (std::filesystem::exists(file.filePath)) {
-                if (std::stoi(file.fileSize) > 100000000) { // 100mb
+                if (std::stoi(file.fileSize) > 5'000'000) { // 5mb
                     net::message<QueryType> msgResponse;
                     msgResponse.header.type = QueryType::FILE_PREVIEW;
                     msgResponse << filePacket;
