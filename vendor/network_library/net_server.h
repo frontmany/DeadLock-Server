@@ -170,6 +170,7 @@ namespace net {
                 m_set_connections.erase(it);
             }
         }
+        
 
     private:
         void createConnection(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login) {
