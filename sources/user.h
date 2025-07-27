@@ -43,7 +43,10 @@ public:
         m_is_has_photo(isHasPhoto), m_photo(photo), m_connection(connection) {}
 
 
-    ~User() = default;
+    ~User() {
+        m_connection.reset();
+        m_files_connection.reset();
+    }
 
 
     connectionT getConnection() const { return m_connection; }
