@@ -122,7 +122,16 @@ void Server::onClientDisconnect(connectionT connection) {
         delete user;
     }
     else {
-        std::cout << "client not found on disconnect\n";
+        auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [connection](auto pair) {
+            return pair.second->getConnection() == connection;
+        });
+
+        if (it != m_map_online_users.end()) {
+            m_map_online_users.erase(it);
+            return;
+        }
+
+        std::cout << "client not found on disconnect__________(error disconnect)\n";
     }
 }
 
