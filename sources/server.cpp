@@ -1416,11 +1416,11 @@ void Server::onFileSent(net::file<QueryType> sentFile) {
         std::error_code ec; 
         setlocale(LC_ALL, "ru");
         if (!std::filesystem::remove(sentFile.filePath, ec)) {
-            std::cerr << "Ошибка удаления: " << ec.message() << std::endl;
+            std::cerr << "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: " << ec.message() << std::endl;
         }
     }
     else {
-        std::cerr << "Файл не существует!" << std::endl;
+        std::cerr << "пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!" << std::endl;
     }
 
     if (m_db.isBlobExists(sentFile.blobUID)) {
