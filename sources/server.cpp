@@ -112,28 +112,36 @@ void Server::stopServer() {
 void Server::onClientDisconnect(connectionT connection) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
-    std::string loginHash = connection->getOwnerLoginHash();
-    m_db.updateUserLastSeen(loginHash, crypto::RSAEncrypt(m_public_key, m_db.getCurrentDateTime()));
-
-    auto it = m_map_online_users.find(loginHash);
-    if (it != m_map_online_users.end()) {
-        User* user = it->second;
-        m_map_online_users.erase(it);
-        delete user;
-    }
-    else {
-        auto it = std::find_if(m_map_online_users.begin(), m_map_online_users.end(), [connection](auto pair) {
-            return pair.second->getConnection() == connection;
-        });
-
-        if (it != m_map_online_users.end()) {
-            m_map_online_users.erase(it);
+    try {
+        const std::string loginHash = connection->getOwnerLoginHash();
+        if (loginHash.empty()) {
+            std::cout << "Unauthorized client disconnected\n";
             return;
         }
-        else {
-            std::cout << "client not found on disconnect__________(error disconnect)\n";
-            removeConnection(connection);
+
+        if (!loginHash.empty()) {
+            const std::string currentTime = m_db.getCurrentDateTime();
+            const std::string encryptedTime = crypto::RSAEncrypt(m_public_key, currentTime);
+            m_db.updateUserLastSeen(loginHash, encryptedTime);
         }
+
+        bool userFound = false;
+
+        auto it_by_hash = m_map_online_users.find(loginHash);
+        if (it_by_hash != m_map_online_users.end()) {
+            delete it_by_hash->second;
+            m_map_online_users.erase(it_by_hash);
+            userFound = true;
+        }
+
+        if (!userFound) {
+            std::cerr << "Client not found in online users map during disconnect (loginHash: "
+                << loginHash << ")\n";
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Exception in onClientDisconnect: " << e.what() << std::endl;
+        return;
     }
 }
 
