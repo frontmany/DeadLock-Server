@@ -70,7 +70,6 @@ namespace net {
                 connection->send(msg);
             else {
                 onClientDisconnect(connection);
-                connection->disconnect();
                 removeConnection(connection);
             }
         }
@@ -79,7 +78,6 @@ namespace net {
             if (isConnected(filesConnection))
                 filesConnection->sendFile(file);
             else {
-                filesConnection->disconnect();
                 removeConnection(filesConnection);
             }
         }
