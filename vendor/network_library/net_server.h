@@ -151,7 +151,6 @@ namespace net {
             return connection && connection->isConnected();
         }
 
-    private:
         template<typename ConnectionType>
         void removeConnection(std::shared_ptr<ConnectionType> connection) {
             auto it = std::find_if(m_set_connections.begin(), m_set_connections.end(),
@@ -174,6 +173,7 @@ namespace net {
             }
         }
 
+    private:
         void createConnection(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login) {
             if (type == connection_type::files) {
                 std::shared_ptr<files_connection<T>> newFilesConnection = std::make_shared<files_connection<T>>(
@@ -223,8 +223,7 @@ namespace net {
     protected:
         using connection_variant = std::variant<
             std::shared_ptr<files_connection<T>>,
-            std::shared_ptr<connection<T>>
-        >;
+            std::shared_ptr<connection<T>>>;
 
         virtual void onMessage(std::shared_ptr<connection<T>> connection, message<T> msg) = 0;
         virtual void onFile(net::file<T> file) = 0;

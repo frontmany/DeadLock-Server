@@ -47,13 +47,14 @@ private:
     void onClientDisconnect(connectionT connection) override;
     bool isConnectionAllowed(connection_variant& connVariant) override;
 
+    void bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) override;
+
     // errors
     void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
     void onReceiveMessageError(connectionT connection, std::error_code ec) override;
     void onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) override;
     void onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) override;
     void onConnectError(std::error_code ec) override;
-    void bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) override;
 
     void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(const std::string& loginHash);

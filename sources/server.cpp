@@ -130,8 +130,10 @@ void Server::onClientDisconnect(connectionT connection) {
             m_map_online_users.erase(it);
             return;
         }
-
-        std::cout << "client not found on disconnect__________(error disconnect)\n";
+        else {
+            std::cout << "client not found on disconnect__________(error disconnect)\n";
+            removeConnection(connection);
+        }
     }
 }
 
@@ -771,6 +773,8 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
 
         else {
             user->setConnection(connection);
+            removeConnection(connection);
+
             user->setLastSeenToOnline();
             m_map_online_users[loginHash] = user;
             connection->setOwnerLoginHash(loginHash);
@@ -805,6 +809,8 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
         std::string encryptionPart = generateEncryptionPart(loginHash);
 
         User* user = new User(loginHash, passwordHash, false, Photo(), connection);
+        removeConnection(connection);
+
         user->setLastSeenToOnline();
         user->setEncryptionPart(encryptionPart);
         m_map_online_users[loginHash] = user;
