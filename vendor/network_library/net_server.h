@@ -1,7 +1,6 @@
 #pragma once
-
 #include "net_common.h"
-#include "net_safe_deque.h"
+#include "net_safeDeque.h"
 #include "net_message.h"
 #include "net_connection.h"
 #include "net_connection_type_resolver.h"
@@ -149,6 +148,7 @@ namespace net {
             return connection && connection->isConnected();
         }
 
+    private:
         template<typename ConnectionType>
         void removeConnection(std::shared_ptr<ConnectionType> connection) {
             auto it = std::find_if(m_set_connections.begin(), m_set_connections.end(),
@@ -170,9 +170,7 @@ namespace net {
                 m_set_connections.erase(it);
             }
         }
-        
 
-    private:
         void createConnection(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login) {
             if (type == connection_type::files) {
                 std::shared_ptr<files_connection<T>> newFilesConnection = std::make_shared<files_connection<T>>(
@@ -247,7 +245,7 @@ namespace net {
 
         safe_deque<owned_message<T>> m_safe_deque_incoming_messages;
         safe_deque<owned_file<T>> m_safe_deque_of_incoming_files;
-        std::deque<std::shared_ptr<connection_variant>> m_set_connections;
+        std::unordered_set<std::shared_ptr<connection<T>>> m_set_connections;
         connection_type_resolver* m_resolver = nullptr;
 
         asio::io_context m_asio_context;

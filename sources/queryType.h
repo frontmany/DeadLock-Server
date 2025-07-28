@@ -1,6 +1,6 @@
 #pragma once
 
-enum class QueryType : uint32_t {
+enum QueryType : uint32_t {
 	AUTHORIZATION,
 	REGISTRATION,
 	CREATE_CHAT,

@@ -1,16 +1,10 @@
 #pragma once
-
 #include <string>
-#include <memory>
 #include <rsa.h>
 
 namespace net
 {
-    template <typename T>
-    class files_connection;
-
-    template <typename T>
-    struct file {
+    struct FileMetadata {
         CryptoPP::RSA::PublicKey friendPublicKey;
         std::string blobUID;
         std::string senderLoginHash;
@@ -23,12 +17,5 @@ namespace net
         std::string filesInBlobCount;
         std::string fileSize;
         std::string encryptedKey;
-    };
-
-
-    template <typename T>
-    struct owned_file {
-        std::shared_ptr<files_connection<T>> remote = nullptr;
-        file<T> m_file;
     };
 }
