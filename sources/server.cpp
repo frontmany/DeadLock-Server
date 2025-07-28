@@ -127,6 +127,8 @@ void Server::onDisconnect(const std::string& ownerLoginHash) {
         if (it != m_map_online_users.end()) {
             delete it->second;
             m_map_online_users.erase(it);
+            std::cerr << "Client disconnected (loginHash: "
+                << ownerLoginHash << ")\n";
         }
         else {
             std::cerr << "Client not found in online users map during disconnect (loginHash: "
@@ -646,7 +648,7 @@ void Server::returnUserInfoAndUpdateKey(net::Connection* connection, const std::
     net::Message msgResponse;
     msgResponse.header.type = QueryType::MY_INFO;
     msgResponse << response;
-    sendMessage(connection, msgResponse);
+    sendMessage(connection, msgResponse); //here
 }
 
 void Server::findFriendsStatuses(net::Connection* connection, const std::string& stringPacket) {

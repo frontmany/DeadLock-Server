@@ -13,7 +13,7 @@ namespace net {
 		: m_asioContext(asioContext),
 		m_socket(std::move(socket)),
 		m_ownerLoginHash(""),
-		m_sender(this, m_asioContext, m_socket, onSendError),
+		m_sender(this, asioContext, m_socket, onSendError),
 		m_receiver(this, m_socket, safeDequeIncomingMessages),
 		m_onDisconnect(onDisconnect)
 	{
