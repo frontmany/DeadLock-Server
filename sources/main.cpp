@@ -1,6 +1,11 @@
 #include <iostream>
 #include "server.h"
 
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0A00
+#endif
+
+
 int main(int argc, char* argv[]) {
     try {
         Server server(8080);

@@ -4,7 +4,7 @@
 #include "net_sender.h"
 
 namespace net {
-	class Connection : public std::enable_shared_from_this<Connection> {
+	class Connection {
 	public:
 
 		Connection(asio::io_context& asioContext,
@@ -14,7 +14,7 @@ namespace net {
 			std::function<void(std::string)> onDisconnect
 		);
 
-		~Connection() {}
+		~Connection();
 
 		bool isConnected() const;
 		void disconnect();
@@ -23,6 +23,8 @@ namespace net {
 		const std::string& getOwnerLoginHash();
 
 		void send(const Message& message);
+
+		asio::ip::tcp::endpoint getEndpoint();
 
 	private:
 		std::function<void(std::string)> m_onDisconnect;

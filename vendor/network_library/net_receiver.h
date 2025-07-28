@@ -1,6 +1,7 @@
 #pragma once
 #include "net_message.h"
 #include "net_safeDeque.h"
+#include "asio.hpp"
 
 namespace net {
 	class Connection;

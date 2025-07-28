@@ -4,7 +4,7 @@
 #include "net_safeDeque.h"
 #include "net_connectionTypeResolver.h"
 #include "net_message.h"
-#include "net_file.h"
+#include "net_fileMetadata.h"
 #include "net_server.h"
 #include "net_connection.h"
 #include "net_filesConnection.h"

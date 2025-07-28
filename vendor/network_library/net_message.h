@@ -1,3 +1,21 @@
+#pragma once
+#include <string>
+
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <deque>
+#include <optional>
+#include <vector>
+#include <set>
+#include <fstream>
+#include <iostream>
+#include <system_error>
+#include <filesystem>
+#include <unordered_set>  
+#include <chrono>
+#include <cstdint>           
+
 namespace net {
 
     struct MessageHeader {
@@ -28,10 +46,11 @@ namespace net {
 
         friend Message& operator << (Message& msg, const std::string& str) {
             msg.body.insert(msg.body.end(), str.begin(), str.end()); 
-            msg.header.size = msg.size();
 
             uint32_t size = static_cast<uint32_t>(str.size());
             msg << size;
+
+            msg.header.size = msg.size();
 
             return msg;
         }
@@ -72,4 +91,4 @@ namespace net {
         Connection* connection;
         Message message;
     };
-};
+}

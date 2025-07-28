@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0A00
+#endif
+
 #include "net_common.h"
 #include "net_safeDeque.h"
 #include "net_message.h"
@@ -10,8 +15,10 @@ namespace net {
 		ConnectionTypeResolver(
 			asio::io_context& asioContext,
 			asio::ip::tcp::socket socket,
-			std::function<void(std::error_code)> errorCallback,
-			std::function<void(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login)> onConnectionResolved
+			uint64_t id,
+			std::function<void(std::error_code, uint64_t)> errorCallback,
+			std::function<void(asio::ip::tcp::socket)> onConnectionResolved,
+			std::function<void(asio::ip::tcp::socket socket, std::string login)> onFilesConnectionResolved
 		);
 
 		~ConnectionTypeResolver();
@@ -25,7 +32,8 @@ namespace net {
 		void completeFilesSocketValidation();
 		void completeMessagesSocketValidation();
 		void disconnect();
-
+		void startTimeout();
+		void cancelTimeout();
 	private:
 		asio::ip::tcp::socket	m_socket;
 		asio::io_context&		m_asioContext;
@@ -36,9 +44,12 @@ namespace net {
 		uint64_t				m_handshakeCheckForMessages;
 
 		std::string             m_login;
-		uint32_t                m_login_length;
+		uint32_t                m_loginLength;
+		uint64_t                m_id;
 
-		std::function<void(std::error_code)> m_on_connect_error;
-		std::function<void(asio::ip::tcp::socket socket, connection_type type, std::optional<std::string> login)> m_on_connection_resolved;
+		asio::steady_timer m_timeoutTimer;
+		std::function<void(std::error_code, uint64_t)> m_onConnectError;
+		std::function<void(asio::ip::tcp::socket)> m_onConnectionResolved;
+		std::function<void(asio::ip::tcp::socket, std::string)> m_onFilesConnectionResolved;
 	};
 }

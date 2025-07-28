@@ -28,15 +28,5 @@ namespace net {
 		if (m_socket.is_open()) {
 			m_socket.close();
 		}
-
-		m_onDisconnect(m_ownerLoginHash);
-	}
-
-	void FilesConnection::setOwnerLoginHash(const std::string& ownerLoginHash) {
-		m_ownerLoginHash = ownerLoginHash;
-	}
-
-	const std::string& FilesConnection::getOwnerLoginHash() {
-		return m_ownerLoginHash;
 	}
 }

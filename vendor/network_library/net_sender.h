@@ -1,6 +1,12 @@
 #pragma once
+
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0A00
+#endif
+
 #include "net_message.h"
 #include "net_safeDeque.h"
+#include "asio.hpp"
 
 
 namespace net {

@@ -14,14 +14,14 @@ namespace net
 	public:
 		FilesReceiver(FilesConnection* filesConnection,
 			asio::ip::tcp::socket& socket,
+			SafeDeque<FileMetadata>& incomingFilesQueue,
 			std::function<void(std::error_code, std::optional<FileMetadata>)> onReceiveError
 		);
 
-		void startReceiving() {
-			readMetadataHeader();
-		}
+		void startReceiving();
 
 	private:
+		std::string createFilePath(const std::string& fileId);
 		void removePartiallyDownloadedFile();
 		void readMetadataHeader();
 		void readMetadataBody();

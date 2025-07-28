@@ -8,6 +8,7 @@
 #include <codecvt>
 #include <locale>
 
+
 std::string Server::getLatestVersionNumber() {
     std::ifstream file(m_versionsListPath);
     if (!file.is_open()) {
@@ -26,7 +27,7 @@ std::string Server::getLatestVersionNumber() {
 void Server::sendUpdateOfferPacket() {
     std::string versionNumber = getLatestVersionNumber();
 
-    auto usersVec = m_db.getUsers(m_private_key);
+    auto usersVec = m_db.getUsers(m_privateKey);
     for (auto user : usersVec) {
         auto it = m_map_online_users.find(user->getLoginHash());
 
@@ -37,10 +38,10 @@ void Server::sendUpdateOfferPacket() {
         }
         else {
             User* userOnline = it->second;
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::UPDATE_OFFER;
             msgResponse << updatePacket;
-            sendResponse(userOnline->getConnection(), msgResponse);
+            sendMessage(userOnline->getConnection(), msgResponse);
         }
     }
 }
@@ -93,7 +94,7 @@ void Server::processIncomingMessagesQueue() {
     }
 }
 
-Server::Server(int port) : net::server_interface<QueryType>(port), m_db(Database()) {
+Server::Server(int port) : net::ServerInterface(port), m_db(Database()) {
     m_port = port;
 }
 
@@ -109,34 +110,27 @@ void Server::stopServer() {
     stop();
 }
 
-void Server::onClientDisconnect(connectionT connection) {
+void Server::onDisconnect(const std::string& ownerLoginHash) {
+    if (ownerLoginHash == "") {
+        std::cout << "disconnected\n";
+        return;
+    }
+
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
     try {
-        const std::string loginHash = connection->getOwnerLoginHash();
-        if (loginHash.empty()) {
-            std::cout << "Unauthorized client disconnected\n";
-            return;
+        const std::string currentTime = m_db.getCurrentDateTime();
+        const std::string encryptedTime = crypto::RSAEncrypt(m_publicKey, currentTime);
+        m_db.updateUserLastSeen(ownerLoginHash, encryptedTime);
+        
+        auto it = m_map_online_users.find(ownerLoginHash);
+        if (it != m_map_online_users.end()) {
+            delete it->second;
+            m_map_online_users.erase(it);
         }
-
-        if (!loginHash.empty()) {
-            const std::string currentTime = m_db.getCurrentDateTime();
-            const std::string encryptedTime = crypto::RSAEncrypt(m_public_key, currentTime);
-            m_db.updateUserLastSeen(loginHash, encryptedTime);
-        }
-
-        bool userFound = false;
-
-        auto it_by_hash = m_map_online_users.find(loginHash);
-        if (it_by_hash != m_map_online_users.end()) {
-            delete it_by_hash->second;
-            m_map_online_users.erase(it_by_hash);
-            userFound = true;
-        }
-
-        if (!userFound) {
+        else {
             std::cerr << "Client not found in online users map during disconnect (loginHash: "
-                << loginHash << ")\n";
+                << ownerLoginHash << ")\n";
         }
     }
     catch (const std::exception& e) {
@@ -145,11 +139,11 @@ void Server::onClientDisconnect(connectionT connection) {
     }
 }
 
-bool Server::isConnectionAllowed(connection_variant& connection) {
+bool Server::isConnectionAllowed(net::Connection* connection) {
     return true;
 }
 
-void Server::onMessage(connectionT connection, MessageT msg) {
+void Server::onMessage(net::Connection* connection, net::Message& msg) {
     std::string messageStr;
     msg >> messageStr;
     std::istringstream iss(messageStr);
@@ -159,30 +153,30 @@ void Server::onMessage(connectionT connection, MessageT msg) {
 
     std::string remainingStr = rebuildRemainingStringFromIss(iss);
     if (classificationStr == "GET") {
-        handleGet(connection, remainingStr, msg.header.type);
+        handleGet(connection, remainingStr, static_cast<QueryType>(msg.header.type));
     }
     else if (classificationStr == "RPL") {
-        handleRpl(connection, remainingStr, msg.header.type);
+        handleRpl(connection, remainingStr, static_cast<QueryType>(msg.header.type));
     }
     else if (classificationStr == "BROADCAST") {
-        handleBroadcast(connection, remainingStr, msg.header.type);
+        handleBroadcast(connection, remainingStr, static_cast<QueryType>(msg.header.type));
     }
 }
 
-void Server::handleBroadcast(connectionT connection, const std::string& stringPacket, QueryType type) {
+void Server::handleBroadcast(net::Connection* connection, const std::string& stringPacket, QueryType type) {
     if (type == QueryType::STATUS) {
         broadcastUserStatus(connection, stringPacket);
     }
 }
 
-void Server::broadcastUserStatus(connectionT connection, const std::string& stringPacket) {
+void Server::broadcastUserStatus(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string status;
     std::getline(iss, status);
@@ -205,18 +199,19 @@ void Server::broadcastUserStatus(connectionT connection, const std::string& stri
                 continue; 
             }
             else {
-                net::message<QueryType> msg;
+                net::Message msg;
                 msg.header.type = QueryType::STATUS;
                 std::string messageStr = m_packets_builder.get_statusPacket(it->second->getPublicKey(), loginHash, status);
                 msg << messageStr;
+                msg.header.size = msg.size();
 
-                sendResponse(it->second->getConnection(), msg);
+                sendMessage(it->second->getConnection(), msg);
             }
         }
     }
 }
 
-void Server::handleGet(connectionT connection, const std::string& stringPacket, QueryType type) {
+void Server::handleGet(net::Connection* connection, const std::string& stringPacket, QueryType type) {
 
     if (type == QueryType::AUTHORIZATION) {
         authorizeUser(connection, stringPacket);
@@ -272,7 +267,7 @@ void Server::handleGet(connectionT connection, const std::string& stringPacket, 
     }
 }
 
-void Server::handleRpl(connectionT connection, const std::string& stringPacket, QueryType type) {
+void Server::handleRpl(net::Connection* connection, const std::string& stringPacket, QueryType type) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -297,34 +292,34 @@ void Server::handleRpl(connectionT connection, const std::string& stringPacket, 
         User* user = it->second;
 
         if (type == QueryType::MESSAGE) {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::MESSAGE;
             msgResponse << iss.str();
-            sendResponse(user->getConnection(), msgResponse);
+            sendMessage(user->getConnection(), msgResponse);
         }
         else if (type == QueryType::MESSAGES_READ_CONFIRMATION) {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::MESSAGES_READ_CONFIRMATION;
             msgResponse << iss.str();
-            sendResponse(user->getConnection(), msgResponse);
+            sendMessage(user->getConnection(), msgResponse);
         }
         else if (type == QueryType::TYPING) {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::TYPING;
             msgResponse << iss.str();
-            sendResponse(user->getConnection(), msgResponse);
+            sendMessage(user->getConnection(), msgResponse);
         }
     }
 }
 
-void Server::onUpdateRequested(connectionT connection, const std::string& stringPacket) {
+void Server::onUpdateRequested(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string loginHash;
     std::getline(iss, loginHash);
@@ -352,7 +347,7 @@ void Server::onUpdateRequested(connectionT connection, const std::string& string
         crypto::generateAESKey(keyToSend);
         std::string encryptedKeyToSend = crypto::RSAEncryptKey(user->getPublicKey(), key);
 
-        net::file<QueryType> file;
+        net::FileMetadata file;
         file.blobUID = "_";
         file.caption = "";
         file.filePath = filePath;
@@ -369,7 +364,7 @@ void Server::onUpdateRequested(connectionT connection, const std::string& string
     }
 }
 
-void Server::onSendMeFile(connectionT connection, const std::string& stringPacket) {
+void Server::onSendMeFile(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -413,31 +408,31 @@ void Server::onSendMeFile(connectionT connection, const std::string& stringPacke
         auto& [userLoginHash, user] = *it;
         
         if (isPresent) {
-            net::file<QueryType> file;
-            file.blobUID = blobUID;
-            file.caption = caption;
-            file.filePath = filePath;
-            file.fileName = fileName;
-            file.filesInBlobCount = filesCountInBlob;
-            file.fileSize = fileSize;
-            file.id = fileId;
-            file.receiverLoginHash = loginHash;
-            file.senderLoginHash = friendLoginHash;
-            file.timestamp = fileTimestamp;
-            file.encryptedKey = encryptedKey;
+            net::FileMetadata fileMetadata;
+            fileMetadata.blobUID = blobUID;
+            fileMetadata.caption = caption;
+            fileMetadata.filePath = filePath;
+            fileMetadata.fileName = fileName;
+            fileMetadata.filesInBlobCount = filesCountInBlob;
+            fileMetadata.fileSize = fileSize;
+            fileMetadata.id = fileId;
+            fileMetadata.receiverLoginHash = loginHash;
+            fileMetadata.senderLoginHash = friendLoginHash;
+            fileMetadata.timestamp = fileTimestamp;
+            fileMetadata.encryptedKey = encryptedKey;
 
-            sendFile(user->getFilesConnection(), file);
+            sendFile(user->getFilesConnection(), fileMetadata);
         }
     }
     else {
-        net::message<QueryType> msgResponse;
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::UNEXISTING_FILE;
         msgResponse << stringPacket;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
     }
 }
 
-void Server::onFile(net::file<QueryType> file) {
+void Server::onFile(net::FileMetadata file) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
     std::string filePacket = m_packets_builder.get_fileCollectPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
@@ -455,14 +450,14 @@ void Server::onFile(net::file<QueryType> file) {
     }
 }
 
-void Server::findUser(connectionT connection, const std::string& stringPacket) {
+void Server::findUser(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string myLoginHash;
     std::getline(iss, myLoginHash);
@@ -472,28 +467,28 @@ void Server::findUser(connectionT connection, const std::string& stringPacket) {
     searchText = crypto::AESDecrypt(key, searchText);
 
     std::vector<User*> vec;
-    m_db.findUsers(m_private_key, myLoginHash, searchText, vec);
+    m_db.findUsers(m_privateKey, myLoginHash, searchText, vec);
 
-    net::message<QueryType> msgResponse;
+    net::Message msgResponse;
     msgResponse.header.type = QueryType::FIND_USER_RESULTS;
 
     auto it = m_map_online_users.find(myLoginHash);
     User* user = it->second;
 
-    std::string s = m_packets_builder.get_usersPacket(m_private_key, user->getPublicKey(),  vec);
+    std::string s = m_packets_builder.get_usersPacket(m_privateKey, user->getPublicKey(),  vec);
     msgResponse << s;
 
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
-void Server::checkNewLogin(connectionT connection, const std::string& stringPacket) {
+void Server::checkNewLogin(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string oldLoginHash;
     std::getline(iss, oldLoginHash);
@@ -505,7 +500,7 @@ void Server::checkNewLogin(connectionT connection, const std::string& stringPack
     std::string newLoginHash = crypto::calculateHash(newLogin);
     bool isAvailable = m_db.checkNewLogin(newLoginHash);
 
-    net::message<QueryType> msgResponse;
+    net::Message msgResponse;
     if (isAvailable) {
         msgResponse.header.type = QueryType::NEW_LOGIN_SUCCESS;
 
@@ -516,17 +511,17 @@ void Server::checkNewLogin(connectionT connection, const std::string& stringPack
     else
         msgResponse.header.type = QueryType::NEW_LOGIN_FAIL;
 
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
-void Server::onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket) {
+void Server::onAfterRegistrationInfo(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string login;
     std::getline(iss, login);
@@ -542,11 +537,11 @@ void Server::onAfterRegistrationInfo(connectionT connection, const std::string& 
     user->setLogin(login);
     user->setName(name);
 
-    m_db.updateUserLoginOnly(loginHash, crypto::RSAEncrypt(m_public_key, login));
-    m_db.updateUserName(loginHash, crypto::RSAEncrypt(m_public_key, name));
+    m_db.updateUserLoginOnly(loginHash, crypto::RSAEncrypt(m_publicKey, login));
+    m_db.updateUserName(loginHash, crypto::RSAEncrypt(m_publicKey, name));
 }
 
-void Server::onPublicKey(connectionT connection, const std::string& stringPacket) {
+void Server::onPublicKey(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -565,7 +560,7 @@ void Server::onPublicKey(connectionT connection, const std::string& stringPacket
     m_db.updateUserPublicKey(loginHash, crypto::serializePublicKey(publicKey));
 }
 
-void Server::verifyPassword(connectionT connection, const std::string& stringPacket) {
+void Server::verifyPassword(net::Connection* connection, const std::string& stringPacket) {
     std::istringstream iss(stringPacket);
 
     std::string loginHash;
@@ -576,16 +571,16 @@ void Server::verifyPassword(connectionT connection, const std::string& stringPac
 
     bool isPasswordsMatch = m_db.checkPassword(loginHash, passwordHash);
 
-    net::message<QueryType> msgResponse;
+    net::Message msgResponse;
     if (isPasswordsMatch) 
         msgResponse.header.type = QueryType::VERIFY_PASSWORD_SUCCESS;
     else
         msgResponse.header.type = QueryType::VERIFY_PASSWORD_FAIL;
 
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
-void Server::returnUserInfo(connectionT connection, const std::string& stringPacket) {
+void Server::returnUserInfo(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -597,39 +592,39 @@ void Server::returnUserInfo(connectionT connection, const std::string& stringPac
     std::getline(iss, loginHashToSearch);
 
     auto itUser = m_map_online_users.find(loginHash);
-    User* user = m_db.getUser(m_private_key, loginHash);
+    User* user = m_db.getUser(m_privateKey, loginHash);
 
     
     auto itSearch = m_map_online_users.find(loginHashToSearch);
 
     if (itSearch == m_map_online_users.end()) {
-        User* userSearch = m_db.getUser(m_private_key, loginHashToSearch);
+        User* userSearch = m_db.getUser(m_privateKey, loginHashToSearch);
         if (userSearch != nullptr) {
-            std::string response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
+            std::string response = m_packets_builder.get_userInfoPacket(m_privateKey, userSearch, user->getPublicKey());
             
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << response;
-            sendResponse(connection, msgResponse);
+            sendMessage(connection, msgResponse);
         }
         else {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::USER_INFO_FAIL;
-            sendResponse(connection, msgResponse);
+            sendMessage(connection, msgResponse);
         }
         delete userSearch;
     }
     else {
         User* userSearch = itSearch->second;
-        std::string response = m_packets_builder.get_userInfoPacket(m_private_key, userSearch, user->getPublicKey());
-        net::message<QueryType> msgResponse;
+        std::string response = m_packets_builder.get_userInfoPacket(m_privateKey, userSearch, user->getPublicKey());
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
         msgResponse << response;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
     }
 }
 
-void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket) {
+void Server::returnUserInfoAndUpdateKey(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -647,14 +642,14 @@ void Server::returnUserInfoAndUpdateKey(connectionT connection, const std::strin
 
     m_db.updateUserPublicKey(loginHash, crypto::serializePublicKey(newPublicKey));
 
-    std::string response = m_packets_builder.get_MyInfoPacket(m_private_key, user);
-    net::message<QueryType> msgResponse;
+    std::string response = m_packets_builder.get_MyInfoPacket(m_privateKey, user);
+    net::Message msgResponse;
     msgResponse.header.type = QueryType::MY_INFO;
     msgResponse << response;
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
-void Server::findFriendsStatuses(connectionT connection, const std::string& stringPacket) {
+void Server::findFriendsStatuses(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -674,7 +669,7 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
             break;
         }
         else {
-            User* user = m_db.getUser(m_private_key, friendLoginHash);
+            User* user = m_db.getUser(m_privateKey, friendLoginHash);
             if (user != nullptr) {
                 loginHashes.push_back(user->getLoginHash());
 
@@ -698,11 +693,11 @@ void Server::findFriendsStatuses(connectionT connection, const std::string& stri
     User* user = it->second;
 
     std::string response = m_packets_builder.get_friendsStatusesSuccessPacket(user->getPublicKey(), loginHashes, statuses);
-    net::message<QueryType> msgResponse;
+    net::Message msgResponse;
     msgResponse.header.type = QueryType::FRIENDS_STATUSES;
     msgResponse << response;
 
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
 void Server::sendPendingMessages(const std::string& loginHash) {
@@ -724,17 +719,17 @@ void Server::sendPendingMessages(const std::string& loginHash) {
         }
 
         for (auto& [packet, type] : updateLoginPackets) {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packet;
-            sendResponse(user->getConnection(), msgResponse);
+            sendMessage(user->getConnection(), msgResponse);
         }
 
         for (auto& [packet, type] : otherPackets) {
-            net::message<QueryType> msgResponse;
+            net::Message msgResponse;
             msgResponse.header.type = type;
             msgResponse << packet;
-            sendResponse(user->getConnection(), msgResponse);
+            sendMessage(user->getConnection(), msgResponse);
         }
 
         auto blobsVec = m_db.getBlobsByLoginHashTo(loginHash);
@@ -744,13 +739,13 @@ void Server::sendPendingMessages(const std::string& loginHash) {
             }
         }
 
-        net::message<QueryType> msgResponse;
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::ALL_PENDING_MESSAGES_WERE_SENT;
-        sendResponse(user->getConnection(), msgResponse);
+        sendMessage(user->getConnection(), msgResponse);
     }
 }
 
-void Server::authorizeUser(connectionT connection, const std::string& stringPacket) {
+void Server::authorizeUser(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -764,16 +759,16 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
     QueryType type = QueryType::_;
 
     if (m_map_online_users.find(loginHash) != m_map_online_users.end()) {
-        net::message<QueryType> msgResponse;
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
         type = QueryType::AUTHORIZATION_FAIL;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
         return;
     }
 
     bool isAuthorized = m_db.checkPassword(loginHash, passwordHash);
     if (isAuthorized) {
-        User* user = m_db.getUser(m_private_key, loginHash);
+        User* user = m_db.getUser(m_privateKey, loginHash);
 
         if (user == nullptr) {
             std::cout << "can't get user info";
@@ -787,22 +782,22 @@ void Server::authorizeUser(connectionT connection, const std::string& stringPack
             m_map_online_users[loginHash] = user;
             connection->setOwnerLoginHash(loginHash);
 
-            net::message<QueryType> msgResponse;
-            msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_public_key);
+            net::Message msgResponse;
+            msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_publicKey);
             msgResponse.header.type = QueryType::AUTHORIZATION_SUCCESS;
             type = QueryType::AUTHORIZATION_SUCCESS;
-            sendResponse(connection, msgResponse);
+            sendMessage(connection, msgResponse);
         }
     }
     else {
-        net::message<QueryType> msgResponse;
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
         type = QueryType::AUTHORIZATION_FAIL;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
     }
 }
 
-void Server::registerUser(connectionT connection, const std::string& stringPacket) {
+void Server::registerUser(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -813,7 +808,7 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
     std::string passwordHash;
     std::getline(iss, passwordHash);
 
-    if (m_db.getUser(m_private_key, loginHash) == nullptr) {
+    if (m_db.getUser(m_privateKey, loginHash) == nullptr) {
         std::string encryptionPart = generateEncryptionPart(loginHash);
 
         User* user = new User(loginHash, passwordHash, false, Photo(), connection);
@@ -823,25 +818,25 @@ void Server::registerUser(connectionT connection, const std::string& stringPacke
         user->setEncryptionPart(encryptionPart);
         m_map_online_users[loginHash] = user;
 
-        bool  isAdded = m_db.addUser(loginHash, passwordHash, crypto::RSAEncrypt(m_public_key, encryptionPart), crypto::RSAEncrypt(m_public_key, user->getLastSeen()));
+        bool isAdded = m_db.addUser(loginHash, passwordHash, crypto::RSAEncrypt(m_publicKey, encryptionPart), crypto::RSAEncrypt(m_publicKey, user->getLastSeen()));
         if (!isAdded){
             std::cout << "error user was not added in db\n";
         }
         connection->setOwnerLoginHash(loginHash);
 
-        net::message<QueryType> msgResponse;
-        msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_public_key);
+        net::Message msgResponse;
+        msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_publicKey);
         msgResponse.header.type = QueryType::REGISTRATION_SUCCESS;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
     }
     else {
-        net::message<QueryType> msgResponse;
+        net::Message msgResponse;
         msgResponse.header.type = QueryType::REGISTRATION_FAIL;
-        sendResponse(connection, msgResponse);
+        sendMessage(connection, msgResponse);
     }
 }
 
-void Server::createChat(connectionT connection, const std::string& stringPacket) {
+void Server::createChat(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -863,34 +858,34 @@ void Server::createChat(connectionT connection, const std::string& stringPacket)
     else {
         setlocale(LC_ALL, "ru");
 
-        User* userToCreateChat = m_db.getUser(m_private_key, loginHashToCreateChat);
+        User* userToCreateChat = m_db.getUser(m_privateKey, loginHashToCreateChat);
         if (userToCreateChat == nullptr) {
             responseType = QueryType::CHAT_CREATE_FAIL;
         }
         else {
             responseType = QueryType::CHAT_CREATE_SUCCESS;
-            response = m_packets_builder.get_chatCreateSuccessPacket(m_private_key, userToCreateChat, user->getPublicKey());
+            response = m_packets_builder.get_chatCreateSuccessPacket(m_privateKey, userToCreateChat, user->getPublicKey());
         }
 
         delete userToCreateChat;
     }
 
-    net::message<QueryType> msgResponse;
+    net::Message msgResponse;
     msgResponse.header.type = responseType;
     if (responseType == QueryType::CHAT_CREATE_SUCCESS) {
         msgResponse << response;
     }
-    sendResponse(connection, msgResponse);
+    sendMessage(connection, msgResponse);
 }
 
-void Server::updateUserName(connectionT connection, const std::string& stringPacket) {
+void Server::updateUserName(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string loginHash;
     std::getline(iss, loginHash);
@@ -917,28 +912,28 @@ void Server::updateUserName(connectionT connection, const std::string& stringPac
     User* user = it->second;
     user->setName(newName);
     
-    m_db.updateUserName(loginHash, crypto::RSAEncrypt(m_public_key, newName));
+    m_db.updateUserName(loginHash, crypto::RSAEncrypt(m_publicKey, newName));
 
     for (auto& friendLoginHash : loginHashes) {
         auto it = m_map_online_users.find(friendLoginHash);
         if (it != m_map_online_users.end()) {
             User* userTo = it->second;
 
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
-            net::message<QueryType> msgResponse;
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packetU;
-            sendResponse(userTo->getConnection(), msgResponse);
+            sendMessage(userTo->getConnection(), msgResponse);
         }
         else {
-            User* userTo = m_db.getUser(m_private_key, friendLoginHash);
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
+            User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
             m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
         }
     }
 }
 
-void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::string loginHash) {
+void Server::bindFilesConnectionToUser(net::FilesConnection* filesConnection, std::string loginHash) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     auto it = m_map_online_users.find(loginHash);
@@ -949,7 +944,7 @@ void Server::bindFilesConnectionToUser(files_connectionT filesConnection, std::s
     }
 }
 
-void Server::updateUserPassword(connectionT connection, const std::string& stringPacket) {
+void Server::updateUserPassword(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
@@ -969,14 +964,14 @@ void Server::updateUserPassword(connectionT connection, const std::string& strin
     m_db.updateUserPassword(loginHash, newPasswordHash);
 }
 
-void Server::updateUserPhoto(connectionT connection, const std::string& stringPacket) {
+void Server::updateUserPhoto(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string loginHash;
     std::getline(iss, loginHash);
@@ -1009,10 +1004,10 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
     std::string dataSecondPartStr;
     std::getline(iss, dataSecondPartStr);
     
-    auto photoOpt = Photo::deserialize(m_private_key, dataFirstPartStr + "\n" + dataSecondPartStr, loginHash);
+    auto photoOpt = Photo::deserialize(m_privateKey, dataFirstPartStr + "\n" + dataSecondPartStr, loginHash);
     if (photoOpt) {
         Photo& photo = *photoOpt;  
-        m_db.updateUserPhoto(m_public_key, loginHash, photo, size);
+        m_db.updateUserPhoto(m_publicKey, loginHash, photo, size);
         auto it = m_map_online_users.find(loginHash);
         User* user = it->second;
         user->setPhoto(photo);
@@ -1023,15 +1018,15 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
             if (it != m_map_online_users.end()) {
                 User* userTo = it->second;
 
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
-                net::message<QueryType> msgResponse;
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
+                net::Message msgResponse;
                 msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
                 msgResponse << packetU;
-                sendResponse(userTo->getConnection(), msgResponse);
+                sendMessage(userTo->getConnection(), msgResponse);
             }
             else {
-                User* userTo = m_db.getUser(m_private_key, friendLoginHash);
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey());
+                User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
+                std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
                 m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
             }
         }
@@ -1041,14 +1036,14 @@ void Server::updateUserPhoto(connectionT connection, const std::string& stringPa
     }
 }
 
-void Server::updateUserLogin(connectionT connection, const std::string& stringPacket) {
+void Server::updateUserLogin(net::Connection* connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
     std::istringstream iss(stringPacket);
 
     std::string encryptedKey;
     std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_private_key, encryptedKey);
+    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
 
     std::string oldLoginHash;
     std::getline(iss, oldLoginHash);
@@ -1074,7 +1069,7 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
         }
     }
 
-    m_db.updateUserLogin(m_public_key, oldLoginHash, newLogin);
+    m_db.updateUserLogin(m_publicKey, oldLoginHash, newLogin);
     connection->setOwnerLoginHash(newLoginHash);
     
     auto packetDataVec = m_db.getPacketsBySender(oldLoginHash);
@@ -1137,16 +1132,16 @@ void Server::updateUserLogin(connectionT connection, const std::string& stringPa
     User* user = mapIt->second;
 
     for (auto& friendLoginHash : logins) {
-        User* userTo = m_db.getUser(m_private_key, friendLoginHash);
+        User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
-            net::message<QueryType> msgResponse;
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey(), newLogin);
+            net::Message msgResponse;
             msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
             msgResponse << packetU;
-            sendResponse(it->second->getConnection(), msgResponse);
+            sendMessage(it->second->getConnection(), msgResponse);
         }
         else {
-            std::string packetU = m_packets_builder.get_userInfoPacket(m_private_key, user, userTo->getPublicKey(), newLogin);
+            std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey(), newLogin);
             m_db.collect(friendLoginHash, newLoginHash, packetU, QueryType::UPDATE_LOGIN_COLLECTED);
         }
     }
@@ -1199,10 +1194,10 @@ void Server::sendBlob(const Blob& blob, const std::string& loginHash) {
 
             if (std::filesystem::exists(file.filePath)) {
                 if (std::stoi(file.fileSize) > 5'000'000) { // 5mb
-                    net::message<QueryType> msgResponse;
+                    net::Message msgResponse;
                     msgResponse.header.type = QueryType::FILE_PREVIEW;
                     msgResponse << filePacket;
-                    sendResponse(user->getConnection(), msgResponse);
+                    sendMessage(user->getConnection(), msgResponse);
 
                     m_db.incrementFilesSentCounter(file.blobUID);
                     if (m_db.isBlobExists(file.blobUID)) {
@@ -1234,10 +1229,6 @@ std::string Server::rebuildRemainingStringFromIss(std::istringstream& iss) {
     return remainingStr;
 }
 
-void Server::sendResponse(connectionT connection, net::message<QueryType>& msg) {
-    msg.header.size = msg.size();
-    sendMessage(connection, msg);
-}
 
 std::string Server::generateEncryptionPart(const std::string& salt) {
     const std::string chars =
@@ -1270,7 +1261,7 @@ std::string Server::generateEncryptionPart(const std::string& salt) {
     return result;
 }
 
-net::file<QueryType> Server::constructFileFromPacket(const std::string& packet) {
+net::FileMetadata Server::constructFileFromPacket(const std::string& packet) {
     std::istringstream iss(packet);
 
     std::string encryptedKey;
@@ -1308,7 +1299,7 @@ net::file<QueryType> Server::constructFileFromPacket(const std::string& packet) 
     std::ifstream fileStream(filePath);
     bool isPresent = fileStream.good();
 
-    net::file<QueryType> file;
+    net::FileMetadata file;
     if (isPresent) {
         file.encryptedKey = encryptedKey;
         file.blobUID = blobUID;
@@ -1328,12 +1319,12 @@ net::file<QueryType> Server::constructFileFromPacket(const std::string& packet) 
 
 
 // errors
-void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) {
+void Server::onSendMessageError(std::error_code ec, net::Message& unsentMessage) {
     std::string messageStr;
     unsentMessage >> messageStr;
     std::istringstream iss(messageStr);
 
-    QueryType type = unsentMessage.header.type;
+    QueryType type = static_cast<QueryType>(unsentMessage.header.type);
 
     if (type == QueryType::MESSAGE) {
         std::string friendLoginHash;
@@ -1357,16 +1348,11 @@ void Server::onSendMessageError(std::error_code ec, net::message<QueryType> unse
     handleError(ec);
 }
 
-void Server::onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) {
+void Server::onSendFileError(std::error_code ec, net::FileMetadata unsentFile) {
     handleError(ec);    
 }
 
-void Server::onReceiveMessageError(connectionT connection, std::error_code ec) {
-    onClientDisconnect(connection);
-    handleError(ec);
-}
-
-void Server::onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) {
+void Server::onReceiveFileError(std::error_code ec, std::optional<net::FileMetadata> unreadFile) {
     handleError(ec);
 }
 
@@ -1403,11 +1389,7 @@ void Server::handleError(std::error_code ec) {
     }
 }
 
-void Server::onConnectError(std::error_code ec) {
-    handleError(ec);
-}
-
-void Server::onFileSent(net::file<QueryType> sentFile) {
+void Server::onFileSent(net::FileMetadata sentFile) {
     if (sentFile.senderLoginHash == "server") {
         return;
     }
@@ -1461,8 +1443,8 @@ void Server::loadKeys() {
             std::istreambuf_iterator<char>());
         privFile.close();
 
-        m_public_key = crypto::deserializePublicKey(publicKeyStr);
-        m_private_key = crypto::deserializePrivateKey(privateKeyStr);
+        m_publicKey = crypto::deserializePublicKey(publicKeyStr);
+        m_privateKey = crypto::deserializePrivateKey(privateKeyStr);
 
     }
     catch (const std::exception& e) {

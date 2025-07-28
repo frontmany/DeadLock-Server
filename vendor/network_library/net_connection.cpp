@@ -41,5 +41,10 @@ namespace net {
 	void Connection::send(const Message& message) {
 		m_sender.send(message);
 	}
+
+
+	asio::ip::tcp::endpoint Connection::getEndpoint() {
+		return m_socket.remote_endpoint();
+	}
 }
 

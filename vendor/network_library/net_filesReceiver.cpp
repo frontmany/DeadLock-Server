@@ -156,7 +156,7 @@ namespace net {
 			std::cerr << "Failed to create file\n";
 	}
 
-	std::string createFilePath(const std::string& fileId) {
+	std::string FilesReceiver::createFilePath(const std::string& fileId) {
 		namespace fs = std::filesystem;
 		std::string baseName = fileId;
 		std::string extension = ".deadlock";

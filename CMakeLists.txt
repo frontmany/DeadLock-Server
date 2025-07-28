@@ -17,6 +17,6 @@ file(GLOB_RECURSE NET_LIB "vendor/network_library/*.h" "vendor/network_library/*
 source_group("Source Files\\Net Library Files" FILES ${NET_LIB})
 
 include_directories("sources" "vendor" "vendor/base_64" "vendor/sqlite" "vendor/network_library" "vendor/cryptopp") 
-link_directories("vendor/cryptopp/x64/Output/Release")
+link_directories("vendor/cryptopp/x64/Output/Debug")
 add_executable(${PROJECT_NAME} ${SOURCES} ${NET_LIB})
 target_link_libraries(${PROJECT_NAME} "cryptlib.lib")

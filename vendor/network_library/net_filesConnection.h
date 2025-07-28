@@ -23,11 +23,7 @@ namespace net {
 		void sendFile(const FileMetadata& file);
 		void disconnect();
 
-		void setOwnerLoginHash(const std::string& ownerLoginHash);
-		const std::string& getOwnerLoginHash();
-
 	private:
-		std::string m_ownerLoginHash;
 		asio::ip::tcp::socket m_socket;
 		FilesSender m_filesSender;
 		FilesReceiver m_filesReceiver;
