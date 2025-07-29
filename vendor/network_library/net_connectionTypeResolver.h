@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef _WIN32
-#define _WIN32_WINNT 0x0A00
-#endif
-
 #include "net_common.h"
 #include "net_safeDeque.h"
 #include "net_message.h"
@@ -17,8 +13,8 @@ namespace net {
 			asio::ip::tcp::socket socket,
 			uint64_t id,
 			std::function<void(std::error_code, uint64_t)> errorCallback,
-			std::function<void(asio::ip::tcp::socket)> onConnectionResolved,
-			std::function<void(asio::ip::tcp::socket socket, std::string login)> onFilesConnectionResolved
+			std::function<void(uint64_t, asio::ip::tcp::socket)> onConnectionResolved,
+			std::function<void(uint64_t, asio::ip::tcp::socket, std::string)> onFilesConnectionResolved
 		);
 
 		~ConnectionTypeResolver();
@@ -49,7 +45,7 @@ namespace net {
 
 		asio::steady_timer m_timeoutTimer;
 		std::function<void(std::error_code, uint64_t)> m_onConnectError;
-		std::function<void(asio::ip::tcp::socket)> m_onConnectionResolved;
-		std::function<void(asio::ip::tcp::socket, std::string)> m_onFilesConnectionResolved;
+		std::function<void(uint64_t, asio::ip::tcp::socket)> m_onConnectionResolved;
+		std::function<void(uint64_t, asio::ip::tcp::socket, std::string)> m_onFilesConnectionResolved;
 	};
 }

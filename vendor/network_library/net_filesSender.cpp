@@ -51,7 +51,6 @@ namespace net {
 			[this](std::error_code ec, std::size_t length) {
 				if (ec)
 				{
-					m_relatedFilesConnection->disconnect();
 					if (ec != asio::error::connection_reset) {
 						m_onSendError(ec, m_outgoingFilesQueue.pop_front());
 					}
@@ -64,7 +63,6 @@ namespace net {
 						[this](std::error_code ec, std::size_t length)
 						{
 							if (ec) {
-								m_relatedFilesConnection->disconnect();
 								if (ec != asio::error::connection_reset) {
 									m_onSendError(ec, m_outgoingFilesQueue.pop_front());
 								}
@@ -96,7 +94,6 @@ namespace net {
 						m_fileStream.close();
 						m_totalBytesSent = 0;
 						
-						m_relatedFilesConnection->disconnect();
 						if (ec != asio::error::connection_reset) {
 							m_onSendError(ec, m_outgoingFilesQueue.pop_front());
 						}

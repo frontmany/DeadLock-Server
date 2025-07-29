@@ -6,8 +6,8 @@ namespace net {
         asio::ip::tcp::socket socket,
         uint64_t id,
         std::function<void(std::error_code, uint64_t)> errorCallback,
-        std::function<void(asio::ip::tcp::socket)> onConnectionResolved,
-        std::function<void(asio::ip::tcp::socket socket, std::string login)> onFilesConnectionResolved)
+        std::function<void(uint64_t, asio::ip::tcp::socket)> onConnectionResolved,
+        std::function<void(uint64_t, asio::ip::tcp::socket, std::string)> onFilesConnectionResolved)
         : m_asioContext(asioContext),
         m_socket(std::move(socket)),
         m_timeoutTimer(asioContext),
@@ -114,14 +114,14 @@ namespace net {
 
     void ConnectionTypeResolver::completeFilesSocketValidation() {
         cancelTimeout();
-        std::cout << "Files Client Validated. bind as login: " << m_login << "\n";
-        m_onFilesConnectionResolved(std::move(m_socket), m_login);
+        std::cout << "Files Client Validated. " << "\n";
+        m_onFilesConnectionResolved(m_id, std::move(m_socket), m_login);
     }
 
     void ConnectionTypeResolver::completeMessagesSocketValidation() {
         cancelTimeout();
         std::cout << "Messages Client Validated." << "\n";
-        m_onConnectionResolved(std::move(m_socket));
+        m_onConnectionResolved(m_id, std::move(m_socket));
     }
 
     void ConnectionTypeResolver::disconnect() {

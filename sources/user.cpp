@@ -1,5 +1,7 @@
 #include "user.h"
 #include "crypto.h"
+#include "net_connection.h"
+#include "net_filesConnection.h"
 
 // from db
 User::User(const std::string& login,
@@ -9,6 +11,7 @@ User::User(const std::string& login,
     bool isHasPhoto,
     Photo photo)
     : m_login(login),
+    m_is_files_connection_established(false),
     m_login_hash(loginHash),
     m_password_hash(passwordHash),
     m_name(name),
@@ -20,8 +23,9 @@ User::User(const std::string& login,
 User::User(const std::string& loginHash,
     const std::string& passwordHash,
     bool isHasPhoto, Photo photo,
-    net::Connection* connection)
+    ConnectionPtr connection)
     : m_login_hash(loginHash),
+    m_is_files_connection_established(false),
     m_password_hash(passwordHash),
     m_is_has_photo(isHasPhoto),
     m_photo(photo),
@@ -31,7 +35,13 @@ User::User(const std::string& loginHash,
 
 User::~User() 
 {
+    m_connection->close();
+
+    if (m_is_files_connection_established) {
+        m_files_connection->close();
+    }
 }
+
 
 void User::setLastSeenToNow() {
     auto now = std::chrono::system_clock::now();

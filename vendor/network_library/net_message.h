@@ -17,7 +17,6 @@
 #include <cstdint>           
 
 namespace net {
-
     struct MessageHeader {
         uint32_t type = 0;
         uint32_t size = 0;
@@ -86,9 +85,11 @@ namespace net {
     };
 
     class Connection;
+    typedef std::shared_ptr<Connection> ConnectionPtr;
+
 
     struct OwnedMessage {
-        Connection* connection;
+        ConnectionPtr connection;
         Message message;
     };
 }

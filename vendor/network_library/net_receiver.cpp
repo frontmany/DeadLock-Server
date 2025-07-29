@@ -2,13 +2,30 @@
 #include "net_connection.h"
 
 namespace net {
-	Receiver::Receiver(Connection* connection,
-		asio::ip::tcp::socket& socket,
-		SafeDeque<OwnedMessage>& safeDequeIncomingMessages)
+	Receiver::Receiver(asio::ip::tcp::socket* socket,
+		std::function<void(Message)> queueReceivedMessage,
+		std::function<void()> onDisconnect)
 		: m_socket(socket),
-		m_relatedConnection(connection),
-		m_safeDequeIncomingMessages(safeDequeIncomingMessages)
+		m_queueReceivedMessage(queueReceivedMessage),
+		m_onDisconnect(onDisconnect)
 	{
+	}
+
+	Receiver::Receiver(Receiver&& other) noexcept
+		: m_socket(std::exchange(other.m_socket, nullptr)),
+		m_temporaryMessage(std::move(other.m_temporaryMessage)),
+		m_queueReceivedMessage(std::move(other.m_queueReceivedMessage)),
+		m_onDisconnect(std::move(other.m_onDisconnect)) {
+	}
+
+	Receiver& Receiver::operator=(Receiver&& other) noexcept {
+		if (this != &other) {
+			m_socket = std::exchange(other.m_socket, nullptr);
+			m_temporaryMessage = std::move(other.m_temporaryMessage);
+			m_queueReceivedMessage = std::move(other.m_queueReceivedMessage);
+			m_onDisconnect = std::move(other.m_onDisconnect);
+		}
+		return *this;
 	}
 
 	void Receiver::startReceiving() {
@@ -16,12 +33,10 @@ namespace net {
 	}
 
 	void Receiver::readHeader() {
-		asio::async_read(m_socket, asio::buffer(&m_temporaryMessage.header, sizeof(MessageHeader)),
+		asio::async_read(*m_socket, asio::buffer(&m_temporaryMessage.header, sizeof(MessageHeader)),
 			[this](std::error_code ec, std::size_t length) {
 				if (ec) {
-					if (ec == asio::error::connection_reset) {
-						m_relatedConnection->disconnect();
-					}
+					m_onDisconnect();
 				}
 				else {
 					if (m_temporaryMessage.header.size > sizeof(MessageHeader)) {
@@ -29,29 +44,24 @@ namespace net {
 						readBody();
 					}
 					else {
-						addToIncomingMessagesQueue();
+						m_queueReceivedMessage(m_temporaryMessage);
+						readHeader();
 					}
 				}
 			});
 	}
 
 	void Receiver::readBody() {
-		asio::async_read(m_socket, asio::buffer(m_temporaryMessage.body.data(), m_temporaryMessage.body.size()),
+		asio::async_read(*m_socket, asio::buffer(m_temporaryMessage.body.data(), m_temporaryMessage.body.size()),
 			[this](std::error_code ec, std::size_t length) {
 				if (ec) {
-					if (ec == asio::error::connection_reset) {
-						m_relatedConnection->disconnect();
-					}
+					m_onDisconnect();
 				}
 				else {
-					addToIncomingMessagesQueue();
+					m_queueReceivedMessage(m_temporaryMessage);
+					readHeader();
 				}
 			});
-	}
-
-	void Receiver::addToIncomingMessagesQueue() {
-		m_safeDequeIncomingMessages.push_back({ m_relatedConnection, m_temporaryMessage });
-		readHeader();
 	}
 }
 

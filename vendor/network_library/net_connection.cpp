@@ -13,21 +13,36 @@ namespace net {
 		: m_asioContext(asioContext),
 		m_socket(std::move(socket)),
 		m_ownerLoginHash(""),
-		m_sender(this, asioContext, m_socket, onSendError),
-		m_receiver(this, m_socket, safeDequeIncomingMessages),
-		m_onDisconnect(onDisconnect)
+		m_sender(&asioContext,
+			&m_socket,
+			onSendError,
+			[this, onDisconnect]() {onDisconnect(m_ownerLoginHash); }),
+		m_receiver(&m_socket,
+			[this, &safeDequeIncomingMessages](Message msg) {safeDequeIncomingMessages.push_back({ shared_from_this(),std::move(msg) }); },
+			[this, onDisconnect]() {onDisconnect(m_ownerLoginHash); })
 	{
 		m_receiver.startReceiving();
 	}
 
-	Connection::~Connection() {}
-	
-	void Connection::disconnect() {
-		if (m_socket.is_open()) {
-			m_socket.close();
-		}
+	Connection::~Connection() 
+	{
+	}
 
-		m_onDisconnect(m_ownerLoginHash);
+	void Connection::close() {
+		auto self = shared_from_this();
+
+		asio::post(m_asioContext, [this, self]() {
+			if (m_socket.is_open()) {
+				std::error_code ec;
+				m_socket.close(ec);
+				if (ec) {
+					std::cerr << "Socket close error: " << ec.message() << "\n";
+				}
+				else {
+					std::cout << "Connection closed successfully\n";
+				}
+			}
+		});
 	}
 
 	void Connection::setOwnerLoginHash(const std::string& ownerLoginHash) {

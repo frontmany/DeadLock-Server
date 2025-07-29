@@ -15,8 +15,10 @@ namespace net {
         stop();
     }
 
-    void ServerInterface::removeConnection(Connection* connection) {
+    void ServerInterface::removeConnection(ConnectionPtr connection) {
+        std::lock_guard<std::mutex> lock(m_mtx);
         m_setConnections.erase(connection);
+        
     }
 
     bool ServerInterface::start() {
@@ -52,12 +54,12 @@ namespace net {
                     m_asioContext,
                     std::move(socket),
                     newId,
-                    [this](std::error_code ec, uint64_t id) { onConnectError(ec, id); },
-                    [this](asio::ip::tcp::socket socket) {
-                        createConnection(std::move(socket));
+                    [this](std::error_code ec, uint64_t resolverID) { onConnectError(ec, resolverID); },
+                    [this](uint64_t resolverID, asio::ip::tcp::socket socket) {
+                        createConnection(resolverID, std::move(socket));
                     },
-                    [this](asio::ip::tcp::socket socket, std::string login) {
-                        createFilesConnection(std::move(socket), login);
+                    [this](uint64_t resolverID, asio::ip::tcp::socket socket, std::string login) {
+                        createFilesConnection(resolverID,std::move(socket), login);
                     }
                 );
 
@@ -71,11 +73,11 @@ namespace net {
         });
     }
 
-    void ServerInterface::sendMessage(Connection* connection, const Message& msg) {
+    void ServerInterface::sendMessage(ConnectionPtr connection, const Message& msg) {
         connection->send(msg);
     }
 
-    void ServerInterface::sendFile(FilesConnection* filesConnection, FileMetadata file) {
+    void ServerInterface::sendFile(FilesConnectionPtr filesConnection, FileMetadata file) {
         filesConnection->sendFile(file);
     }
 
@@ -98,9 +100,9 @@ namespace net {
         }
     }
 
-    void ServerInterface::createConnection(asio::ip::tcp::socket socket) 
+    void ServerInterface::createConnection(uint64_t id, asio::ip::tcp::socket socket)
     {
-        Connection* newMessagesConnection = new Connection(
+        ConnectionPtr newMessagesConnection = std::make_shared<Connection>(
             m_asioContext,
             std::move(socket),
             m_safeDequeIncomingMessages,
@@ -108,7 +110,12 @@ namespace net {
             [this](std::string ownerLoginHash) { onDisconnect(ownerLoginHash); }
         );
 
+        if (m_mapResolvers.contains(id)) {
+            m_mapResolvers.erase(id);
+        }
+
         if (isConnectionAllowed(newMessagesConnection)) {
+            std::lock_guard<std::mutex> lock(m_mtx);
             m_setConnections.insert(newMessagesConnection);
         }
         else {
@@ -116,9 +123,9 @@ namespace net {
         }
     }
 
-    void ServerInterface::createFilesConnection(asio::ip::tcp::socket socket, const std::string& login)
+    void ServerInterface::createFilesConnection(uint64_t id, asio::ip::tcp::socket socket, const std::string& login)
     {
-        FilesConnection* newFilesConnection = new FilesConnection(
+        FilesConnectionPtr newFilesConnection = std::make_shared<FilesConnection>(
             m_asioContext,
             std::move(socket),
             m_safeDequeIncomingFiles,
@@ -127,6 +134,10 @@ namespace net {
             [this](FileMetadata file) { onFileSent(file); },
             [this](std::string ownerLoginHash) { onDisconnect(ownerLoginHash); }
         );
+
+        if (m_mapResolvers.contains(id)) {
+            m_mapResolvers.erase(id);
+        }
 
         bindFilesConnectionToUser(newFilesConnection, login);
     }

@@ -23,8 +23,6 @@ namespace net {
 		asio::async_read(m_socket, asio::buffer(&m_metadataMessageToReceive.header, sizeof(MessageHeader)),
 			[this](std::error_code ec, std::size_t length) {
 				if (ec) {
-					m_relatedFilesConnection->disconnect();
-
 					if (ec != asio::error::connection_reset) {
 						m_onReceiveError(ec, std::nullopt);
 					}
@@ -40,8 +38,6 @@ namespace net {
 		asio::async_read(m_socket, asio::buffer(m_metadataMessageToReceive.body.data(), m_metadataMessageToReceive.body.size()),
 			[this](std::error_code ec, std::size_t length) {
 				if (ec) {
-					m_relatedFilesConnection->disconnect();
-
 					if (ec != asio::error::connection_reset) {
 						m_onReceiveError(ec, std::nullopt);
 					}
@@ -60,8 +56,6 @@ namespace net {
 			[this](std::error_code ec, std::size_t bytesTransferred) {
 				if (ec) {
 					removePartiallyDownloadedFile();
-
-					m_relatedFilesConnection->disconnect();
 
 					if (ec != asio::error::connection_reset) {
 						m_onReceiveError(ec, m_fileMetadataToHold);

@@ -6,7 +6,7 @@
 
 
 namespace net {
-	class FilesConnection {
+	class FilesConnection : public std::enable_shared_from_this<FilesConnection> {
 	public:
 		FilesConnection(
 			asio::io_context& asioContext,
@@ -21,13 +21,12 @@ namespace net {
 		~FilesConnection();
 
 		void sendFile(const FileMetadata& file);
-		void disconnect();
+		void close();
 
 	private:
 		asio::ip::tcp::socket m_socket;
 		FilesSender m_filesSender;
 		FilesReceiver m_filesReceiver;
 		asio::io_context& m_asioContext;
-		std::function<void(std::string)> m_onDisconnect;
 	};
 }

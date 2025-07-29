@@ -18,15 +18,35 @@ namespace net {
 		m_filesReceiver.startReceiving();
 	}
 
-	FilesConnection::~FilesConnection() {}
+	FilesConnection::~FilesConnection() 
+	{
+	}
 
 	void FilesConnection::sendFile(const FileMetadata& file) {
 		m_filesSender.sendFile(file);
 	}
 
-	void FilesConnection::disconnect() {
-		if (m_socket.is_open()) {
-			m_socket.close();
-		}
-	}
+    void FilesConnection::close() {
+        auto self = shared_from_this();
+
+        asio::post(m_asioContext,
+            [this, self]() {
+                if (m_socket.is_open()) {
+                    try {
+                        std::error_code ec;
+
+                        m_socket.close(ec);
+                        if (ec) {
+                            std::cerr << "Socket close error: " << ec.message() << "\n";
+                        }
+						else {
+							std::cout << "files Connection closed successfully\n";
+						}
+                    }
+                    catch (const std::exception& e) {
+                        std::cerr << "Exception in FilesConnection::close: " << e.what() << "\n";
+                    }
+                }
+            });
+    }
 }
