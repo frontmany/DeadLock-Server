@@ -15,13 +15,13 @@
 #include "asio.hpp"
 #include "photo.h"  
 #include "packetData.h"  
+#include "queryType.h"  
 #include "blob.h"  
 #include "rsa.h"  
 #include "sqlite/sqlite3.h" 
 
 class User;
 class Photo;
-enum class QueryType : uint32_t;
 
 class Database {
 public:

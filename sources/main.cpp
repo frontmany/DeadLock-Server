@@ -1,6 +1,7 @@
 #include <iostream>
 #include "server.h"
 
+
 int main(int argc, char* argv[]) {
     try {
         Server server(8080);

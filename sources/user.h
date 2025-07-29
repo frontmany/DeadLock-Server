@@ -10,50 +10,49 @@
 #include <ctime>
 
 #include "photo.h"
+#include "queryType.h"
 
 #include "rsa.h"
 
 
 namespace net {
-    template <typename T>
-    class connection;
-
-    template <typename T>
-    class files_connection;
+    class Connection;
+    class FilesConnection;
 }
 
-enum class QueryType : uint32_t;
-
-typedef std::shared_ptr<net::connection<QueryType>> connectionT;
-typedef std::shared_ptr<net::files_connection<QueryType>> files_connectionT;
+typedef std::shared_ptr<net::Connection> ConnectionPtr;
+typedef std::shared_ptr<net::FilesConnection> FilesConnectionPtr;
 
 class User {
 public:
     User() = default;
 
     // from db
-    User(const std::string& login, const std::string& loginHash, const std::string& passwordHash, const std::string& name, bool isHasPhoto, Photo photo)
-        : m_login(login), m_login_hash(loginHash), m_password_hash(passwordHash),
-        m_name(name), m_is_has_photo(isHasPhoto), m_photo(photo) {}
+    User(const std::string& login,
+        const std::string& loginHash,
+        const std::string& passwordHash,
+        const std::string& name,
+        bool isHasPhoto,
+        Photo photo
+    );
 
 
     // on registration
-    User(const std::string& loginHash, const std::string& passwordHash, bool isHasPhoto, Photo photo, connectionT connection)
-        : m_login_hash(loginHash), m_password_hash(passwordHash),
-        m_is_has_photo(isHasPhoto), m_photo(photo), m_connection(connection) {}
+    User(const std::string& loginHash,
+        const std::string& passwordHash,
+        bool isHasPhoto,
+        Photo photo,
+        ConnectionPtr connection
+    );
 
 
-    ~User() {
-        m_connection.reset();
-        m_files_connection.reset();
-    }
+    ~User();
 
+    ConnectionPtr getConnection() const { return m_connection; }
+    void setConnection(ConnectionPtr connection) { m_connection = connection; }
 
-    connectionT getConnection() const { return m_connection; }
-    void setConnection(connectionT connection) { m_connection = connection; }
-
-    files_connectionT getFilesConnection() const { return m_files_connection; }
-    void setFilesConnection(files_connectionT filesConnection) { m_files_connection = filesConnection; }
+    FilesConnectionPtr getFilesConnection() const { return m_files_connection; }
+    void setFilesConnection(FilesConnectionPtr filesConnection) { m_files_connection = filesConnection; m_is_files_connection_established = true; }
 
     const std::string& getLogin() const { return m_login; }
     void setLogin(const std::string& login) { m_login = login; }
@@ -86,15 +85,16 @@ public:
     void setLastSeenToOnline();
 
 private:
-    bool                                    m_is_has_photo = false;
+    bool                                    m_is_has_photo;
+    bool                                    m_is_files_connection_established;
     std::string			                    m_last_seen;
     std::string			                    m_name;
     std::string			                    m_login;
     std::string			                    m_login_hash;
     std::string			                    m_password_hash;
     Photo			                        m_photo;
-    connectionT                             m_connection;
-    files_connectionT                       m_files_connection;
+    ConnectionPtr                           m_connection;
+    FilesConnectionPtr                      m_files_connection;
     CryptoPP::RSA::PublicKey                m_public_key;
     std::string			                    m_encryption_part;
 };

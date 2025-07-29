@@ -1,17 +1,14 @@
 #pragma once
-
 #include <deque>
-
-#include "net_common.h"
 
 namespace net {
 
-	template<typename T>
-	class safe_deque {
+	template <typename T>
+	class SafeDeque {
 	public:
-		safe_deque() = default;
-		safe_deque(const safe_deque<T>&) = delete;
-		virtual ~safe_deque() { clear(); }
+		SafeDeque() = default;
+		SafeDeque(const SafeDeque<T>&) = delete;
+		virtual ~SafeDeque() { clear(); }
 
 	public: 
 		const T& front() {
@@ -22,6 +19,11 @@ namespace net {
 		const T& back() {
 			std::scoped_lock lock(m_mtx);
 			return m_deque.back();
+		}
+
+		const size_t size() {
+			std::scoped_lock lock(m_mtx);
+			return m_deque.size();
 		}
 
 		void push_front(const T& item) {
@@ -67,13 +69,6 @@ namespace net {
 			auto t = std::move(m_deque.back());
 			m_deque.pop_back();
 			return t;
-		}
-
-		void wait() {
-			while (empty()) {
-				std::unique_lock<std::mutex> uniqueLock(m_mtx_blocking);
-				m_cv_blocking.wait(uniqueLock);
-			}
 		}
 
 	protected:

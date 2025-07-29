@@ -1,5 +1,47 @@
 #include "user.h"
 #include "crypto.h"
+#include "net_connection.h"
+#include "net_filesConnection.h"
+
+// from db
+User::User(const std::string& login,
+    const std::string& loginHash,
+    const std::string& passwordHash,
+    const std::string& name,
+    bool isHasPhoto,
+    Photo photo)
+    : m_login(login),
+    m_is_files_connection_established(false),
+    m_login_hash(loginHash),
+    m_password_hash(passwordHash),
+    m_name(name),
+    m_is_has_photo(isHasPhoto),
+    m_photo(photo)
+{
+}
+
+User::User(const std::string& loginHash,
+    const std::string& passwordHash,
+    bool isHasPhoto, Photo photo,
+    ConnectionPtr connection)
+    : m_login_hash(loginHash),
+    m_is_files_connection_established(false),
+    m_password_hash(passwordHash),
+    m_is_has_photo(isHasPhoto),
+    m_photo(photo),
+    m_connection(connection) 
+{
+}
+
+User::~User() 
+{
+    m_connection->close();
+
+    if (m_is_files_connection_established) {
+        m_files_connection->close();
+    }
+}
+
 
 void User::setLastSeenToNow() {
     auto now = std::chrono::system_clock::now();
@@ -9,7 +51,7 @@ void User::setLastSeenToNow() {
     std::ostringstream oss;
     oss << std::put_time(std::localtime(&now_time_t), "%H:%M:%S");
 
-    m_last_seen = "last seen " + oss.str(); // например "last seen 14:30:00"
+    m_last_seen = "last seen " + oss.str(); // "last seen 14:30:00"
 }
 
 void User::setLastSeenToOnline() {

@@ -18,72 +18,63 @@
 #include "packetsBuilder.h"
 #include "user.h"
 #include "net.h"
-
 #include "rsa.h"
 
-typedef std::shared_ptr<net::connection<QueryType>> connectionT;
-typedef std::shared_ptr<net::files_connection<QueryType>> files_connectionT;
-typedef net::message<QueryType> MessageT;
+typedef std::shared_ptr<net::Connection> ConnectionPtr;
+typedef std::shared_ptr<net::FilesConnection> FilesConnectionPtr;
 
-class Server : public net::server_interface<QueryType> {
+class Server : public net::ServerInterface {
 public:
     Server(int port);
     void startServer();
     void stopServer();
     void loadKeys();
 
-    static net::file<QueryType> constructFileFromPacket(const std::string& packet);
-
 private:
     void runUpdateChecker();
     void processIncomingMessagesQueue();
 
-    void onFileSent(net::file<QueryType> sentFile) override;
-    void onMessage(connectionT connection, MessageT msg) override;
-    void onFile(net::file<QueryType> file) override;
-    void onSendMeFile(connectionT connection, const std::string& stringPacket);
-    void onUpdateRequested(connectionT connection, const std::string& stringPacket);
+    void onMessage(ConnectionPtr connection, net::Message& msg) override;
+    void onFile(net::FileMetadata file) override;
+    void onFileSent(net::FileMetadata sentFile) override;
+    void bindFilesConnectionToUser(FilesConnectionPtr filesConnection, std::string login)override;
+    bool isConnectionAllowed(ConnectionPtr connection) override;
+    void onDisconnect(const std::string& ownerLoginHash) override;
+    void onSendMessageError(std::error_code ec, net::Message& unsentMessage) override;
+    void onSendFileError(std::error_code ec, net::FileMetadata unsentFile) override;
+    void onReceiveFileError(std::error_code ec, std::optional<net::FileMetadata> unreadFile) override;
 
-    void onClientDisconnect(connectionT connection) override;
-    bool isConnectionAllowed(connection_variant& connVariant) override;
 
-    void bindFilesConnectionToUser(files_connectionT filesConnection, std::string login) override;
-
-    // errors
-    void onSendMessageError(std::error_code ec, net::message<QueryType> unsentMessage) override;
-    void onReceiveMessageError(connectionT connection, std::error_code ec) override;
-    void onSendFileError(std::error_code ec, net::file<QueryType> unsentFile) override;
-    void onReceiveFileError(std::error_code ec, net::file<QueryType> unreadFile) override;
-    void onConnectError(std::error_code ec) override;
-
-    void sendResponse(connectionT connection, net::message<QueryType>& msg);
     void sendPendingMessages(const std::string& loginHash);
     void sendUpdateOfferPacket();
 
-    void onAfterRegistrationInfo(connectionT connection, const std::string& stringPacket);
-    void onPublicKey(connectionT connection, const std::string& stringPacket);
-    void authorizeUser(connectionT connection, const std::string& stringPacket);
-    void registerUser(connectionT connection, const std::string& stringPacket);
+    net::FileMetadata constructFileFromPacket(const std::string& packet);
+    void onUpdateRequested(ConnectionPtr connection, const std::string& stringPacket);
+    void onSendMeFile(ConnectionPtr connection, const std::string& stringPacket);
+    void onAfterRegistrationInfo(ConnectionPtr connection, const std::string& stringPacket);
+    void onPublicKey(ConnectionPtr connection, const std::string& stringPacket);
+    void authorizeUser(ConnectionPtr connection, const std::string& stringPacket);
+    void registerUser(ConnectionPtr connection, const std::string& stringPacket);
 
-    void createChat(connectionT connection, const std::string& stringPacket);
-    void verifyPassword(connectionT connection, const std::string& stringPacket);
-    void checkNewLogin(connectionT connection, const std::string& stringPacket);
-    void findUser(connectionT connection, const std::string& stringPacket);
+    void createChat(ConnectionPtr connection, const std::string& stringPacket);
+    void verifyPassword(ConnectionPtr connection, const std::string& stringPacket);
+    void checkNewLogin(ConnectionPtr connection, const std::string& stringPacket);
+    void findUser(ConnectionPtr connection, const std::string& stringPacket);
 
-    void updateUserName(connectionT connection, const std::string& stringPacket);
-    void updateUserPassword(connectionT connection, const std::string& stringPacket);
-    void updateUserPhoto(connectionT connection, const std::string& stringPacket);
-    void updateUserLogin(connectionT connection, const std::string& stringPacket);
+    void updateUserName(ConnectionPtr connection, const std::string& stringPacket);
+    void updateUserPassword(ConnectionPtr connection, const std::string& stringPacket);
+    void updateUserPhoto(ConnectionPtr connection, const std::string& stringPacket);
+    void updateUserLogin(ConnectionPtr connection, const std::string& stringPacket);
 
-    void returnUserInfo(connectionT connection, const std::string& stringPacket);
-    void returnUserInfoAndUpdateKey(connectionT connection, const std::string& stringPacket);
-    void findFriendsStatuses(connectionT connection, const std::string& stringPacket);
+    void returnUserInfo(ConnectionPtr connection, const std::string& stringPacket);
+    void returnUserInfoAndUpdateKey(ConnectionPtr connection, const std::string& stringPacket);
+    void findFriendsStatuses(ConnectionPtr connection, const std::string& stringPacket);
 
-    void broadcastUserStatus(connectionT connection, const std::string& stringPacket);
+    void broadcastUserStatus(ConnectionPtr connection, const std::string& stringPacket);
 
-    void handleBroadcast(connectionT connection, const std::string& stringPacket, QueryType type);
-    void handleGet(connectionT connection, const std::string& stringPacket, QueryType type);
-    void handleRpl(connectionT connection, const std::string& stringPacket, QueryType type);
+    void handleBroadcast(ConnectionPtr connection, const std::string& stringPacket, QueryType type);
+    void handleGet(ConnectionPtr connection, const std::string& stringPacket, QueryType type);
+    void handleRpl(ConnectionPtr connection, const std::string& stringPacket, QueryType type);
 
 
     std::string getLatestVersionNumber();
