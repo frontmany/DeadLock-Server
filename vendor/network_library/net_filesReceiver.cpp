@@ -143,7 +143,7 @@ namespace net {
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		std::wstring filePath = converter.from_bytes(m_fileMetadataToHold.filePath);
 #else
-		std::string filePath = m_file.filePath;
+		std::string filePath = m_fileMetadataToHold.filePath;
 #endif
 		m_fileStream.open(filePath, std::ios::binary);
 		if (!m_fileStream)

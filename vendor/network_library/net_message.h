@@ -14,7 +14,8 @@
 #include <filesystem>
 #include <unordered_set>  
 #include <chrono>
-#include <cstdint>           
+#include <cstdint>    
+#include <cstring>
 
 namespace net {
     struct MessageHeader {
@@ -37,7 +38,7 @@ namespace net {
 
             size_t i = msg.body.size();
             msg.body.resize(msg.body.size() + sizeof(DataType));
-            std::memcpy(msg.body.data() + i, &data, sizeof(DataType));
+            memcpy(msg.body.data() + i, &data, sizeof(DataType));
             msg.header.size = msg.size();
 
             return msg;
@@ -62,7 +63,7 @@ namespace net {
                 throw std::runtime_error("Message body too small for data type");
 
             size_t i = msg.body.size() - sizeof(DataType);
-            std::memcpy(&data, msg.body.data() + i, sizeof(DataType));
+            memcpy(&data, msg.body.data() + i, sizeof(DataType));
             msg.body.resize(i);
             msg.header.size = msg.size();
 
