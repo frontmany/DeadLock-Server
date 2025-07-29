@@ -467,19 +467,35 @@ void Server::findUser(ConnectionPtr connection, const std::string& stringPacket)
     std::getline(iss, searchText);
     searchText = crypto::AESDecrypt(key, searchText);
 
-    std::vector<User*> vec;
-    m_db.findUsers(m_privateKey, myLoginHash, searchText, vec);
+    try {
+        std::vector<User*> vec;
+        m_db.findUsers(m_privateKey, myLoginHash, searchText, vec);
 
-    net::Message msgResponse;
-    msgResponse.header.type = QueryType::FIND_USER_RESULTS;
+        net::Message msgResponse;
+        msgResponse.header.type = QueryType::FIND_USER_RESULTS;
 
-    auto it = m_map_online_users.find(myLoginHash);
-    User* user = it->second;
+        auto it = m_map_online_users.find(myLoginHash);
+        User* user = it->second;
 
-    std::string s = m_packets_builder.get_usersPacket(m_privateKey, user->getPublicKey(),  vec);
-    msgResponse << s;
+        std::string s = m_packets_builder.get_usersPacket(m_privateKey, user->getPublicKey(), vec);
+        msgResponse << s;
 
-    sendMessage(connection, msgResponse);
+        sendMessage(connection, msgResponse);
+    }
+    catch (...){
+        std::vector<User*> vec;
+
+        net::Message msgResponse;
+        msgResponse.header.type = QueryType::FIND_USER_RESULTS;
+
+        auto it = m_map_online_users.find(myLoginHash);
+        User* user = it->second;
+
+        std::string s = m_packets_builder.get_usersPacket(m_privateKey, user->getPublicKey(), vec);
+        msgResponse << s;
+
+        sendMessage(connection, msgResponse);
+    }
 }
 
 void Server::checkNewLogin(ConnectionPtr connection, const std::string& stringPacket) {
@@ -859,16 +875,22 @@ void Server::createChat(ConnectionPtr connection, const std::string& stringPacke
     else {
         setlocale(LC_ALL, "ru");
 
-        User* userToCreateChat = m_db.getUser(m_privateKey, loginHashToCreateChat);
-        if (userToCreateChat == nullptr) {
+        try {
+            User* userToCreateChat = m_db.getUser(m_privateKey, loginHashToCreateChat);
+            if (userToCreateChat == nullptr) {
+                responseType = QueryType::CHAT_CREATE_FAIL;
+            }
+            else {
+                responseType = QueryType::CHAT_CREATE_SUCCESS;
+                response = m_packets_builder.get_chatCreateSuccessPacket(m_privateKey, userToCreateChat, user->getPublicKey());
+            }
+
+            delete userToCreateChat;
+        }
+        catch (...) {
             responseType = QueryType::CHAT_CREATE_FAIL;
         }
-        else {
-            responseType = QueryType::CHAT_CREATE_SUCCESS;
-            response = m_packets_builder.get_chatCreateSuccessPacket(m_privateKey, userToCreateChat, user->getPublicKey());
-        }
-
-        delete userToCreateChat;
+        
     }
 
     net::Message msgResponse;
