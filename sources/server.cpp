@@ -266,6 +266,9 @@ void Server::handleGet(ConnectionPtr connection, const std::string& stringPacket
     else if (type == QueryType::UPDATE_REQUEST) {
         onUpdateRequested(connection, stringPacket);
     }
+    else if (type == QueryType::RECONNECT) {
+        onReconnect(connection, stringPacket);
+    }
 }
 
 void Server::handleRpl(ConnectionPtr connection, const std::string& stringPacket, QueryType type) {
@@ -762,6 +765,52 @@ void Server::sendPendingMessages(const std::string& loginHash) {
     }
 }
 
+void Server::onReconnect(ConnectionPtr connection, const std::string& stringPacket) {
+    std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
+
+    std::istringstream iss(stringPacket);
+
+    std::string loginHash;
+    std::getline(iss, loginHash);
+
+    std::string passwordHash;
+    std::getline(iss, passwordHash);
+
+    if (m_map_online_users.find(loginHash) != m_map_online_users.end()) {
+        net::Message msgResponse;
+        msgResponse.header.type = QueryType::RECONNECT_FAIL;
+        sendMessage(connection, msgResponse);
+        return;
+    }
+
+    bool isAuthorized = m_db.checkPassword(loginHash, passwordHash);
+    if (isAuthorized) {
+        User* user = m_db.getUser(m_privateKey, loginHash);
+
+        if (user == nullptr) {
+            std::cout << "can't get user info";
+        }
+
+        else {
+            user->setConnection(connection);
+            removeConnection(connection);
+
+            user->setLastSeenToOnline();
+            m_map_online_users[loginHash] = user;
+            connection->setOwnerLoginHash(loginHash);
+
+            net::Message msgResponse;
+            msgResponse.header.type = QueryType::RECONNECT_SUCCESS;
+            sendMessage(connection, msgResponse);
+        }
+    }
+    else {
+        net::Message msgResponse;
+        msgResponse.header.type = QueryType::RECONNECT_FAIL;
+        sendMessage(connection, msgResponse);
+    }
+}
+
 void Server::authorizeUser(ConnectionPtr connection, const std::string& stringPacket) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
@@ -773,12 +822,9 @@ void Server::authorizeUser(ConnectionPtr connection, const std::string& stringPa
     std::string passwordHash;
     std::getline(iss, passwordHash);
 
-    QueryType type = QueryType::_;
-
     if (m_map_online_users.find(loginHash) != m_map_online_users.end()) {
         net::Message msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
-        type = QueryType::AUTHORIZATION_FAIL;
         sendMessage(connection, msgResponse);
         return;
     }
@@ -802,14 +848,12 @@ void Server::authorizeUser(ConnectionPtr connection, const std::string& stringPa
             net::Message msgResponse;
             msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_publicKey);
             msgResponse.header.type = QueryType::AUTHORIZATION_SUCCESS;
-            type = QueryType::AUTHORIZATION_SUCCESS;
             sendMessage(connection, msgResponse);
         }
     }
     else {
         net::Message msgResponse;
         msgResponse.header.type = QueryType::AUTHORIZATION_FAIL;
-        type = QueryType::AUTHORIZATION_FAIL;
         sendMessage(connection, msgResponse);
     }
 }
@@ -1093,7 +1137,6 @@ void Server::updateUserLogin(ConnectionPtr connection, const std::string& string
     }
 
     m_db.updateUserLogin(m_publicKey, oldLoginHash, newLogin);
-    connection->setOwnerLoginHash(newLoginHash);
     
     auto packetDataVec = m_db.getPacketsBySender(oldLoginHash);
     for (auto& packetData : packetDataVec) {
@@ -1153,6 +1196,7 @@ void Server::updateUserLogin(ConnectionPtr connection, const std::string& string
         return;
     }
     User* user = mapIt->second;
+    user->getConnection()->setOwnerLoginHash(newLoginHash);
 
     for (auto& friendLoginHash : logins) {
         User* userTo = m_db.getUser(m_privateKey, friendLoginHash);

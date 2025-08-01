@@ -34,7 +34,7 @@ namespace net {
     ConnectionTypeResolver::~ConnectionTypeResolver() {}
 
     void ConnectionTypeResolver::startTimeout() {
-        m_timeoutTimer.expires_after(std::chrono::seconds(30));
+        m_timeoutTimer.expires_after(std::chrono::seconds(15));
 
         m_timeoutTimer.async_wait([this](const std::error_code& ec) {
             if (!ec) {
@@ -58,7 +58,6 @@ namespace net {
         asio::async_write(m_socket, asio::buffer(&m_handshakeOut, sizeof(uint64_t)),
             [this](std::error_code ec, std::size_t length) {
                 if (ec) {
-                    cancelTimeout();
                     disconnect();
                     m_onConnectError(ec, m_id);
                 }
@@ -68,10 +67,8 @@ namespace net {
     void ConnectionTypeResolver::readValidation() {
         asio::async_read(m_socket, asio::buffer(&m_handshakeIn, sizeof(uint64_t)),
             [this](std::error_code ec, std::size_t length) {
-                if (ec) {
-                    cancelTimeout();
-                    disconnect();
-                    m_onConnectError(ec, m_id);
+                if (ec) 
+                {
                 }
                 else {
                     if (m_handshakeIn == m_handshakeCheckForFiles) {
@@ -80,9 +77,8 @@ namespace net {
                     else if (m_handshakeIn == m_handshakeCheckForMessages) {
                         completeMessagesSocketValidation();
                     }
-                    else {
-                        cancelTimeout();
-                        disconnect();
+                    else 
+                    {
                     }
                 }
             });
@@ -91,18 +87,15 @@ namespace net {
     void ConnectionTypeResolver::readLoginForBind() {
         asio::async_read(m_socket, asio::buffer(&m_loginLength, sizeof(uint32_t)),
             [this](std::error_code ec, std::size_t length) {
-                if (ec) {
-                    disconnect();
-                    m_onConnectError(ec, m_id);
+                if (ec) 
+                {
                 }
                 else {
                     m_login.resize(m_loginLength);
                     asio::async_read(m_socket, asio::buffer(&m_login[0], m_loginLength),
                         [this](std::error_code ec, std::size_t length) {
-                            if (ec) {
-                                cancelTimeout();
-                                disconnect();
-                                m_onConnectError(ec, m_id);
+                            if (ec) 
+                            {
                             }
                             else {
                                 completeFilesSocketValidation();

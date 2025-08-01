@@ -145,6 +145,7 @@ namespace net {
     void ServerInterface::onConnectError(std::error_code ec, uint64_t id) {
         if (m_mapResolvers.contains(id)) {
             m_mapResolvers.erase(id);
+            std::cout << "[-----] Connection wasn't established " << "\n";
         }
         else {
             std::cout << "[-----] Resolver not found in map by id: " << id << "\n";

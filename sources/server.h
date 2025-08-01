@@ -53,6 +53,7 @@ private:
     void onSendMeFile(ConnectionPtr connection, const std::string& stringPacket);
     void onAfterRegistrationInfo(ConnectionPtr connection, const std::string& stringPacket);
     void onPublicKey(ConnectionPtr connection, const std::string& stringPacket);
+    void onReconnect(ConnectionPtr connection, const std::string& stringPacket);
     void authorizeUser(ConnectionPtr connection, const std::string& stringPacket);
     void registerUser(ConnectionPtr connection, const std::string& stringPacket);
 

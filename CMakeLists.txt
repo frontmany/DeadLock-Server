@@ -37,6 +37,7 @@ file(GLOB_RECURSE NET_LIB
     "vendor/network_library/*.h" 
     "vendor/network_library/*.cpp"
 )
+source_group("Source Files\\Net Library Files" FILES ${NET_LIB})
 
 add_subdirectory("Deadlock_server_updater")
 add_subdirectory("Deadlock_server_database_viewer")
