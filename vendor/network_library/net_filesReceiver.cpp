@@ -43,7 +43,12 @@ namespace net {
 					}
 				}
 				else {
-					parseMetadata();
+					if (m_metadataMessageToReceive.header.type == QueryType::UPDATE_MY_AVATAR) {
+						parseAvatarMetadata();
+					}
+					else {
+						parseMetadata();
+					}
 					openFile();
 					readChunk();
 				}
@@ -84,6 +89,33 @@ namespace net {
 		m_fileMetadataToHold = FileMetadata{};
 
 		readMetadataHeader();
+	}
+
+	void FilesReceiver::parseAvatarMetadata() {
+		std::string metadataString;
+		m_metadataMessageToReceive >> metadataString;
+		std::istringstream iss(metadataString);
+
+		std::string senderLoginHash;
+		std::getline(iss, senderLoginHash);
+
+		std::string fileSize;
+		std::getline(iss, fileSize);
+
+		std::string line;
+		while (std::getline(iss, line)) {
+			if (line == "VEC_END") {
+				break;
+			}
+			else {
+				m_fileMetadataToHold.ifFileIsAvatarLoginHashesVec.push_back(line);
+			}
+		}
+
+		m_fileMetadataToHold.isAvatar = true;
+		m_fileMetadataToHold.filePath = createAvatarFilePath(senderLoginHash);
+		m_fileMetadataToHold.senderLoginHash = senderLoginHash;
+		m_fileMetadataToHold.fileSize = fileSize;
 	}
 
 	void FilesReceiver::parseMetadata() {
@@ -163,6 +195,17 @@ namespace net {
 			filePath = "ReceivedFiles/" + baseName + "_" + std::to_string(counter) + extension;
 			counter++;
 		}
+
+		return filePath;
+	}
+
+	std::string FilesReceiver::createAvatarFilePath(const std::string& userLoginHash) {
+		namespace fs = std::filesystem;
+		std::string baseName = userLoginHash;
+		std::string extension = ".dph";
+
+		fs::create_directory("ReceivedPhotos");
+		std::string filePath = "ReceivedPhotos/" + baseName + extension;
 
 		return filePath;
 	}

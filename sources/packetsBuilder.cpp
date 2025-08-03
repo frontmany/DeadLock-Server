@@ -55,19 +55,10 @@ std::string PacketsBuilder::get_usersPacket(const CryptoPP::RSA::PrivateKey priv
         oss << crypto::AESEncrypt(key, user->getLogin()) << '\n'
             << crypto::AESEncrypt(key,user->getName()) << '\n'
             << crypto::AESEncrypt(key, crypto::RSADecrypt(privateKey, user->getLastSeen())) << '\n'
-            << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n'
-            << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n';
-
-        if (user->getIsHasPhoto()) {
-            oss << crypto::AESEncrypt(key, user->getPhoto().serialize(privateKey, userPublicKeyTo)) << '\n';
-        }
-        else {
-            oss << "space" << "\n";
-            oss << "space" << "\n";
-        }
-
-        oss << crypto::serializePublicKey(user->getPublicKey()) << "\n";
+            << crypto::AESEncrypt(key, (user->getIsHasAvatar() ? "true" : "false")) << '\n'
+            << crypto::serializePublicKey(user->getPublicKey());
     }
+
     return oss.str();
 }
 
@@ -84,11 +75,7 @@ std::string PacketsBuilder::get_userInfoPacket(const CryptoPP::RSA::PrivateKey p
         << crypto::AESEncrypt(key, user->getLogin()) << '\n'
         << crypto::AESEncrypt(key, user->getName()) << '\n'
         << crypto::AESEncrypt(key, user->getLastSeen()) << '\n'
-        << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n';
-
-        if (user->getIsHasPhoto()) {
-            oss << user->getPhoto().serialize(privateKey, userPublicKeyTo) << '\n';
-        }
+        << crypto::AESEncrypt(key, (user->getIsHasAvatar() ? "true" : "false")) << '\n';
 
     oss << crypto::serializePublicKey(user->getPublicKey()) << '\n';
 
@@ -129,13 +116,8 @@ std::string PacketsBuilder::get_chatCreateSuccessPacket(const CryptoPP::RSA::Pri
     oss << encryptedKey << '\n'
         << crypto::AESEncrypt(key, user->getLogin()) << '\n'
         << crypto::AESEncrypt(key, user->getName()) << '\n'
-        << crypto::AESEncrypt(key, (user->getPhoto().getSize() > 0 ? "true" : "false")) << '\n'
-        << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n'
+        << crypto::AESEncrypt(key, (user->getIsHasAvatar() ? "true" : "false")) << '\n'
         << crypto::AESEncrypt(key, "last seen: N/A") << '\n';
-    
-    if (user->getIsHasPhoto()) {
-        oss << user->getPhoto().serialize(privateKey, userPublicKeyTo);
-    }
 
     oss << crypto::serializePublicKey(user->getPublicKey());
     return oss.str();
@@ -154,9 +136,7 @@ std::string PacketsBuilder::get_MyInfoPacket(const CryptoPP::RSA::PrivateKey pri
         << crypto::AESEncrypt(key, user->getLogin()) << '\n'
         << crypto::AESEncrypt(key, user->getName()) << '\n'
         << crypto::AESEncrypt(key, user->getLastSeen()) << '\n'
-        << crypto::AESEncrypt(key, (user->getIsHasPhoto() ? "true" : "false")) << '\n'
-        << crypto::AESEncrypt(key, std::to_string(user->getPhoto().getSize())) << '\n'
-        << user->getPhoto().serialize(privateKey, user->getPublicKey());
+        << crypto::AESEncrypt(key, (user->getIsHasAvatar() ? "true" : "false"));
 
     return oss.str();
 }

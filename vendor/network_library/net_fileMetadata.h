@@ -17,5 +17,8 @@ namespace net
         std::string filesInBlobCount;
         std::string fileSize;
         std::string encryptedKey;
+        bool isAvatar = false;
+        bool isAvatarPreview = false;
+        std::vector<std::string> ifFileIsAvatarLoginHashesVec;
     };
 }

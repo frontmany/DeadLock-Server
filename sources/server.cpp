@@ -26,7 +26,7 @@ std::string Server::getLatestVersionNumber() {
 void Server::sendUpdateOfferPacket() {
     std::string versionNumber = getLatestVersionNumber();
 
-    auto usersVec = m_db.getUsers(m_privateKey);
+    auto usersVec = m_db.getUsers(m_avatarsKey, m_privateKey);
     for (auto user : usersVec) {
         auto it = m_map_online_users.find(user->getLoginHash());
 
@@ -229,9 +229,6 @@ void Server::handleGet(ConnectionPtr connection, const std::string& stringPacket
     }
     else if (type == QueryType::UPDATE_MY_PASSWORD) {
         updateUserPassword(connection, stringPacket);
-    }
-    else if (type == QueryType::UPDATE_MY_PHOTO) {
-        updateUserPhoto(connection, stringPacket);
     }
     else if (type == QueryType::UPDATE_MY_LOGIN) {
         updateUserLogin(connection, stringPacket);
@@ -439,6 +436,10 @@ void Server::onSendMeFile(ConnectionPtr connection, const std::string& stringPac
 void Server::onFile(net::FileMetadata file) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
 
+    if (file.isAvatar) {
+        updateUserAvatar(file);
+    }
+
     std::string filePacket = m_packets_builder.get_fileCollectPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
     
     bool isExist = m_db.isBlobExists(file.blobUID);
@@ -472,7 +473,7 @@ void Server::findUser(ConnectionPtr connection, const std::string& stringPacket)
 
     try {
         std::vector<User*> vec;
-        m_db.findUsers(m_privateKey, myLoginHash, searchText, vec);
+        m_db.findUsers(m_avatarsKey, m_privateKey, myLoginHash, searchText, vec);
 
         net::Message msgResponse;
         msgResponse.header.type = QueryType::FIND_USER_RESULTS;
@@ -484,6 +485,15 @@ void Server::findUser(ConnectionPtr connection, const std::string& stringPacket)
         msgResponse << s;
 
         sendMessage(connection, msgResponse);
+
+        for (auto& user : vec) {
+            net::FileMetadata avatarFile;
+            avatarFile.isAvatar = true;
+            avatarFile.isAvatarPreview = true;
+            avatarFile.fileSize = user->getAvatar()->getEncryptedSize();
+            avatarFile.senderLoginHash = user->getLoginHash();
+            sendFile(user->getFilesConnection(), avatarFile);
+        }
     }
     catch (...){
         std::vector<User*> vec;
@@ -612,13 +622,13 @@ void Server::returnUserInfo(ConnectionPtr connection, const std::string& stringP
     std::getline(iss, loginHashToSearch);
 
     auto itUser = m_map_online_users.find(loginHash);
-    User* user = m_db.getUser(m_privateKey, loginHash);
+    User* user = m_db.getUser(m_avatarsKey, m_privateKey, loginHash);
 
     
     auto itSearch = m_map_online_users.find(loginHashToSearch);
 
     if (itSearch == m_map_online_users.end()) {
-        User* userSearch = m_db.getUser(m_privateKey, loginHashToSearch);
+        User* userSearch = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToSearch);
         if (userSearch != nullptr) {
             std::string response = m_packets_builder.get_userInfoPacket(m_privateKey, userSearch, user->getPublicKey());
             
@@ -689,7 +699,7 @@ void Server::findFriendsStatuses(ConnectionPtr connection, const std::string& st
             break;
         }
         else {
-            User* user = m_db.getUser(m_privateKey, friendLoginHash);
+            User* user = m_db.getUser(m_avatarsKey, m_privateKey, friendLoginHash);
             if (user != nullptr) {
                 loginHashes.push_back(user->getLoginHash());
 
@@ -745,6 +755,17 @@ void Server::sendPendingMessages(const std::string& loginHash) {
             sendMessage(user->getConnection(), msgResponse);
         }
 
+        auto vec = m_db.getAndRemoveAvatarPacketsByReceiver(loginHash);
+        for (auto& [path, size, owner] : vec) {
+            net::FileMetadata avatarFile;
+            avatarFile.isAvatar = true;
+            avatarFile.isAvatarPreview = false;
+            avatarFile.fileSize = std::to_string(size);
+            avatarFile.senderLoginHash = owner;
+
+            sendFile(user->getFilesConnection(), avatarFile);
+        }
+
         for (auto& [packet, type] : otherPackets) {
             net::Message msgResponse;
             msgResponse.header.type = type;
@@ -785,7 +806,7 @@ void Server::onReconnect(ConnectionPtr connection, const std::string& stringPack
 
     bool isAuthorized = m_db.checkPassword(loginHash, passwordHash);
     if (isAuthorized) {
-        User* user = m_db.getUser(m_privateKey, loginHash);
+        User* user = m_db.getUser(m_avatarsKey, m_privateKey, loginHash);
 
         if (user == nullptr) {
             std::cout << "can't get user info";
@@ -831,7 +852,7 @@ void Server::authorizeUser(ConnectionPtr connection, const std::string& stringPa
 
     bool isAuthorized = m_db.checkPassword(loginHash, passwordHash);
     if (isAuthorized) {
-        User* user = m_db.getUser(m_privateKey, loginHash);
+        User* user = m_db.getUser(m_avatarsKey, m_privateKey, loginHash);
 
         if (user == nullptr) {
             std::cout << "can't get user info";
@@ -869,10 +890,10 @@ void Server::registerUser(ConnectionPtr connection, const std::string& stringPac
     std::string passwordHash;
     std::getline(iss, passwordHash);
 
-    if (m_db.getUser(m_privateKey, loginHash) == nullptr) {
+    if (m_db.getUser(m_avatarsKey, m_privateKey, loginHash) == nullptr) {
         std::string encryptionPart = generateEncryptionPart(loginHash);
 
-        User* user = new User(loginHash, passwordHash, false, Photo(), connection);
+        User* user = new User(loginHash, passwordHash, false, new Avatar(), connection);
         removeConnection(connection);
 
         user->setLastSeenToOnline();
@@ -920,7 +941,7 @@ void Server::createChat(ConnectionPtr connection, const std::string& stringPacke
         setlocale(LC_ALL, "ru");
 
         try {
-            User* userToCreateChat = m_db.getUser(m_privateKey, loginHashToCreateChat);
+            User* userToCreateChat = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToCreateChat);
             if (userToCreateChat == nullptr) {
                 responseType = QueryType::CHAT_CREATE_FAIL;
             }
@@ -943,6 +964,17 @@ void Server::createChat(ConnectionPtr connection, const std::string& stringPacke
         msgResponse << response;
     }
     sendMessage(connection, msgResponse);
+
+    if (responseType == QueryType::CHAT_CREATE_SUCCESS) {
+        User* userFriend = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToCreateChat);
+
+        net::FileMetadata avatarFile;
+        avatarFile.isAvatar = true;
+        avatarFile.isAvatarPreview = false;
+        avatarFile.fileSize = userFriend->getAvatar()->getEncryptedSize();
+        avatarFile.senderLoginHash = userFriend->getLoginHash();
+        sendFile(user->getFilesConnection(), avatarFile);
+    }
 }
 
 void Server::updateUserName(ConnectionPtr connection, const std::string& stringPacket) {
@@ -993,7 +1025,7 @@ void Server::updateUserName(ConnectionPtr connection, const std::string& stringP
             sendMessage(userTo->getConnection(), msgResponse);
         }
         else {
-            User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
+            User* userTo = m_db.getUser(m_avatarsKey, m_privateKey, friendLoginHash);
             std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
             m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
         }
@@ -1031,75 +1063,26 @@ void Server::updateUserPassword(ConnectionPtr connection, const std::string& str
     m_db.updateUserPassword(loginHash, newPasswordHash);
 }
 
-void Server::updateUserPhoto(ConnectionPtr connection, const std::string& stringPacket) {
+void Server::updateUserAvatar(const net::FileMetadata& fileAvatar) {
     std::lock_guard<std::recursive_mutex> lock(m_map_mutex);
     
-    std::istringstream iss(stringPacket);
+    Avatar* avatar = new Avatar(m_avatarsKey, fileAvatar.filePath);  
+    m_db.updateUserAvatar(m_publicKey, fileAvatar.senderLoginHash, avatar->getPath(), avatar->getEncryptedSize());
+    auto it = m_map_online_users.find(fileAvatar.senderLoginHash);
+    User* user = it->second;
+    user->setAvatar(avatar);
+    user->setIsHasAvatar(true);
 
-    std::string encryptedKey;
-    std::getline(iss, encryptedKey);
-    CryptoPP::SecByteBlock key = crypto::RSADecryptKey(m_privateKey, encryptedKey);
+    for (auto& friendLoginHash : fileAvatar.ifFileIsAvatarLoginHashesVec) {
+        auto it = m_map_online_users.find(friendLoginHash);
+        if (it != m_map_online_users.end()) {
+            User* userTo = it->second;
 
-    std::string loginHash;
-    std::getline(iss, loginHash);
-
-    std::string vecBegin;
-    std::getline(iss, vecBegin);
-
-    std::vector<std::string> loginHashes;
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (line == "VEC_END") {
-            break;
+            sendFile(userTo->getFilesConnection(), fileAvatar);
         }
         else {
-            loginHashes.push_back(line);
+            m_db.addAvatarPacketIfNotExists(avatar->getPath(), fileAvatar.senderLoginHash, friendLoginHash, avatar->getEncryptedSize());
         }
-    }
-
-    std::string isHasPhotoStr;
-    std::getline(iss, isHasPhotoStr);
-    isHasPhotoStr = crypto::AESDecrypt(key, isHasPhotoStr);
-
-    std::string sizeStr;
-    std::getline(iss, sizeStr);
-    sizeStr = crypto::AESDecrypt(key, sizeStr);
-    size_t size = std::stoi(sizeStr);
-
-    std::string dataFirstPartStr;
-    std::getline(iss, dataFirstPartStr);
-    std::string dataSecondPartStr;
-    std::getline(iss, dataSecondPartStr);
-    
-    auto photoOpt = Photo::deserialize(m_privateKey, dataFirstPartStr + "\n" + dataSecondPartStr, loginHash);
-    if (photoOpt) {
-        Photo& photo = *photoOpt;  
-        m_db.updateUserPhoto(m_publicKey, loginHash, photo, size);
-        auto it = m_map_online_users.find(loginHash);
-        User* user = it->second;
-        user->setPhoto(photo);
-        user->setIsHasPhoto(true);
-
-        for (auto& friendLoginHash : loginHashes) {
-            auto it = m_map_online_users.find(friendLoginHash);
-            if (it != m_map_online_users.end()) {
-                User* userTo = it->second;
-
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
-                net::Message msgResponse;
-                msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
-                msgResponse << packetU;
-                sendMessage(userTo->getConnection(), msgResponse);
-            }
-            else {
-                User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
-                std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey());
-                m_db.collect(friendLoginHash, loginHash, packetU, QueryType::USER_INFO_SUCCESS);
-            }
-        }
-    }
-    else {
-        std::cout << "(updateUserPhoto) error: photo deserialization error\n";
     }
 }
 
@@ -1135,6 +1118,8 @@ void Server::updateUserLogin(ConnectionPtr connection, const std::string& string
             logins.push_back(line);
         }
     }
+
+    Avatar::rename(oldLoginHash + ".dph", newLoginHash + ".dph");
 
     m_db.updateUserLogin(m_publicKey, oldLoginHash, newLogin);
     
@@ -1199,7 +1184,7 @@ void Server::updateUserLogin(ConnectionPtr connection, const std::string& string
     user->getConnection()->setOwnerLoginHash(newLoginHash);
 
     for (auto& friendLoginHash : logins) {
-        User* userTo = m_db.getUser(m_privateKey, friendLoginHash);
+        User* userTo = m_db.getUser(m_avatarsKey, m_privateKey, friendLoginHash);
         if (auto it = m_map_online_users.find(friendLoginHash); it != m_map_online_users.end()) {
             std::string packetU = m_packets_builder.get_userInfoPacket(m_privateKey, user, userTo->getPublicKey(), newLogin);
             net::Message msgResponse;
@@ -1510,9 +1495,19 @@ void Server::loadKeys() {
             std::istreambuf_iterator<char>());
         privFile.close();
 
+        std::ifstream aesFile("avatars_key.txt");
+        if (!aesFile.is_open()) {
+            throw std::runtime_error("Failed to open AES key file");
+        }
+        std::string avatarsKeyStr((std::istreambuf_iterator<char>(aesFile)),
+            std::istreambuf_iterator<char>());
+        aesFile.close();
+
         m_publicKey = crypto::deserializePublicKey(publicKeyStr);
         m_privateKey = crypto::deserializePrivateKey(privateKeyStr);
+        m_avatarsKey = crypto::deserializeAESKey(avatarsKeyStr);
 
+        std::cout << "All keys loaded successfully!" << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "Error loading keys: " << e.what() << std::endl;

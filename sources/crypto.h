@@ -25,6 +25,8 @@ namespace crypto {
     std::string AESDecrypt(const CryptoPP::SecByteBlock& key, const std::string& cipher);
 
     // Key serialization
+    std::string serializeAESKey(const CryptoPP::SecByteBlock& key);
+    CryptoPP::SecByteBlock deserializeAESKey(const std::string& keyStr);
     std::string serializePublicKey(const CryptoPP::RSA::PublicKey& key);
     CryptoPP::RSA::PublicKey deserializePublicKey(const std::string& keyStr);
     std::string serializePrivateKey(const CryptoPP::RSA::PrivateKey& key);

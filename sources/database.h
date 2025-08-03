@@ -13,7 +13,7 @@
 #include <random>
 
 #include "asio.hpp"
-#include "photo.h"  
+#include "avatar.h"  
 #include "packetData.h"  
 #include "queryType.h"  
 #include "blob.h"  
@@ -21,7 +21,6 @@
 #include "sqlite/sqlite3.h" 
 
 class User;
-class Photo;
 
 class Database {
 public:
@@ -39,8 +38,8 @@ public:
 	std::vector<Blob> getBlobsByLoginHashFrom(const std::string& loginHashFrom);
 	bool replaceAllBlobs(const std::string& loginHashFrom, const std::vector<Blob>& newBlobs);
 
-	User* getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash);
-	std::vector<User*> getUsers(CryptoPP::RSA::PrivateKey privateKey);
+	User* getUser(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash);
+	std::vector<User*> getUsers(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey);
 	bool addUser(const std::string& loginHash, const std::string& passwordHash, const std::string& encryptionPartEnc, const std::string& lastSeenEnc);
     bool updateUserLogin(const CryptoPP::RSA::PublicKey& publicKey, const std::string& loginHash, const std::string& newLogin);
     void updateUserName(const std::string& loginHash, const std::string& nameEnc);
@@ -48,11 +47,15 @@ public:
     void updateUserEncryptionPart(const std::string& loginHash, const std::string& encryptionPartEnc);
     void updateUserLastSeen(const std::string& loginHash, const std::string& lastSeenEnc);
     void updateUserPublicKey(const std::string& loginHash, const std::string& publicKey);
-	void updateUserPhoto(CryptoPP::RSA::PublicKey privateKey, const std::string& loginHash, const Photo& photo, size_t photoSize);
+	void updateUserAvatar(CryptoPP::RSA::PublicKey privateKey, const std::string& loginHash, const std::string& avatarPath, size_t photoSize);
 	void updateUserLoginOnly(const std::string& loginHash, const std::string& newLoginEnc);
-	std::vector<std::string> getUsersStatusesVec(CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
-	std::vector<User*> findUsers(const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers);
+	std::vector<std::string> getUsersStatusesVec(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers);
+	std::vector<User*> findUsers(CryptoPP::SecByteBlock avatarsKey, const CryptoPP::RSA::PrivateKey& privateKey, const std::string& currentUserLoginHash, const std::string& searchText, std::vector<User*>& foundUsers);
 
+	//					  avatar_path     size    avatar_owner
+	std::vector<std::tuple<std::string, uint32_t, std::string>> getAndRemoveAvatarPacketsByReceiver(const std::string& loginHashTo);
+	bool addAvatarPacketIfNotExists(const std::string& avatarPath, const std::string& ownerLoginHash, const std::string& loginHashTo, uint32_t avatarSize);
+	
 
 	void collect(const std::string& loginHashTo, const std::string& loginHashFrom, const std::string& packet, QueryType type);
 	std::vector<std::pair<std::string, QueryType>> getCollected(const std::string& loginHash);
@@ -66,6 +69,8 @@ public:
 
 
 private:
+	std::vector<std::tuple<std::string, uint32_t, std::string>> getAvatarPacketsByReceiver(const std::string& loginHashTo);
+	bool removeAvatarPacketsByReceiver(const std::string& loginHashTo);
 	void executeSQL(const char* sql, const char* tableName);
 	std::string safeColumnText(sqlite3_stmt* stmt, int column);
 	void executeUpdate(const char* sql, const std::vector<std::string>& params);

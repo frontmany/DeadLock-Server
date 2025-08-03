@@ -59,7 +59,150 @@ void Database::init() {
         "FILE_ID       TEXT    NOT NULL);";
 
     executeSQL(blobFilesTableSQL, "BLOB_FILES");
+
+
+    const char* avatarPacketsTableSQL = "CREATE TABLE IF NOT EXISTS AVATAR_PACKETS("
+        "AVATAR_PATH            TEXT    NOT NULL,"
+        "AVATAR_OWNER_LOGINHASH TEXT    NOT NULL,"
+        "PHOTO_SIZE             INTEGER NOT NULL,"
+        "LOGINHASH_TO           TEXT    NOT NULL,"
+        "PRIMARY KEY (AVATAR_OWNER_LOGINHASH, LOGINHASH_TO));";
+
+    executeSQL(avatarPacketsTableSQL, "AVATAR_PACKETS");
 }
+
+bool Database::addAvatarPacketIfNotExists(const std::string& avatarPath,
+    const std::string& ownerLoginHash,
+    const std::string& loginHashTo,
+    uint32_t avatarSize)
+{
+    const char* sql = "INSERT OR IGNORE INTO AVATAR_PACKETS "
+        "(AVATAR_PATH, AVATAR_OWNER_LOGINHASH, PHOTO_SIZE, LOGINHASH_TO) "
+        "VALUES (?, ?, ?, ?);";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, avatarPath.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, ownerLoginHash.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 3, avatarSize);
+    sqlite3_bind_text(stmt, 4, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = true;
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        std::cerr << "Failed to insert avatar packet: " << sqlite3_errmsg(m_db) << std::endl;
+        result = false;
+    }
+
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+std::vector<std::tuple<std::string, uint32_t, std::string>> Database::getAvatarPacketsByReceiver(
+    const std::string& loginHashTo)
+{
+    const char* sql = "SELECT AVATAR_PATH, PHOTO_SIZE, AVATAR_OWNER_LOGINHASH FROM AVATAR_PACKETS "
+        "WHERE LOGINHASH_TO = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    std::vector<std::tuple<std::string, uint32_t, std::string>> results;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return results;
+    }
+
+    sqlite3_bind_text(stmt, 1, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const unsigned char* path = sqlite3_column_text(stmt, 0);
+        uint32_t size = sqlite3_column_int(stmt, 1);
+        const unsigned char* owner = sqlite3_column_text(stmt, 2);
+
+        if (path && owner) {
+            results.emplace_back(
+                reinterpret_cast<const char*>(path),
+                size,
+                reinterpret_cast<const char*>(owner)
+            );
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+bool Database::removeAvatarPacketsByReceiver(const std::string& loginHashTo) {
+    const char* sql = "DELETE FROM AVATAR_PACKETS WHERE LOGINHASH_TO = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool result = true;
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        std::cerr << "Failed to delete avatar packets: " << sqlite3_errmsg(m_db) << std::endl;
+        result = false;
+    }
+
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+std::vector<std::tuple<std::string, uint32_t, std::string>> Database::getAndRemoveAvatarPacketsByReceiver(
+    const std::string& loginHashTo)
+{
+    if (sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        return {};
+    }
+
+    auto packets = getAvatarPacketsByReceiver(loginHashTo);
+
+    const char* deleteSql = "DELETE FROM AVATAR_PACKETS WHERE LOGINHASH_TO = ?;";
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(m_db, deleteSql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to prepare delete statement: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return {};
+    }
+
+    sqlite3_bind_text(stmt, 1, loginHashTo.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        std::cerr << "Failed to delete avatar packets: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_finalize(stmt);
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return {};
+    }
+
+    sqlite3_finalize(stmt);
+
+    if (sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(m_db) << std::endl;
+        sqlite3_exec(m_db, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return {};
+    }
+
+    return packets;
+}
+
+
+
+
+
+
+
+
+
 
 
 bool Database::addBlob(const std::string& blobUid,
@@ -623,7 +766,7 @@ bool Database::addUser(const std::string& loginHash,
     return success;
 }
 
-User* Database::getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash) {
+User* Database::getUser(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey, const std::string& loginHash) {
     if (!m_db) {
         std::cerr << "Database not initialized" << std::endl;
         return nullptr;
@@ -672,7 +815,7 @@ User* Database::getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string&
             std::string photoPath = encryptedPhotoPath.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoPath);
             std::string photoSize = photoSize.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoSize);
 
-            user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, Photo(privateKey, photoPath));
+            user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, new Avatar(avatarsKey, photoPath));
             user->setEncryptionPart(encryptionPart);
             user->setLastSeen(lastSeen);
 
@@ -697,7 +840,7 @@ User* Database::getUser(CryptoPP::RSA::PrivateKey privateKey, const std::string&
     return user;
 }
 
-std::vector<User*> Database::getUsers(CryptoPP::RSA::PrivateKey privateKey) {
+std::vector<User*> Database::getUsers(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey) {
     std::vector<User*> users;
 
     if (!m_db) {
@@ -740,7 +883,7 @@ std::vector<User*> Database::getUsers(CryptoPP::RSA::PrivateKey privateKey) {
             std::string photoPath = encryptedPhotoPath.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoPath);
             std::string photoSize = encryptedPhotoSize.empty() ? "" : crypto::RSADecrypt(privateKey, encryptedPhotoSize);
 
-            User* user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, Photo(privateKey, photoPath));
+            User* user = new User(login, dbLoginHash, passwordHash, name, isHasPhoto, new Avatar(avatarsKey, photoPath));
             user->setEncryptionPart(encryptionPart);
             user->setLastSeen(lastSeen);
 
@@ -769,7 +912,7 @@ std::string Database::safeColumnText(sqlite3_stmt* stmt, int column) {
     return text ? text : "";
 }
 
-std::vector<std::string> Database::getUsersStatusesVec(CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
+std::vector<std::string> Database::getUsersStatusesVec(CryptoPP::SecByteBlock avatarsKey, CryptoPP::RSA::PrivateKey privateKey, const std::vector<std::string>& loginsVec, const std::map<std::string, User*>& mapOnlineUsers) {
     std::vector<std::string> statuses;
     for (const auto& login : loginsVec) {
 
@@ -779,7 +922,7 @@ std::vector<std::string> Database::getUsersStatusesVec(CryptoPP::RSA::PrivateKey
             continue;
         }
 
-        std::string statusFromDb = getUser(privateKey, login)->getLastSeen(); 
+        std::string statusFromDb = getUser(avatarsKey, privateKey, login)->getLastSeen();
         if (!statusFromDb.empty()) {
             statuses.push_back(statusFromDb);
         }
@@ -1055,7 +1198,7 @@ bool Database::replaceAllPackets(const std::string& loginHashFrom, const std::ve
 
 
 
-std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateKey,
+std::vector<User*> Database::findUsers(CryptoPP::SecByteBlock avatarsKey, const CryptoPP::RSA::PrivateKey& privateKey,
     const std::string& currentUserLoginHash,
     const std::string& searchText,
     std::vector<User*>& foundUsers) {
@@ -1104,13 +1247,13 @@ std::vector<User*> Database::findUsers(const CryptoPP::RSA::PrivateKey& privateK
         user->setEncryptionPart(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
         user->setLastSeen(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
         user->setPublicKey(crypto::deserializePublicKey(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6))));
-        user->setIsHasPhoto(sqlite3_column_int(stmt, 7) != 0);
+        user->setIsHasAvatar(sqlite3_column_int(stmt, 7) != 0);
 
         std::string photoPath = crypto::RSADecrypt(privateKey, reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8)));
-        Photo* photo = new Photo(privateKey, photoPath);
-        user->setPhoto(*photo);
-        if (photo->getPhotoPath() != "") {
-            user->setIsHasPhoto(true);
+        Avatar* avatar = new Avatar(avatarsKey, photoPath);
+        user->setAvatar(avatar);
+        if (avatar->getPath() != "") {
+            user->setIsHasAvatar(true);
         }
 
         foundUsers.push_back(user);
@@ -1233,12 +1376,12 @@ void Database::updateUserPublicKey(const std::string& loginHash, const std::stri
     executeUpdate(sql, { publicKey, loginHash });
 }
 
-void Database::updateUserPhoto(CryptoPP::RSA::PublicKey publicKey, const std::string& loginHash, const Photo& photo, size_t photoSize) {
+void Database::updateUserAvatar(CryptoPP::RSA::PublicKey publicKey, const std::string& loginHash, const std::string& avatarPath, size_t photoSize) {
     const char* sql = "UPDATE USER SET IS_HAS_PHOTO = ?, PHOTO_PATH = ?, PHOTO_SIZE = ? WHERE LOGIN_HASH = ?";
 
     std::vector<std::string> params;
     params.push_back("1"); 
-    params.push_back(crypto::RSAEncrypt(publicKey, photo.getPhotoPath()));
+    params.push_back(crypto::RSAEncrypt(publicKey, avatarPath));
     params.push_back(crypto::RSAEncrypt(publicKey, std::to_string(photoSize)));
     params.push_back(loginHash);
 

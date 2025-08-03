@@ -8,27 +8,27 @@ User::User(const std::string& login,
     const std::string& loginHash,
     const std::string& passwordHash,
     const std::string& name,
-    bool isHasPhoto,
-    Photo photo)
+    bool isHasAvatar,
+    Avatar* avatar)
     : m_login(login),
     m_is_files_connection_established(false),
     m_login_hash(loginHash),
     m_password_hash(passwordHash),
     m_name(name),
-    m_is_has_photo(isHasPhoto),
-    m_photo(photo)
+    m_is_has_avatar(isHasAvatar),
+    m_avatar(avatar)
 {
 }
 
 User::User(const std::string& loginHash,
     const std::string& passwordHash,
-    bool isHasPhoto, Photo photo,
+    bool isHasAvatar, Avatar* avatar,
     ConnectionPtr connection)
     : m_login_hash(loginHash),
     m_is_files_connection_established(false),
     m_password_hash(passwordHash),
-    m_is_has_photo(isHasPhoto),
-    m_photo(photo),
+    m_is_has_avatar(isHasAvatar),
+    m_avatar(avatar),
     m_connection(connection) 
 {
 }
@@ -40,6 +40,8 @@ User::~User()
     if (m_is_files_connection_established) {
         m_files_connection->close();
     }
+
+    delete m_avatar;
 }
 
 

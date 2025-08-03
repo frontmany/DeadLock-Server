@@ -39,6 +39,7 @@ namespace net {
 
         CryptoPP::RSA::PrivateKey m_privateKey;
         CryptoPP::RSA::PublicKey m_publicKey;
+        CryptoPP::SecByteBlock m_avatarsKey;
 
     private:
         void createConnection(uint64_t resolverID, asio::ip::tcp::socket socket);

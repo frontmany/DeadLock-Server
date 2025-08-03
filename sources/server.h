@@ -64,7 +64,7 @@ private:
 
     void updateUserName(ConnectionPtr connection, const std::string& stringPacket);
     void updateUserPassword(ConnectionPtr connection, const std::string& stringPacket);
-    void updateUserPhoto(ConnectionPtr connection, const std::string& stringPacket);
+    void updateUserAvatar(const net::FileMetadata& fileAvatar);
     void updateUserLogin(ConnectionPtr connection, const std::string& stringPacket);
 
     void returnUserInfo(ConnectionPtr connection, const std::string& stringPacket);

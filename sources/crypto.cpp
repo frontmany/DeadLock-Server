@@ -264,6 +264,46 @@ RSA::PublicKey crypto::deserializePublicKey(const std::string& keyStr) {
     }
 }
 
+std::string crypto::serializeAESKey(const CryptoPP::SecByteBlock& key) {
+    std::string encoded;
+
+    CryptoPP::StringSource ss(
+        key.data(),
+        key.size(),
+        true,
+        new CryptoPP::Base64Encoder(
+            new CryptoPP::StringSink(encoded),
+            false
+        )
+    );
+
+    return encoded;
+}
+
+SecByteBlock crypto::deserializeAESKey(const std::string& keyStr) {
+    try {
+        std::string decoded;
+
+        CryptoPP::StringSource ss(
+            keyStr,
+            true,
+            new CryptoPP::Base64Decoder(
+                new CryptoPP::StringSink(decoded)
+            )
+        );
+
+        CryptoPP::SecByteBlock key(
+            reinterpret_cast<const CryptoPP::byte*>(decoded.data()),
+            decoded.size()
+        );
+
+        return key;
+    }
+    catch (const CryptoPP::Exception& e) {
+        throw std::runtime_error("Failed to deserialize AES key: " + std::string(e.what()));
+    }
+}
+
 std::string crypto::serializePrivateKey(const RSA::PrivateKey& key) {
     std::string encoded;
     ByteQueue queue;

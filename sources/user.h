@@ -9,7 +9,7 @@
 #include <memory>
 #include <ctime>
 
-#include "photo.h"
+#include "avatar.h"
 #include "queryType.h"
 
 #include "rsa.h"
@@ -33,7 +33,7 @@ public:
         const std::string& passwordHash,
         const std::string& name,
         bool isHasPhoto,
-        Photo photo
+        Avatar* avatar
     );
 
 
@@ -41,7 +41,7 @@ public:
     User(const std::string& loginHash,
         const std::string& passwordHash,
         bool isHasPhoto,
-        Photo photo,
+        Avatar* avatar,
         ConnectionPtr connection
     );
 
@@ -66,11 +66,11 @@ public:
     const std::string& getName() const { return m_name; }
     void setName(const std::string& name) { m_name = name; }
 
-    const Photo& getPhoto() const { return m_photo; }
-    void setPhoto(const Photo& photo) { m_photo = photo; }
+    Avatar* getAvatar() const { return m_avatar; }
+    void setAvatar(Avatar* avatar) { m_avatar = avatar; }
 
-    const bool getIsHasPhoto() const { return m_is_has_photo; }
-    void setIsHasPhoto(bool isHasPhoto) { m_is_has_photo = isHasPhoto; }
+    const bool getIsHasAvatar() const { return m_is_has_avatar; }
+    void setIsHasAvatar(bool isHasAvatar) { m_is_has_avatar = isHasAvatar; }
 
     const std::string& getLastSeen() const { return m_last_seen; }
     void setLastSeen(const std::string& lastSeen) { m_last_seen = lastSeen; }
@@ -85,14 +85,14 @@ public:
     void setLastSeenToOnline();
 
 private:
-    bool                                    m_is_has_photo;
+    bool                                    m_is_has_avatar;
     bool                                    m_is_files_connection_established;
     std::string			                    m_last_seen;
     std::string			                    m_name;
     std::string			                    m_login;
     std::string			                    m_login_hash;
     std::string			                    m_password_hash;
-    Photo			                        m_photo;
+    Avatar* 	                            m_avatar;
     ConnectionPtr                           m_connection;
     FilesConnectionPtr                      m_files_connection;
     CryptoPP::RSA::PublicKey                m_public_key;

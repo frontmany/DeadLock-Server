@@ -22,12 +22,16 @@ namespace net
 
 	private:
 		std::string createFilePath(const std::string& fileId);
+		std::string createAvatarFilePath(const std::string& userLoginHash);
 		void removePartiallyDownloadedFile();
+
 		void readMetadataHeader();
 		void readMetadataBody();
 		void readChunk();
-		void finalizeReceiving();
+
 		void parseMetadata();
+		void parseAvatarMetadata();
+		void finalizeReceiving();
 		void openFile();
 
 	private:

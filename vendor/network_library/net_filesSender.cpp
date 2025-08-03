@@ -29,22 +29,39 @@ namespace net {
 	}
 
 	void FilesSender::sendMetadata() {
-		std::ostringstream oss;
-		oss << m_fileMetadata.encryptedKey << '\n'
-			<< m_fileMetadata.id << '\n'
-			<< m_fileMetadata.blobUID << "\n"
-			<< m_fileMetadata.receiverLoginHash << '\n'
-			<< m_fileMetadata.senderLoginHash << '\n'
-			<< m_fileMetadata.fileSize << '\n'
-			<< m_fileMetadata.fileName << '\n'
-			<< m_fileMetadata.timestamp << '\n'
-			<< m_fileMetadata.filesInBlobCount << '\n'
-			<< m_fileMetadata.caption;
+		if (m_fileMetadata.isAvatar) {
+			std::ostringstream oss;
+			oss << m_fileMetadata.senderLoginHash << '\n'
+				<< m_fileMetadata.fileSize;
 
-		m_metadataMessage.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
-		m_metadataMessage << oss.str();
-		m_metadataMessage.header.size = m_metadataMessage.size();
+			if (m_fileMetadata.isAvatarPreview) {
+				m_metadataMessage.header.type = static_cast<uint32_t>(QueryType::AVATAR_FOR_PREVIEW);
+			}
+			else {
+				m_metadataMessage.header.type = static_cast<uint32_t>(QueryType::AVATAR);
+			}
 
+			m_metadataMessage << oss.str();
+			m_metadataMessage.header.size = m_metadataMessage.size();
+		}
+		else {
+			std::ostringstream oss;
+			oss << m_fileMetadata.encryptedKey << '\n'
+				<< m_fileMetadata.id << '\n'
+				<< m_fileMetadata.blobUID << "\n"
+				<< m_fileMetadata.receiverLoginHash << '\n'
+				<< m_fileMetadata.senderLoginHash << '\n'
+				<< m_fileMetadata.fileSize << '\n'
+				<< m_fileMetadata.fileName << '\n'
+				<< m_fileMetadata.timestamp << '\n'
+				<< m_fileMetadata.filesInBlobCount << '\n'
+				<< m_fileMetadata.caption;
+
+			m_metadataMessage.header.type = QueryType::PREPARE_TO_RECEIVE_FILE;
+			m_metadataMessage << oss.str();
+			m_metadataMessage.header.size = m_metadataMessage.size();
+		}
+		
 		asio::async_write(
 			m_socket,
 			asio::buffer(&m_metadataMessage.header, sizeof(MessageHeader)),
