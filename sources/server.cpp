@@ -438,6 +438,7 @@ void Server::onFile(net::FileMetadata file) {
 
     if (file.isAvatar) {
         updateUserAvatar(file);
+        return;
     }
 
     std::string filePacket = m_packets_builder.get_fileCollectPacket(file.encryptedKey, file.senderLoginHash, file.receiverLoginHash, file.fileName, file.id, file.fileSize, file.timestamp, file.caption, file.blobUID, file.filesInBlobCount);
@@ -870,6 +871,12 @@ void Server::authorizeUser(ConnectionPtr connection, const std::string& stringPa
             msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_publicKey);
             msgResponse.header.type = QueryType::AUTHORIZATION_SUCCESS;
             sendMessage(connection, msgResponse);
+
+            net::Message msgAvatarsKey;
+            msgAvatarsKey << m_packets_builder.get_avatarsKeyPacket(m_avatarsKey);
+            msgAvatarsKey.header.type = QueryType::AVATARS_KEY;
+            sendMessage(connection, msgAvatarsKey);
+
         }
     }
     else {

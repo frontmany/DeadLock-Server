@@ -4,7 +4,7 @@
 #include <codecvt>
 
 Avatar::Avatar(const CryptoPP::SecByteBlock& avatarsKey, const std::string& photoPath)
-    : m_photoPath(photoPath), m_size(0) {
+    : m_photoPath(photoPath), m_size(0), m_encryptedSize(0) {
     if (photoPath != "") {
         update(avatarsKey);
     }

@@ -180,11 +180,19 @@ std::string PacketsBuilder::get_registrationSuccessPacket(const std::string& enc
 
     return oss.str();
 }
+
 std::string PacketsBuilder::get_authorizationSuccessPacket(const std::string& encryptionPart, const CryptoPP::RSA::PublicKey& serverPublicKey) {
     std::ostringstream oss;
 
     oss << encryptionPart << '\n'
         << crypto::serializePublicKey(serverPublicKey);
+
+    return oss.str();
+}
+
+std::string PacketsBuilder::get_avatarsKeyPacket(const CryptoPP::SecByteBlock avatarsKey) {
+    std::ostringstream oss;
+    oss <<  crypto::serializeAESKey(avatarsKey);
 
     return oss.str();
 }

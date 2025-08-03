@@ -116,6 +116,8 @@ namespace net {
 		m_fileMetadataToHold.filePath = createAvatarFilePath(senderLoginHash);
 		m_fileMetadataToHold.senderLoginHash = senderLoginHash;
 		m_fileMetadataToHold.fileSize = fileSize;
+
+		m_expectedChunksCount = static_cast<int>(std::ceil(static_cast<double>(std::stoi(m_fileMetadataToHold.fileSize)) / c_decryptedChunkSize));
 	}
 
 	void FilesReceiver::parseMetadata() {

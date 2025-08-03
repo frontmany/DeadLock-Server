@@ -24,6 +24,7 @@ public:
     std::string get_authorizationSuccessPacket(const std::string& encryptionPart, const CryptoPP::RSA::PublicKey& serverPublicKey);
 
     std::string get_newLoginSuccessPacket(const std::string& approvedLogin, const CryptoPP::RSA::PublicKey& userPublicKey);
+    std::string get_avatarsKeyPacket(const CryptoPP::SecByteBlock avatarsKey);
 
 private:
     const std::string vecBegin = "VEC_BEGIN";
