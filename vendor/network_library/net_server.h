@@ -19,7 +19,7 @@ namespace net {
 
         void waitForClientConnections();
         void sendMessage(ConnectionPtr connection, const Message& msg);
-        void sendFile(FilesConnectionPtr filesConnection, FileMetadata file);
+        void sendFile(FilesConnectionPtr filesConnection, const FileMetadata& file);
         void update(size_t maxMessagesCount = std::numeric_limits<unsigned long long>::max());
         void removeConnection(ConnectionPtr connection);
 

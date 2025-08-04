@@ -69,12 +69,24 @@ namespace net {
 				else {
 					m_currentChunksCount++;
 
-					m_fileStream.write(m_receiveBuffer.data(), c_receivedChunkSize);
-					if (m_expectedChunksCount > m_currentChunksCount) {
-						readChunk();
+					if (m_fileMetadataToHold.isAvatar) {
+						if (m_currentChunksCount < m_expectedChunksCount) {
+							m_fileStream.write(m_receiveBuffer.data(), c_receivedChunkSize);
+							readChunk();
+						}
+						else if (m_currentChunksCount == m_expectedChunksCount) {
+							m_fileStream.write(m_receiveBuffer.data(), m_lastChunkSize);
+							finalizeReceiving();
+						}
 					}
 					else {
-						finalizeReceiving();
+						m_fileStream.write(m_receiveBuffer.data(), c_receivedChunkSize);
+						if (m_currentChunksCount < m_expectedChunksCount) {
+							readChunk();
+						}
+						else {
+							finalizeReceiving();
+						}
 					}
 				}
 			});
@@ -117,7 +129,14 @@ namespace net {
 		m_fileMetadataToHold.senderLoginHash = senderLoginHash;
 		m_fileMetadataToHold.fileSize = fileSize;
 
-		m_expectedChunksCount = static_cast<int>(std::ceil(static_cast<double>(std::stoi(m_fileMetadataToHold.fileSize)) / c_decryptedChunkSize));
+		m_expectedChunksCount = static_cast<int>(std::ceil(static_cast<double>(std::stoi(m_fileMetadataToHold.fileSize)) / c_receivedChunkSize));
+		int lastChunksSize = std::stoi(m_fileMetadataToHold.fileSize) - (m_expectedChunksCount * c_receivedChunkSize);
+		if (lastChunksSize == 0) {
+			m_lastChunkSize = c_receivedChunkSize;
+		}
+		else {
+			m_lastChunkSize = lastChunksSize + c_receivedChunkSize;
+		}
 	}
 
 	void FilesReceiver::parseMetadata() {
@@ -179,7 +198,7 @@ namespace net {
 #else
 		std::string filePath = m_fileMetadataToHold.filePath;
 #endif
-		m_fileStream.open(filePath, std::ios::binary);
+		m_fileStream.open(filePath, std::ios::binary | std::ios::trunc);
 		if (!m_fileStream)
 			std::cerr << "Failed to create file\n";
 	}

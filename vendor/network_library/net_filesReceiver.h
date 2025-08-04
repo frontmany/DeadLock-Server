@@ -39,6 +39,7 @@ namespace net
 		static constexpr uint32_t c_receivedChunkSize = 8220;
 		static constexpr uint32_t c_overhead = 28;
 
+		uint32_t m_lastChunkSize;
 		uint32_t m_currentChunksCount;
 		uint32_t m_expectedChunksCount;
 

@@ -77,7 +77,7 @@ namespace net {
         connection->send(msg);
     }
 
-    void ServerInterface::sendFile(FilesConnectionPtr filesConnection, FileMetadata file) {
+    void ServerInterface::sendFile(FilesConnectionPtr filesConnection, const FileMetadata& file) {
         filesConnection->sendFile(file);
     }
 

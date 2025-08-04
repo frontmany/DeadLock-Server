@@ -35,7 +35,10 @@ User::User(const std::string& loginHash,
 
 User::~User() 
 {
-    m_connection->close();
+    if (m_connection) {
+        m_connection->close();
+    }
+
 
     if (m_is_files_connection_established) {
         m_files_connection->close();

@@ -56,7 +56,7 @@ std::string PacketsBuilder::get_usersPacket(const CryptoPP::RSA::PrivateKey priv
             << crypto::AESEncrypt(key,user->getName()) << '\n'
             << crypto::AESEncrypt(key, crypto::RSADecrypt(privateKey, user->getLastSeen())) << '\n'
             << crypto::AESEncrypt(key, (user->getIsHasAvatar() ? "true" : "false")) << '\n'
-            << crypto::serializePublicKey(user->getPublicKey());
+            << crypto::serializePublicKey(user->getPublicKey()) << '\n';
     }
 
     return oss.str();

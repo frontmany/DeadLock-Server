@@ -23,7 +23,7 @@ namespace net {
 			return m_deque.back();
 		}
 
-		const size_t size() {
+		size_t size() {
 			std::scoped_lock lock(m_mtx);
 			return m_deque.size();
 		}

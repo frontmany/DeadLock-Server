@@ -488,12 +488,17 @@ void Server::findUser(ConnectionPtr connection, const std::string& stringPacket)
         sendMessage(connection, msgResponse);
 
         for (auto& user : vec) {
-            net::FileMetadata avatarFile;
-            avatarFile.isAvatar = true;
-            avatarFile.isAvatarPreview = true;
-            avatarFile.fileSize = user->getAvatar()->getEncryptedSize();
-            avatarFile.senderLoginHash = user->getLoginHash();
-            sendFile(user->getFilesConnection(), avatarFile);
+            if (user->getIsHasAvatar()) {
+                net::FileMetadata avatarFile;
+                avatarFile.isAvatar = true;
+                avatarFile.isAvatarPreview = true;
+                avatarFile.fileSize = std::to_string(user->getAvatar()->getEncryptedSize());
+                avatarFile.senderLoginHash = user->getLoginHash();
+                avatarFile.filePath = "./ReceivedPhotos/" + user->getLoginHash() + ".dph";
+
+                User* userTo = m_map_online_users.at(myLoginHash);
+                sendFile(userTo->getFilesConnection(), avatarFile);
+            }
         }
     }
     catch (...){
@@ -917,6 +922,11 @@ void Server::registerUser(ConnectionPtr connection, const std::string& stringPac
         msgResponse << m_packets_builder.get_authorizationSuccessPacket(user->getEncryptionPart(), m_publicKey);
         msgResponse.header.type = QueryType::REGISTRATION_SUCCESS;
         sendMessage(connection, msgResponse);
+
+        net::Message msgAvatarsKey;
+        msgAvatarsKey << m_packets_builder.get_avatarsKeyPacket(m_avatarsKey);
+        msgAvatarsKey.header.type = QueryType::AVATARS_KEY;
+        sendMessage(connection, msgAvatarsKey);
     }
     else {
         net::Message msgResponse;
@@ -975,12 +985,15 @@ void Server::createChat(ConnectionPtr connection, const std::string& stringPacke
     if (responseType == QueryType::CHAT_CREATE_SUCCESS) {
         User* userFriend = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToCreateChat);
 
-        net::FileMetadata avatarFile;
-        avatarFile.isAvatar = true;
-        avatarFile.isAvatarPreview = false;
-        avatarFile.fileSize = userFriend->getAvatar()->getEncryptedSize();
-        avatarFile.senderLoginHash = userFriend->getLoginHash();
-        sendFile(user->getFilesConnection(), avatarFile);
+        if (userFriend->getIsHasAvatar()) {
+            net::FileMetadata avatarFile;
+            avatarFile.isAvatar = true;
+            avatarFile.isAvatarPreview = false;
+            avatarFile.filePath = "ReceivedPhotos/" + userFriend->getLoginHash() + ".dph";
+            avatarFile.fileSize = std::to_string(userFriend->getAvatar()->getEncryptedSize());
+            avatarFile.senderLoginHash = userFriend->getLoginHash();
+            sendFile(user->getFilesConnection(), avatarFile);
+        }
     }
 }
 
@@ -1449,6 +1462,10 @@ void Server::handleError(std::error_code ec) {
 }
 
 void Server::onFileSent(net::FileMetadata sentFile) {
+    if (sentFile.isAvatar) {
+        return;
+    }
+
     if (sentFile.senderLoginHash == "server") {
         return;
     }
@@ -1457,11 +1474,11 @@ void Server::onFileSent(net::FileMetadata sentFile) {
         std::error_code ec; 
         setlocale(LC_ALL, "ru");
         if (!std::filesystem::remove(sentFile.filePath, ec)) {
-            std::cerr << "������ ��������: " << ec.message() << std::endl;
+            std::cerr << ec.message() << std::endl;
         }
     }
     else {
-        std::cerr << "���� �� ����������!" << std::endl;
+        std::cerr << "not existing file! (onFileSent)" << std::endl;
     }
 
     if (m_db.isBlobExists(sentFile.blobUID)) {
