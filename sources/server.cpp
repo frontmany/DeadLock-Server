@@ -627,36 +627,34 @@ void Server::returnUserInfo(ConnectionPtr connection, const std::string& stringP
     std::string loginHashToSearch;
     std::getline(iss, loginHashToSearch);
 
-    auto itUser = m_map_online_users.find(loginHash);
-    User* user = m_db.getUser(m_avatarsKey, m_privateKey, loginHash);
+    User* userSearch = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToSearch);
+    net::Message msgResponse;
 
-    
-    auto itSearch = m_map_online_users.find(loginHashToSearch);
+    User* user = m_map_online_users.at(loginHash);
 
-    if (itSearch == m_map_online_users.end()) {
-        User* userSearch = m_db.getUser(m_avatarsKey, m_privateKey, loginHashToSearch);
-        if (userSearch != nullptr) {
-            std::string response = m_packets_builder.get_userInfoPacket(m_privateKey, userSearch, user->getPublicKey());
-            
-            net::Message msgResponse;
-            msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
-            msgResponse << response;
-            sendMessage(connection, msgResponse);
-        }
-        else {
-            net::Message msgResponse;
-            msgResponse.header.type = QueryType::USER_INFO_FAIL;
-            sendMessage(connection, msgResponse);
-        }
-        delete userSearch;
-    }
-    else {
-        User* userSearch = itSearch->second;
+    if (userSearch != nullptr) {
         std::string response = m_packets_builder.get_userInfoPacket(m_privateKey, userSearch, user->getPublicKey());
-        net::Message msgResponse;
         msgResponse.header.type = QueryType::USER_INFO_SUCCESS;
         msgResponse << response;
         sendMessage(connection, msgResponse);
+
+        if (userSearch->getIsHasAvatar()) {
+            net::FileMetadata avatarFile;
+            avatarFile.isAvatar = true;
+            avatarFile.isAvatarPreview = false;
+            avatarFile.filePath = "ReceivedPhotos/" + userSearch->getLoginHash() + ".dph";
+            avatarFile.fileSize = std::to_string(userSearch->getAvatar()->getEncryptedSize());
+            avatarFile.senderLoginHash = userSearch->getLoginHash();
+            
+            sendFile(user->getFilesConnection(), avatarFile);
+        }
+
+        delete userSearch;
+    }
+    else {
+        msgResponse.header.type = QueryType::USER_INFO_FAIL;
+        sendMessage(connection, msgResponse);
+        delete userSearch;
     }
 }
 
@@ -1383,7 +1381,9 @@ net::FileMetadata Server::constructFileFromPacket(const std::string& packet) {
         file.id = fileId;
         file.receiverLoginHash = receiverLoginHash;
         file.senderLoginHash = senderLoginHash;
-        file.timestamp = fileTimestamp;
+        file.timestamp = fileTimestamp; 
+        file.isAvatar = false;
+        file.isAvatarPreview = false;
     }
 
     return file;
