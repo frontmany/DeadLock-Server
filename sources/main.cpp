@@ -1,54 +1,11 @@
 #include <iostream>
 #include "server.h"
 
-/*
-std::string getLocalIP() {
-    asio::io_context io_context;
-    asio::ip::tcp::resolver resolver(io_context);
-    asio::ip::tcp::resolver::results_type endpoints =
-        resolver.resolve(asio::ip::host_name(), "");
 
-    for (const auto& endpoint : endpoints) {
-        auto addr = endpoint.endpoint().address();
-        if (addr.is_v4() && !addr.is_loopback()) {
-            return addr.to_string();
-        }
-    }
-    return ""; 
-}
-
-std::string getPublicFacingIP() {
-    try {
-        asio::io_context io_context;
-        asio::ip::tcp::socket socket(io_context);
-        
-        socket.connect(asio::ip::tcp::endpoint(
-            asio::ip::make_address("8.8.8.8"), 53));
-        return socket.local_endpoint().address().to_string();
-    }
-    catch (...) {
-        return "";
-    }
-}
-
-std::string getServerIP() {
-    std::string ip = getPublicFacingIP();
-    if (!ip.empty()) {
-        return ip;
-    }
-
-    ip = getLocalIP();
-    if (!ip.empty()) {
-        return ip;
-    }
-
-    return "127.0.0.1";
-}
-*/
-
-int main() {
+int main(int argc, char* argv[]) {
     try {
         Server server(8080);
+        server.loadKeys();
         server.startServer();
     }
     catch (const std::exception& e) {
