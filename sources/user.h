@@ -93,7 +93,7 @@ private:
     std::string			                    m_login_hash;
     std::string			                    m_password_hash;
     Avatar* 	                            m_avatar;
-    ConnectionPtr                           m_connection;
+    ConnectionPtr                           m_packetsConnection;
     FilesConnectionPtr                      m_files_connection;
     CryptoPP::RSA::PublicKey                m_public_key;
     std::string			                    m_encryption_part;

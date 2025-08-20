@@ -13,10 +13,9 @@ endif()
 include_directories(
     "${CMAKE_SOURCE_DIR}/sources"
     "${CMAKE_SOURCE_DIR}/vendor"
-    "${CMAKE_SOURCE_DIR}/vendor/base_64"
-    "${CMAKE_SOURCE_DIR}/vendor/sqlite"
-    "${CMAKE_SOURCE_DIR}/vendor/network_library"
+    "${CMAKE_SOURCE_DIR}/vendor/SqliteCpp/include"
     "${CMAKE_SOURCE_DIR}/vendor/cryptopp"
+    "${CMAKE_SOURCE_DIR}/vendor/json/include"
 )
 
 if(WIN32)
@@ -26,18 +25,11 @@ else()
     set(CRYPTOPP_LIB "${CMAKE_SOURCE_DIR}/vendor/cryptopp/libcryptopp.a" CACHE INTERNAL "")
 endif()
 
-file(GLOB_RECURSE SOURCES 
-    "sources/*.cpp" 
-    "sources/*.h" 
-    "vendor/base_64/base64_my.*" 
-    "vendor/sqlite/sqlite3.*"
-)
+file(GLOB SOURCES "sources/*.cpp" "sources/*.h")
+source_group("Source Files" FILES ${SOURCES})
 
-file(GLOB_RECURSE NET_LIB 
-    "vendor/network_library/*.h" 
-    "vendor/network_library/*.cpp"
-)
-source_group("Source Files\\Net Library Files" FILES ${NET_LIB})
+file(GLOB_RECURSE NET_LIB "sources/Network/*.h" "sources/Network/*.cpp")
+source_group("Source Files\\Network" FILES ${NET_LIB})
 
 add_subdirectory("Deadlock_server_updater")
 add_subdirectory("Deadlock_server_database_viewer")
